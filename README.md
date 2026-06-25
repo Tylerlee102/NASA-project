@@ -1,10 +1,10 @@
 # NASA Project Website
 
-Static GitHub Pages site for the Europa radar workbook and dirty-ice sensitivity results.
+Static GitHub Pages site for the Europa radar sensitivity model and dirty-ice interpretation results.
 
-The hosted site files are in `docs/`. The page includes exported v19 workbook results, the v30 workbook graph set, downloadable workbook artifacts, and browser-side sensitivity controls.
+The hosted site files are in `docs/`. The page includes baseline model results, an expanded workbook-derived graph set, and browser-side sensitivity controls.
 
-Important caveat: the v30 live controls are an interactive sensitivity model for testing assumptions. They are not an independent rerun of the Excel workbook or a NASA mission processor.
+Important caveat: the live controls are an interactive sensitivity model for testing assumptions. They are not an independent rerun of the Excel workbook or a NASA mission processor.
 
 ## Local Run
 
@@ -38,4 +38,4 @@ Deployment checklist:
 3. Push both `main` and `gh-pages`.
 4. Verify `https://tylerlee102.github.io/NASA-project/`.
 
-Keep paths relative, such as `styles.css`, `data/v19-results.js`, and `assets/v19.xlsx`, so the project works under the GitHub Pages subpath.
+Keep paths relative, such as `styles.css`, `data/*.js`, and `assets/v30_all_dynamic_graphs.xlsx`, so the project works under the GitHub Pages subpath.

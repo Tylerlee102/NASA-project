@@ -489,8 +489,8 @@
 
   function renderAudit() {
     const sets = [
-      validateChartSet('v19 live', data.charts || []),
-      validateChartSet('v30 live', (v30ViewData && v30ViewData.charts) || [])
+      validateChartSet('Baseline live model', data.charts || []),
+      validateChartSet('Advanced sensitivity model', (v30ViewData && v30ViewData.charts) || [])
     ];
     const serious = sets.reduce((sum, item) => sum + item.serious, 0);
     const warnings = sets.reduce((sum, item) => sum + item.warnings, 0);
