@@ -6,6 +6,7 @@
     <title>Europa Radar v19 Results</title>
     <link rel="stylesheet" href="styles.css">
     <script defer src="data/v19-results.js"></script>
+    <script defer src="data/v30-results.js"></script>
     <script defer src="model.js"></script>
     <script defer src="app.js"></script>
   </head>
@@ -24,6 +25,7 @@
         <button class="tab" type="button" data-target="surface">Surface + Motion</button>
         <button class="tab" type="button" data-target="subsurface">Subsurface</button>
         <button class="tab" type="button" data-target="doppler">Doppler</button>
+        <button class="tab" type="button" data-target="v30">Latest v30</button>
         <button class="tab" type="button" data-target="audit">Inputs + Audit</button>
       </nav>
     </header>
@@ -100,6 +102,38 @@
           </section>
         </div>
         <div id="doppler-charts" class="chart-grid"></div>
+      </section>
+
+      <section id="v30" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Latest workbook</p>
+            <h2>v30 dynamic results and graphs</h2>
+          </div>
+          <a class="download-inline" href="assets/v30_all_dynamic_graphs.xlsx" download>Download v30 workbook</a>
+        </div>
+        <section class="panel v30-claim-panel">
+          <h3>Research Question</h3>
+          <p class="body-copy" id="v30-question"></p>
+          <h3>Best One-Line Claim</h3>
+          <p class="body-copy" id="v30-claim"></p>
+        </section>
+        <div id="v30-metric-grid" class="metric-grid"></div>
+        <div class="split-layout">
+          <section class="panel">
+            <h3>Top Risk Rows</h3>
+            <div id="v30-risk-table"></div>
+          </section>
+          <section class="panel">
+            <h3>Signal Test Assumptions</h3>
+            <div id="v30-signal-table"></div>
+          </section>
+        </div>
+        <section class="panel wide-panel">
+          <h3>Case Studies</h3>
+          <div id="v30-case-table"></div>
+        </section>
+        <div id="v30-charts" class="chart-grid v30-chart-grid"></div>
       </section>
 
       <section id="audit" class="page-section">

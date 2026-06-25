@@ -95,6 +95,20 @@ h3 {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.download-inline {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 800;
+  background: var(--surface);
+}
+
 .tabs {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
@@ -294,6 +308,18 @@ main {
 }
 
 .wide-panel {
+  margin-top: 14px;
+}
+
+.v30-claim-panel {
+  margin-bottom: 16px;
+}
+
+.v30-claim-panel h3 + .body-copy {
+  margin: 8px 0 14px;
+}
+
+.v30-chart-grid {
   margin-top: 14px;
 }
 
