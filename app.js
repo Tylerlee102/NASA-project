@@ -7,7 +7,7 @@
   let data = liveModel ? liveModel.compute(liveParams) : sourceData;
   let v30Params = v30Model ? { ...v30Model.defaults } : {};
   let v30ViewData = v30Model && v30Data ? v30Model.compute(v30Params, v30Data) : v30Data;
-  const colors = ['#35c6d4', '#f18f4f', '#9b7bd8', '#6cc18f', '#e05263', '#5aa6ff', '#d6b64c', '#7b8794'];
+  const colors = ['#1f6b70', '#9b4e2f', '#5f4f8f', '#3f7a55', '#9b3d3f', '#315f88', '#7a641f', '#59615d'];
   const tooltip = document.getElementById('chart-tooltip');
 
   if (!sourceData) {
@@ -60,11 +60,18 @@
       .replace(/'/g, '&#039;');
   }
 
+  function humanizeId(value) {
+    return String(value || 'data')
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
   function renderTable(targetId, rows, columns, limit) {
     const target = document.getElementById(targetId);
     if (!target) return;
+    const label = humanizeId(targetId);
     const shown = limit ? rows.slice(0, limit) : rows;
-    const head = columns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join('');
+    const head = columns.map((col) => `<th scope="col">${escapeHtml(col.label)}</th>`).join('');
     const body = shown.map((row) => {
       const cells = columns.map((col) => {
         const raw = row[col.key];
@@ -74,7 +81,7 @@
       }).join('');
       return `<tr>${cells}</tr>`;
     }).join('');
-    target.innerHTML = `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    target.innerHTML = `<div class="table-wrap" tabindex="0" role="region" aria-label="${escapeHtml(label)} table"><table><caption class="sr-only">${escapeHtml(label)}</caption><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
   }
 
   function statusClass(value) {
@@ -90,6 +97,46 @@
     if (['falseLayerEnabled', 'falseLayerCount', 'falseLayerDepthFraction', 'falseLayerStrength', 'receiverAmbiguityDb'].includes(key)) return 'False layer';
     if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz'].includes(key)) return 'Radar signal';
     return 'Model';
+  }
+
+  function controlMarkup(control, value, dataKey) {
+    const dataAttr = dataKey === 'v30' ? 'data-v30-key' : 'data-live-key';
+    if (control.type === 'checkbox') {
+      return `
+        <label class="control control-toggle">
+          <span>${escapeHtml(control.label)}</span>
+          <input type="checkbox" ${dataAttr}="${control.key}" ${value ? 'checked' : ''}>
+        </label>
+      `;
+    }
+    return `
+      <label class="control">
+        <span>${escapeHtml(control.label)}</span>
+        <input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${value}" ${dataAttr}="${control.key}">
+        <output>${formatValue(value)}${control.unit ? ` ${escapeHtml(control.unit)}` : ''}</output>
+      </label>
+    `;
+  }
+
+  function groupedControls(controls, params, dataKey) {
+    const groups = [];
+    controls.forEach((control) => {
+      const group = controlGroup(control.key);
+      let target = groups.find((item) => item.group === group);
+      if (!target) {
+        target = { group, controls: [] };
+        groups.push(target);
+      }
+      target.controls.push(control);
+    });
+    return groups.map((group) => `
+      <fieldset class="control-group">
+        <legend>${escapeHtml(group.group)}</legend>
+        <div class="control-group-grid">
+          ${group.controls.map((control) => controlMarkup(control, params[control.key], dataKey)).join('')}
+        </div>
+      </fieldset>
+    `).join('');
   }
 
   function initTabs() {
@@ -153,26 +200,7 @@
   function renderLiveControls() {
     const target = document.getElementById('live-controls');
     if (!target || !liveModel) return;
-    target.innerHTML = liveModel.controls.map((control) => {
-      const value = liveParams[control.key];
-      if (control.type === 'checkbox') {
-        return `
-          <label class="control control-toggle">
-            <span class="control-meta">${escapeHtml(controlGroup(control.key))}</span>
-            <span>${escapeHtml(control.label)}</span>
-            <input type="checkbox" data-live-key="${control.key}" ${value ? 'checked' : ''}>
-          </label>
-        `;
-      }
-      return `
-        <label class="control">
-          <span class="control-meta">${escapeHtml(controlGroup(control.key))}</span>
-          <span>${escapeHtml(control.label)}</span>
-          <input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${value}" data-live-key="${control.key}">
-          <output>${formatValue(value)}${control.unit ? ` ${escapeHtml(control.unit)}` : ''}</output>
-        </label>
-      `;
-    }).join('');
+    target.innerHTML = groupedControls(liveModel.controls, liveParams, 'live');
     target.querySelectorAll('[data-live-key]').forEach((input) => {
       input.addEventListener('input', () => {
         const key = input.dataset.liveKey;
@@ -190,7 +218,7 @@
         liveParams = { ...liveModel.defaults };
         data = liveModel.compute(liveParams);
         renderLiveControls();
-        renderAll();
+        renderLiveSections();
       });
     }
   }
@@ -198,26 +226,7 @@
   function renderV30Controls() {
     const target = document.getElementById('v30-controls');
     if (!target || !v30Model) return;
-    target.innerHTML = v30Model.controls.map((control) => {
-      const value = v30Params[control.key];
-      if (control.type === 'checkbox') {
-        return `
-          <label class="control control-toggle">
-            <span class="control-meta">${escapeHtml(controlGroup(control.key))}</span>
-            <span>${escapeHtml(control.label)}</span>
-            <input type="checkbox" data-v30-key="${control.key}" ${value ? 'checked' : ''}>
-          </label>
-        `;
-      }
-      return `
-        <label class="control">
-          <span class="control-meta">${escapeHtml(controlGroup(control.key))}</span>
-          <span>${escapeHtml(control.label)}</span>
-          <input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${value}" data-v30-key="${control.key}">
-          <output>${formatValue(value)}${control.unit ? ` ${escapeHtml(control.unit)}` : ''}</output>
-        </label>
-      `;
-    }).join('');
+    target.innerHTML = groupedControls(v30Model.controls, v30Params, 'v30');
     target.querySelectorAll('[data-v30-key]').forEach((input) => {
       input.addEventListener('input', () => {
         const key = input.dataset.v30Key;
@@ -243,7 +252,7 @@
   function updateLiveData() {
     if (!liveModel) return;
     data = liveModel.compute(liveParams);
-    renderAll();
+    renderLiveSections();
   }
 
   function updateV30Data() {
@@ -269,6 +278,7 @@
     const allRows = [...data.summary, ...data.subsurface, ...data.doppler];
     const picked = summaryPicks.map((label) => allRows.find((row) => row.label === label)).filter(Boolean);
     document.getElementById('metric-grid').innerHTML = picked.map(makeMetric).join('');
+    renderDecisionLadder();
     renderTable('prf-table', data.prf, [
       { key: 'prfHz', label: 'PRF (Hz)' },
       { key: 'pulseIntervalMs', label: 'Pulse interval (ms)' },
@@ -282,6 +292,41 @@
       { key: 'meaning', label: 'Meaning' },
       { key: 'improveBy', label: 'Improve by' },
     ]);
+  }
+
+  function responseValue(label) {
+    const row = (data.falseResponse || []).find((item) => item.label === label);
+    return row ? row.value : 0;
+  }
+
+  function renderDecisionLadder() {
+    const target = document.getElementById('decision-ladder');
+    if (!target || !data.falseResponse) return;
+    const decision = data.falseResponse[0] || {};
+    const score = responseValue('Mid-pass heuristic score');
+    const outcomes = [
+      ['Ocean-boundary likely', responseValue('Ocean-boundary likely')],
+      ['Ambiguous double return', responseValue('Ambiguous double return')],
+      ['False-boundary selected', responseValue('False-boundary selected')],
+      ['Weak/no deep detection', responseValue('Weak/no deep detection')]
+    ];
+    target.innerHTML = `
+      <div class="decision-status">
+        <span>Mid-pass classification</span>
+        <strong>${escapeHtml(decision.value || 'Unavailable')}</strong>
+        <p>${escapeHtml(decision.meaning || '')}</p>
+        <small>Heuristic score: ${escapeHtml(formatValue(score))}%</small>
+      </div>
+      <div class="decision-bars" aria-label="Receiver outcome shares">
+        ${outcomes.map(([label, value]) => `
+          <div class="decision-bar">
+            <span>${escapeHtml(label)}</span>
+            <div><i style="width:${Math.max(0, Math.min(100, Number(value) || 0))}%"></i></div>
+            <b>${escapeHtml(formatValue(value))}%</b>
+          </div>
+        `).join('')}
+      </div>
+    `;
   }
 
   function renderDetails() {
@@ -504,6 +549,15 @@
     return 'Use the axes and legend to compare each modeled series under the current live assumptions.';
   }
 
+  function chartTextSummary(chart) {
+    const values = chartPointValues(chart);
+    const series = (chart.series || []).map((item) => item.name).join(', ');
+    if (!values.length) return `Series: ${series || 'none'}. No numeric values are available.`;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return `Series: ${series}. Value range: ${formatValue(min)} to ${formatValue(max)} ${axisUnit(chart.yLabel) || axisName(chart.yLabel)}.`;
+  }
+
   function renderChartSet(charts, targetId, knownTarget) {
     const target = knownTarget || document.getElementById(targetId);
     if (!target) return;
@@ -521,6 +575,10 @@
         ${badges.length ? `<div class="chart-badges">${badges.map((badge) => `<span>${escapeHtml(badge.message)}</span>`).join('')}</div>` : ''}
         <div class="chart-frame" id="${chart.id}"></div>
         <p class="chart-explainer">${escapeHtml(chartHint(chart))}</p>
+        <details class="chart-data-summary">
+          <summary>Text summary</summary>
+          <p>${escapeHtml(chartTextSummary(chart))}</p>
+        </details>
         ${chart.formulaNote ? `<p class="formula-note">${escapeHtml(chart.formulaNote)}</p>` : ''}
         <div class="legend">${chart.series.map((series, index) => `
           <span class="legend-item"><span class="legend-swatch" style="background:${colors[index % colors.length]}"></span>${escapeHtml(series.name)}</span>
@@ -787,15 +845,19 @@
     tooltip.hidden = true;
   }
 
-  function renderAll() {
+  function renderLiveSections() {
     renderOverview();
     renderDetails();
     renderCharts('Surface and motion', 'surface-charts');
     renderCharts('Subsurface model', 'subsurface-charts');
     renderCharts('False-layer response', 'false-layer-charts');
     renderCharts('Doppler depth correction', 'doppler-charts');
-    renderV30();
     renderAudit();
+  }
+
+  function renderAll() {
+    renderLiveSections();
+    renderV30();
   }
 
   initTabs();
