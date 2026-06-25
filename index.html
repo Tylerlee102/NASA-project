@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Europa Radar v19 Results</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="data/v19-results.js"></script>
+    <script defer src="data/v30-results.js"></script>
+    <script defer src="model.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <div>
+          <p class="eyebrow">NASA project workbook v19</p>
+          <h1>Europa Radar Results</h1>
+          <p class="lead">Parabolic flyby geometry, generated topography, subsurface layers, and Doppler correction.</p>
+        </div>
+        <a class="download-link" href="assets/v19.xlsx" download>Download source workbook</a>
+      </div>
+      <nav class="tabs" aria-label="Result sections">
+        <button class="tab is-active" type="button" data-target="overview">Overview</button>
+        <button class="tab" type="button" data-target="surface">Surface + Motion</button>
+        <button class="tab" type="button" data-target="subsurface">Subsurface</button>
+        <button class="tab" type="button" data-target="doppler">Doppler</button>
+        <button class="tab" type="button" data-target="v30">Latest v30</button>
+        <button class="tab" type="button" data-target="audit">Inputs + Audit</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="overview" class="page-section is-active">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Model snapshot</p>
+            <h2>Key v19 outputs</h2>
+          </div>
+          <p class="source-note" id="source-note"></p>
+        </div>
+        <section class="panel live-panel">
+          <div class="live-panel-heading">
+            <div>
+              <h3>Live Model Controls</h3>
+              <p class="body-copy">These controls run the v19 formulas in the browser and redraw the graphs immediately.</p>
+            </div>
+            <button class="reset-button" type="button" id="reset-live-model">Reset v19 defaults</button>
+          </div>
+          <div id="live-controls" class="control-grid"></div>
+        </section>
+        <div id="metric-grid" class="metric-grid"></div>
+        <div class="split-layout">
+          <section class="panel">
+            <h3>PRF Choices</h3>
+            <div id="prf-table"></div>
+          </section>
+          <section class="panel">
+            <h3>Interpretation Boundary</h3>
+            <p class="body-copy" id="caveat"></p>
+            <div id="realism-table"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="surface" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Geometry and topography</p>
+            <h2>Surface + motion results</h2>
+          </div>
+        </div>
+        <div id="surface-charts" class="chart-grid"></div>
+      </section>
+
+      <section id="subsurface" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Synthetic subsurface model</p>
+            <h2>Layer and detectability results</h2>
+          </div>
+        </div>
+        <div id="subsurface-summary" class="table-panel"></div>
+        <div id="subsurface-charts" class="chart-grid"></div>
+      </section>
+
+      <section id="doppler" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Angle correction</p>
+            <h2>Doppler depth inversion</h2>
+          </div>
+        </div>
+        <div class="split-layout compact">
+          <section class="panel">
+            <h3>Main Result</h3>
+            <div id="doppler-table"></div>
+          </section>
+          <section class="panel">
+            <h3>Live Inputs</h3>
+            <div id="doppler-input-table"></div>
+          </section>
+        </div>
+        <div id="doppler-charts" class="chart-grid"></div>
+      </section>
+
+      <section id="v30" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Latest workbook</p>
+            <h2>v30 dynamic results and graphs</h2>
+          </div>
+          <a class="download-inline" href="assets/v30_all_dynamic_graphs.xlsx" download>Download v30 workbook</a>
+        </div>
+        <section class="panel v30-claim-panel">
+          <h3>Research Question</h3>
+          <p class="body-copy" id="v30-question"></p>
+          <h3>Best One-Line Claim</h3>
+          <p class="body-copy" id="v30-claim"></p>
+        </section>
+        <div id="v30-metric-grid" class="metric-grid"></div>
+        <div class="split-layout">
+          <section class="panel">
+            <h3>Top Risk Rows</h3>
+            <div id="v30-risk-table"></div>
+          </section>
+          <section class="panel">
+            <h3>Signal Test Assumptions</h3>
+            <div id="v30-signal-table"></div>
+          </section>
+        </div>
+        <section class="panel wide-panel">
+          <h3>Case Studies</h3>
+          <div id="v30-case-table"></div>
+        </section>
+        <div id="v30-charts" class="chart-grid v30-chart-grid"></div>
+      </section>
+
+      <section id="audit" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Workbook traceability</p>
+            <h2>Inputs and checks</h2>
+          </div>
+        </div>
+        <div class="split-layout">
+          <section class="panel">
+            <h3>Motion + Topography Inputs</h3>
+            <div id="input-table"></div>
+          </section>
+          <section class="panel">
+            <h3>Subsurface Inputs</h3>
+            <div id="sub-input-table"></div>
+          </section>
+        </div>
+        <section class="panel wide-panel">
+          <h3>Workbook Checks</h3>
+          <div id="checks-table"></div>
+        </section>
+      </section>
+    </main>
+
+    <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+  </body>
+</html>
