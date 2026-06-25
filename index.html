@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="styles.css">
     <script defer src="data/v19-results.js"></script>
     <script defer src="data/v30-results.js"></script>
-    <script defer src="model.js?v=v30-live-all"></script>
-    <script defer src="app.js?v=v30-live-all"></script>
+    <script defer src="model.js?v=false-layer-response"></script>
+    <script defer src="app.js?v=false-layer-response"></script>
   </head>
   <body>
     <header class="site-header">
@@ -32,6 +32,7 @@
         <button class="tab is-active" type="button" data-target="overview">Overview</button>
         <button class="tab" type="button" data-target="surface">Flyby Geometry</button>
         <button class="tab" type="button" data-target="subsurface">Subsurface Echoes</button>
+        <button class="tab" type="button" data-target="false-layer">False-Layer Response</button>
         <button class="tab" type="button" data-target="doppler">Doppler Correction</button>
         <button class="tab" type="button" data-target="v30">v30 Sensitivity</button>
         <button class="tab" type="button" data-target="audit">Audit</button>
@@ -136,6 +137,27 @@
         <p class="section-intro">This section treats the ice shell as a synthetic layered testbed, then shows how possible internal reflectors and attenuation change detectability margins.</p>
         <div id="subsurface-summary" class="table-panel"></div>
         <div id="subsurface-charts" class="chart-grid"></div>
+      </section>
+
+      <section id="false-layer" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Receiver decision model</p>
+            <h2>What the satellite radar does when false layers exist</h2>
+          </div>
+        </div>
+        <p class="section-intro">This model does not make the spacecraft change its flight path. It simulates the radar receiver and interpretation pipeline: multiple echoes arrive, the strongest deep return is ranked, and the result is marked as ocean likely, ambiguous, weak, or fooled by a false boundary.</p>
+        <div class="split-layout compact">
+          <section class="panel">
+            <h3>Satellite Response Summary</h3>
+            <div id="false-response-summary"></div>
+          </section>
+          <section class="panel">
+            <h3>Decision Chain</h3>
+            <div id="false-response-steps"></div>
+          </section>
+        </div>
+        <div id="false-layer-charts" class="chart-grid"></div>
       </section>
 
       <section id="doppler" class="page-section">
