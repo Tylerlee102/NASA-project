@@ -120,6 +120,8 @@
   function mean(values) { return values.reduce((a, b) => a + b, 0) / values.length; }
   function gaussian(x, mu, sigma) { return exp(-0.5 * ((x - mu) / sigma) ** 2); }
   function fract(v) { return v - Math.floor(v); }
+  function delayUsFromPathM(pathM, p) { return 2 * pathM / p.c * 1000000; }
+  function delayUsInIce(depthM, p) { return 2 * p.n * depthM / p.c * 1000000; }
 
   function topography(x, y, p) {
     if (!p.topographyOn) return 0;
@@ -154,6 +156,7 @@
     for (let i = 0; i < rowCount; i += 1) {
       const x = p.xMin + i * (p.xMax - p.xMin) / (rowCount - 1);
       const z = p.z0 + p.deltaZEdge * (x / p.xEdge) ** 2;
+      // Geometry distances are in km until converted to meters for apparent depth and delay.
       const rNadir = z;
       const rOff = slantRange(z, x, p.y, p, 0);
       const deltaR = (rOff - rNadir) * 1000;
@@ -169,9 +172,9 @@
       const topoLookAngle = deg(Math.atan(horizontal / (z - hTarget / 1000)));
       rows.push({
         x, z, rNadir, rOff, deltaR, flatDepth,
-        flatDelay: 2 * deltaR / p.c * 1000000,
+        flatDelay: delayUsFromPathM(deltaR, p),
         hNadir, hTarget, rNadirTopo, rOffTopo, deltaTopo, topoDepth,
-        topoDelay: 2 * deltaTopo / p.c * 1000000,
+        topoDelay: delayUsFromPathM(deltaTopo, p),
         lookAngle, topoLookAngle,
         vhfPhaseTopo: deg((2 * pi / p.lambdaVhf) * p.baseline * sin(rad(topoLookAngle))),
         depthChange: topoDepth - flatDepth,
@@ -227,9 +230,12 @@
     });
     const avgOceanElevation = mean(rows.map(r => r.oceanElevation));
     rows.forEach((r) => {
-      r.upperDelay = 2 * p.n * r.upperDepth / p.c * 1000000;
-      r.lensDelay = 2 * p.n * r.lensDepth / p.c * 1000000;
-      r.oceanDelay = 2 * p.n * r.oceanDepth / p.c * 1000000;
+      // Layer delays are two-way travel times through ice: 2 * n * depth_m / c.
+      r.upperDelay = delayUsInIce(r.upperDepth, p);
+      r.lensDelay = delayUsInIce(r.lensDepth, p);
+      r.oceanDelay = delayUsInIce(r.oceanDepth, p);
+      // Echo terms are relative power dB. The attenuation input is one-way dB/km,
+      // so the round-trip loss uses -2 * attenuation * depth_km.
       r.upperEcho = p.shallowEcho - 2 * p.attenuation * (r.upperDepth / 1000);
       r.lensEcho = p.lensEcho + p.lensEchoBonus * r.lensStrength - 2 * p.attenuation * (r.lensDepth / 1000);
       r.oceanEcho = p.oceanEcho - 2 * p.attenuation * (r.oceanDepth / 1000) - p.basalRoughnessPenalty * Math.abs(r.oceanElevation - avgOceanElevation);
@@ -249,21 +255,27 @@
       const s = subsurfaceRows[i];
       const radialVelocity = Math.abs(m.vhfDoppler) * p.lambdaVhf / 2;
       const dopplerAngle = deg(Math.asin(clamp(radialVelocity / (p.speed * 1000), 0, 1)));
+      const angleResidualDeg = 0.18 * sin(2 * pi * m.x / 37) + 0.05 * cos(2 * pi * m.x / 19);
+      const measuredDopplerAngle = dopplerAngle + angleResidualDeg;
       const cosTheta = cos(rad(dopplerAngle));
+      const measuredCosTheta = cos(rad(measuredDopplerAngle));
       const rawOceanSlant = s.oceanDepth / cosTheta;
       const rawLensSlant = s.lensDepth / cosTheta;
       const rawUpperSlant = s.upperDepth / cosTheta;
+      const correctedOceanDepth = rawOceanSlant * measuredCosTheta;
       return {
         x: m.x,
         dopplerAngle,
+        measuredDopplerAngle,
+        angleResidualDeg,
         geometryAngle: m.lookAngle,
         trueOceanDepth: s.oceanDepth,
         rawOceanSlant,
-        correctedOceanDepth: rawOceanSlant * cosTheta,
+        correctedOceanDepth,
         uncorrectedOceanError: rawOceanSlant - s.oceanDepth,
-        correctedOceanError: rawOceanSlant * cosTheta - s.oceanDepth,
-        correctedLensDepth: rawLensSlant * cosTheta,
-        correctedUpperDepth: rawUpperSlant * cosTheta
+        correctedOceanError: correctedOceanDepth - s.oceanDepth,
+        correctedLensDepth: rawLensSlant * measuredCosTheta,
+        correctedUpperDepth: rawUpperSlant * measuredCosTheta
       };
     });
   }
@@ -276,7 +288,8 @@
     return Number.isFinite(v) ? Number(v.toFixed(6)) : null;
   }
 
-  function chart(id, section, title, yLabel, series, note, kind) {
+  function chart(id, section, title, yLabel, series, note, kind, options) {
+    const extra = options || {};
     return {
       id,
       section,
@@ -286,6 +299,7 @@
       xLabel: 'Along-track position (km)',
       yLabel,
       kind: kind || 'line',
+      formulaNote: extra.formulaNote || '',
       series: series.map(s => ({ name: s.name, points: s.points }))
     };
   }
@@ -293,11 +307,17 @@
   function scenarioRows(p, scenario) {
     const rows = [];
     for (let i = 0; i < rowCount; i += 1) {
-      const t = -1 + i * 2 / (rowCount - 1);
-      const x = scenario.xMin + ((t + 1) / 2) * (scenario.xMax - scenario.xMin);
+      const t = i / (rowCount - 1);
+      const x = scenario.xMin + t * (scenario.xMax - scenario.xMin);
       const z = scenario.z0 + scenario.delta * (x / scenario.edge) ** 2;
       const rOff = slantRange(z, x, p.y, p, 0);
-      rows.push({ x: t, depth: (rOff - z) * 1000 / p.n, altitude: z });
+      const extraPathM = (rOff - z) * 1000;
+      rows.push({
+        x,
+        depth: extraPathM / p.n,
+        delay: delayUsFromPathM(extraPathM, p),
+        altitude: z
+      });
     }
     return rows;
   }
@@ -311,13 +331,12 @@
     ].map(s => ({ name: s.name, rows: scenarioRows(p, s) }));
 
     const charts = [
-      chart('live-surface-height', 'Surface and motion', 'Surface Height: Generated Topography Reference Floor, Target, and Nadir', 'Elevation or depth (m)', [
-        { name: 'Reference floor = generated topography', points: pts(modelRows, 'x', 'hTarget') },
+      chart('live-surface-height', 'Surface and motion', 'Surface Height: Off-Nadir Target vs Nadir Reference Terrain', 'Surface elevation (m)', [
         { name: 'Off-nadir target terrain', points: pts(modelRows, 'x', 'hTarget') },
         { name: 'Nadir terrain', points: pts(modelRows, 'x', 'hNadir') }
-      ], 'Generated terrain profiles used by the topography-adjusted radar geometry.'),
-      chart('live-scenario-depth', 'Surface and motion', 'Apparent Depth: Spacecraft Motion Distortion by Run', 'Depth / error (m)', scenarios.map(s => ({ name: s.name, points: pts(s.rows, 'x', 'depth') })), 'Recomputed apparent depth for the custom pass and paper-derived pass overlays.'),
-      chart('live-terrain-error', 'Surface and motion', 'Terrain Baseline: Total Radar Elevation Error', 'Value', [
+      ], 'Compares the side-offset target path with the nadir reference terrain used in the topography-adjusted range calculation.'),
+      chart('live-scenario-depth', 'Surface and motion', 'Apparent Depth: Spacecraft Motion Distortion by Run', 'Apparent depth (m)', scenarios.map(s => ({ name: s.name, points: pts(s.rows, 'x', 'depth') })), 'Recomputed apparent depth for the custom pass and paper-derived pass overlays.'),
+      chart('live-terrain-error', 'Surface and motion', 'Terrain Baseline: Surface-Height Equivalent Error', 'Surface-height equivalent error (m)', [
         { name: 'Total radar elevation error - custom parabolic', points: pts(modelRows, 'x', 'apparentSurfaceHeight') }
       ], 'Terrain-caused apparent elevation shift from the flat baseline.'),
       chart('live-doppler-flat-topo', 'Surface and motion', 'Doppler: Flat Geometry vs Topography', 'Doppler shift (Hz)', [
@@ -326,16 +345,11 @@
         { name: 'Flat HF Doppler (Hz)', points: pts(modelRows, 'x', 'hfDoppler') },
         { name: 'Topo HF Doppler (Hz)', points: pts(modelRows, 'x', 'hfDopplerTopo') }
       ], 'Flat and topography-adjusted Doppler shifts for VHF and HF.'),
-      chart('live-flat-delay', 'Surface and motion', 'Nadir Radar Delay by Flyby: Without Topography', 'Delay (us)', scenarios.map(s => ({ name: s.name, points: pts(s.rows, 'x', 'depth') })), 'Scenario delay proxy before generated topography is added.'),
-      chart('live-topo-delay', 'Surface and motion', 'Nadir Radar Delay by Flyby: With Generated Topography', 'Delay (us)', [
-        { name: 'Custom topo pass', points: pts(modelRows, 'x', 'topoDelay') }
-      ], 'Two-way delay after generated terrain is included.'),
-      chart('live-off-delay-flat', 'Surface and motion', 'Off-Nadir Radar Delay by Flyby: Without Topography', 'Delay (us)', [
-        { name: 'Custom flat pass', points: pts(modelRows, 'x', 'flatDelay') }
-      ], 'Two-way off-nadir delay before topography.'),
-      chart('live-off-delay-topo', 'Surface and motion', 'Off-Nadir Radar Delay by Flyby: With Generated Topography', 'Delay (us)', [
-        { name: 'Custom topo pass', points: pts(modelRows, 'x', 'topoDelay') }
-      ], 'Two-way off-nadir delay after topography.')
+      chart('live-scenario-delay', 'Surface and motion', 'Scenario Two-Way Extra Delay: Flat Surface', 'Two-way extra delay (us)', scenarios.map(s => ({ name: s.name, points: pts(s.rows, 'x', 'delay') })), 'Uses 2 * extra path / c, in microseconds, for each scenario pass.'),
+      chart('live-delay-flat-topo', 'Surface and motion', 'Custom Pass Two-Way Extra Delay: Flat vs Generated Topography', 'Two-way extra delay (us)', [
+        { name: 'Flat surface pass', points: pts(modelRows, 'x', 'flatDelay') },
+        { name: 'Topography-adjusted pass', points: pts(modelRows, 'x', 'topoDelay') }
+      ], 'Compares the flat off-nadir extra delay with the generated-terrain delay for the active v19 pass.')
     ];
 
     charts.push(
@@ -358,7 +372,7 @@
       chart('live-ocean-control', 'Subsurface model', 'Ocean Model vs No-Ocean Control', 'Relative power / margin (dB)', [
         { name: 'Ocean model margin', points: pts(subRows, 'x', 'oceanMargin') },
         { name: 'No-ocean control margin', points: pts(subRows, 'x', 'noOceanMargin') },
-        { name: 'Zero threshold', points: subRows.map(r => [round(r.x), 0]) }
+        { name: '0 dB threshold', points: subRows.map(r => [round(r.x), 0]) }
       ], 'Detectability comparison between a possible ocean reflector and a no-ocean control.'),
       chart('live-radargram', 'Subsurface model', 'Radargram-Style Return Timing With Clutter', 'Delay (us)', [
         { name: 'Surface clutter upper', points: pts(subRows, 'x', 'radargramClutter') },
@@ -369,31 +383,32 @@
       chart('live-detectability', 'Subsurface model', 'Detectability Margin vs Threshold', 'Relative power / margin (dB)', [
         { name: 'Lens echo margin', points: pts(subRows, 'x', 'lensMargin') },
         { name: 'Ocean echo margin', points: pts(subRows, 'x', 'oceanMargin') },
-        { name: 'Zero margin threshold', points: subRows.map(r => [round(r.x), 0]) }
+        { name: '0 dB threshold', points: subRows.map(r => [round(r.x), 0]) }
       ], 'Positive values clear the simple detection threshold.'),
       chart('live-materials', 'Subsurface model', 'Reflection Strength by Material / Interface', 'Relative power / margin (dB)', [
-        { name: 'Material/interface strength', points: [[1, -18], [2, -14], [3, -10], [4, -6], [5, -2]] }
+        { name: 'Material/interface strength', points: [['Cold clean ice', -18], ['Salt-rich ice', -14], ['Briny lens', -10], ['Dirty ice mix', -6], ['Ice-ocean boundary', -2]] }
       ], 'Relative assumed reflector strength by material or interface.', 'bar'),
       chart('live-evidence', 'Subsurface model', 'Cross-Instrument Evidence Score', 'Support (%)', [
-        { name: 'Evidence support score', points: [[1, p.radarSupport], [2, p.thermalSupport], [3, p.compositionSupport], [4, p.magneticSupport]] }
+        { name: 'Evidence support score', points: [['Radar', p.radarSupport], ['Thermal', p.thermalSupport], ['Composition', p.compositionSupport], ['Magnetic/plasma', p.magneticSupport]] }
       ], 'Simple support scores for radar, thermal, composition, and magnetic/plasma evidence.', 'bar')
     );
 
     charts.push(
       chart('live-doppler-angle', 'Doppler depth correction', 'Doppler-Inverted Look Angle vs Existing Geometry', 'Look angle (deg)', [
         { name: 'Doppler angle from VHF shift', points: pts(dopplerRows, 'x', 'dopplerAngle') },
+        { name: 'Angle used after residual', points: pts(dopplerRows, 'x', 'measuredDopplerAngle') },
         { name: 'Existing model geometry angle', points: pts(dopplerRows, 'x', 'geometryAngle') }
-      ], 'Doppler-derived look angle compared with the model geometry angle.'),
-      chart('live-slant-depth', 'Doppler depth correction', 'Raw Slant Depth vs Doppler-Corrected Ocean Depth', 'Depth / error (m)', [
+      ], 'Doppler-derived look angle compared with geometry. A small deterministic residual is included to avoid a perfect inversion.'),
+      chart('live-slant-depth', 'Doppler depth correction', 'Raw Slant Depth vs Doppler-Corrected Ocean Depth', 'Depth below local surface (m)', [
         { name: 'True simulated ocean depth', points: pts(dopplerRows, 'x', 'trueOceanDepth') },
         { name: 'Raw slant depth from echo delay', points: pts(dopplerRows, 'x', 'rawOceanSlant') },
-        { name: 'Doppler-corrected actual depth', points: pts(dopplerRows, 'x', 'correctedOceanDepth') }
-      ], 'Correction from slant depth to vertical depth.'),
-      chart('live-depth-error', 'Doppler depth correction', 'Depth Error Before and After Angle Correction', 'Depth / error (m)', [
+        { name: 'Doppler-corrected depth estimate', points: pts(dopplerRows, 'x', 'correctedOceanDepth') }
+      ], 'Controlled correction from slant depth to vertical depth; residual angle error keeps the result illustrative, not perfect.'),
+      chart('live-depth-error', 'Doppler depth correction', 'Depth Error Before and After Angle Correction', 'Depth error (m)', [
         { name: 'Uncorrected slant-depth error', points: pts(dopplerRows, 'x', 'uncorrectedOceanError') },
-        { name: 'Corrected depth error', points: pts(dopplerRows, 'x', 'correctedOceanError') }
-      ], 'Error drops after applying the Doppler angle correction in the controlled simulation.'),
-      chart('live-corrected-layers', 'Doppler depth correction', 'Corrected Layer Depths From Doppler Angle', 'Depth / error (m)', [
+        { name: 'Corrected depth residual', points: pts(dopplerRows, 'x', 'correctedOceanError') }
+      ], 'Error drops after applying the Doppler angle correction, but a small residual remains in the controlled simulation.'),
+      chart('live-corrected-layers', 'Doppler depth correction', 'Corrected Layer Depths From Doppler Angle', 'Depth below local surface (m)', [
         { name: 'Corrected upper-layer depth', points: pts(dopplerRows, 'x', 'correctedUpperDepth') },
         { name: 'Corrected briny lens depth', points: pts(dopplerRows, 'x', 'correctedLensDepth') },
         { name: 'Corrected ocean boundary depth', points: pts(dopplerRows, 'x', 'correctedOceanDepth') }
@@ -425,7 +440,7 @@
       spacingM: p.speed * 1000 / prf,
       unambiguousRangeKm: p.c / (2 * prf) / 1000,
       pulsesInAir: (2 * p.z0 * 1000 / p.c) * prf,
-      status: prf >= 2 * maxTopoDoppler ? 'OK for modeled topo VHF Doppler' : 'Below simple Doppler floor'
+      status: prf >= 2 * maxTopoDoppler ? 'Above simple Doppler sampling floor' : 'Below simple Doppler sampling floor'
     }));
     return {
       source: { workbook: 'v19 live JS model', workbookPath: 'assets/v19.xlsx', generatedFrom: 'browser-side v19 formulas' },
@@ -441,7 +456,7 @@
         { label: 'Min target terrain height', value: Math.min(...modelRows.map(r => r.hTarget)), unit: 'm', meaning: 'Lowest modeled terrain at the side-offset target path.' },
         { label: 'Max absolute topo depth change', value: Math.max(...modelRows.map(r => Math.abs(r.depthChange))), unit: 'm', meaning: 'Largest magnitude of topography-driven apparent-depth change.' },
         { label: 'Max topo VHF Doppler magnitude', value: maxTopoDoppler, unit: 'Hz', meaning: 'Largest VHF Doppler after topography is included.' },
-        { label: 'Simple minimum PRF with topo', value: 2 * maxTopoDoppler, unit: 'Hz', meaning: 'Twice max topo VHF Doppler, a simple no-alias floor.' }
+        { label: 'Simple minimum PRF with topo', value: 2 * maxTopoDoppler, unit: 'Hz', meaning: 'Nyquist-style floor from twice the max modeled VHF Doppler; not a complete radar PRF design rule.' }
       ],
       prf: prfs,
       subsurface: [
@@ -455,9 +470,9 @@
       realism: window.V19_RESULTS.realism,
       doppler: [
         { label: 'Mean raw slant error', value: dopplerMeanRaw, unit: 'm' },
-        { label: 'Mean corrected error', value: dopplerMeanCorrected, unit: 'm' },
+        { label: 'Mean corrected residual', value: dopplerMeanCorrected, unit: 'm' },
         { label: 'Max Doppler angle', value: maxDopplerAngle, unit: 'deg' },
-        { label: 'Depth correction status', value: dopplerMeanCorrected < 0.001 ? 'PASS' : 'CHECK', unit: '' }
+        { label: 'Depth correction status', value: dopplerMeanCorrected < 35 ? 'OK (controlled residual)' : 'REVIEW', unit: '' }
       ],
       dopplerInputs: [
         { label: 'VHF wavelength', value: p.lambdaVhf, unit: 'm' },
@@ -470,7 +485,7 @@
       checks: [
         { check: 'Live JS model loaded', status: 'OK', formula: 'Browser formulas are active.' },
         { check: 'Charts are recalculated', status: 'OK', formula: 'Changing controls rebuilds chart series.' },
-        { check: 'PRF high vs simple PRF floor', status: p.prf3 >= 2 * maxTopoDoppler ? 'OK' : 'CHECK', formula: 'PRF_3 should exceed the live topo Doppler floor.' },
+        { check: 'PRF high vs simple sampling floor', status: p.prf3 >= 2 * maxTopoDoppler ? 'OK' : 'CHECK', formula: 'PRF_3 should exceed 2 * max(abs(VHF Doppler)); this is a Nyquist-style floor only.' },
         { check: 'Subsurface layer order', status: subMid.upperDepth < subMid.lensDepth && subMid.lensDepth < subMid.oceanDepth ? 'OK' : 'CHECK', formula: 'Upper layer < lens < ocean at mid-pass.' }
       ],
       subsurfaceChecks: window.V19_RESULTS.subsurfaceChecks,
@@ -496,6 +511,9 @@
   const clutterStressTitle = 'VHF 60 MHz Shallow Clutter Stress Test';
   const materialTitle = 'Reflection Strength by Material / Interface';
   const evidenceTitle = 'Cross-Instrument Evidence Score';
+  const chartAliases = new Map([
+    ['Surface Height: Generated Topography Reference Floor, Target, and Nadir', 'Surface Height: Off-Nadir Target vs Nadir Reference Terrain']
+  ]);
 
   const liveModel = window.V19_LIVE_MODEL;
   const liveDefaults = liveModel ? liveModel.defaults : {};
@@ -558,6 +576,7 @@
   }
 
   function db(value) {
+    // Power-like ratios use 10*log10. Use 20*log10 only for amplitude ratios.
     return 10 * Math.log10(Math.max(value, 1e-12));
   }
 
@@ -566,7 +585,13 @@
   }
 
   function pulseGain(lengthUs, windowLossDb) {
+    // Sensitivity proxy for pulse-compression gain: assumes pulse length scales
+    // the time-bandwidth product relative to a 1 us reference.
     return db(Math.max(lengthUs, 0.1)) + windowLossDb;
+  }
+
+  function percentShare(value) {
+    return round(clamp(value) * 100, 3);
   }
 
   function getChart(baseData, title) {
@@ -579,7 +604,7 @@
       section: 'Latest v30',
       sourceSheet: 'Browser model',
       title,
-      note: 'Recalculated in the browser from editable inputs.',
+      note: 'Interactive browser sensitivity model; not an independent rerun of the v30 workbook.',
       xLabel,
       yLabel,
       kind,
@@ -587,13 +612,15 @@
     };
   }
 
-  function withSeries(source, fallback, series) {
+  function withSeries(source, fallback, series, meta) {
     const chart = source || fallback;
+    const overrides = meta || {};
     return {
       ...chart,
+      ...overrides,
       sourceSheet: 'Browser model',
       section: 'Latest v30',
-      note: 'Recalculated in the browser from editable v30 inputs.',
+      note: overrides.note || 'Interactive browser sensitivity model; not an independent rerun of the v30 workbook.',
       series
     };
   }
@@ -621,14 +648,15 @@
         { name: 'HF pulse gain', points: hf },
         { name: 'VHF pulse gain', points: vhf },
         { name: 'Selected pulse setting', points: selected }
-      ]
+      ],
+      { note: 'Pulse-compression sensitivity proxy: 10log10(time-bandwidth product) plus window loss, with pulse length used as the time-bandwidth proxy.' }
     );
   }
 
   function buildGeometricChart(params, source) {
     const baseSeries = source ? source.series : [];
     const rangeScale = Math.max(params.z0 || defaults.z0, 1) / Math.max(defaults.z0, 1);
-    const altitudeShift = -20 * log2(rangeScale);
+    const altitudeShift = db((1 / rangeScale) ** 4);
     const series = baseSeries.map((item, index) => ({
       name: index === 0 ? 'HF geometric power' : 'VHF topo geometric power',
       points: item.points.map((point) => replacePointY(point, point[1] + params.baseReflectivityDb + altitudeShift))
@@ -636,7 +664,8 @@
     return withSeries(
       source,
       fallbackChart('v30-live-geometric-power', titleGeometric, 'Along-track position (km)', 'dB'),
-      series
+      series,
+      { note: 'Two-way geometric spreading uses a power ratio, so the altitude sensitivity uses 10log10((R0/R)^4).' }
     );
   }
 
@@ -655,7 +684,8 @@
     return withSeries(
       source,
       fallbackChart('v30-live-coherent-gain', titleCoherent, 'Along-track position (km)', 'dB'),
-      series
+      series,
+      { note: 'Coherent gain is a simplified power-ratio sensitivity, not a full aperture synthesis model.' }
     );
   }
 
@@ -664,7 +694,8 @@
     const coherent = coherentChart.series[1] || coherentChart.series[0] || { points: [] };
     const selectedPulseGain = pulseGain(params.pulseLengthUs, params.windowLossDb) + 10;
     const frequencyResponse = params.frequencySlopeDbPerOctave * log2(60 / Math.max(params.referenceFrequencyMhz, 0.1));
-    const attenuationPenalty = -Math.max(params.attenuation || 0, 0) * 1.5;
+    const representativeDepthKm = Math.max(params.nominalIceShell || defaults.nominalIceShell || 0, 0) / 1000;
+    const attenuationPenalty = -2 * Math.max(params.attenuation || 0, 0) * representativeDepthKm;
     const constantPoints = geom.points.map((point, index) => {
       const coherentGain = coherent.points[index] ? coherent.points[index][1] : 0;
       return replacePointY(point, point[1] + coherentGain + selectedPulseGain + attenuationPenalty);
@@ -676,7 +707,8 @@
       [
         { name: 'Constant reflectivity', points: constantPoints },
         { name: 'Frequency-dependent reflectivity', points: frequencyPoints }
-      ]
+      ],
+      { note: 'Combines geometric power, simplified coherent gain, pulse gain, two-way attenuation loss through the nominal ice-shell depth, and a frequency-response sensitivity term.' }
     );
   }
 
@@ -727,15 +759,16 @@
       const ambiguity = clamp(0.08 + stress.dirty * 0.72 + stress.clutter * 0.44 - stress.signal * 0.22);
       const score = clamp(1 - ambiguity + stress.signal * 0.18, 0, 1) * 100;
       confidence.push([label, round(score, 3)]);
-      ambiguous.push([label, round(ambiguity, 4)]);
+      ambiguous.push([label, percentShare(ambiguity)]);
     });
     return withSeries(
       source,
-      fallbackChart('v30-live-confidence', confidenceTitle, 'Scenario', 'Score / percent', 'bar'),
+      fallbackChart('v30-live-confidence', confidenceTitle, 'Scenario', 'Percent / score (0-100)', 'bar'),
       [
         { name: 'Median confidence', points: confidence },
         { name: 'Ambiguous/false %', points: ambiguous }
-      ]
+      ],
+      { yLabel: 'Percent / score (0-100)', note: 'Confidence is a 0-100 score; ambiguous/false values are converted from share to percent.' }
     );
   }
 
@@ -757,18 +790,19 @@
       const falseShare = clamp(stress.dirty * 0.55 + stress.clutter * 0.15 - stress.signal * 0.12);
       const weakShare = clamp(0.05 + stress.dirty * 0.25 + Math.max((params.attenuation || 0.9) - 0.9, 0) * 0.18 - stress.signal * 0.08);
       const clearShare = clamp(1 - falseShare - weakShare);
-      clear.push([label, round(clearShare, 4)]);
-      falseRisk.push([label, round(falseShare, 4)]);
-      weak.push([label, round(clamp(1 - clearShare - falseShare), 4)]);
+      clear.push([label, percentShare(clearShare)]);
+      falseRisk.push([label, percentShare(falseShare)]);
+      weak.push([label, percentShare(clamp(1 - clearShare - falseShare))]);
     });
     return withSeries(
       source,
-      fallbackChart('v30-live-workbook-depth', workbookDepthTitle, 'Scenario', 'Score / percent', 'bar'),
+      fallbackChart('v30-live-workbook-depth', workbookDepthTitle, 'Scenario', 'Percent (0-100)', 'bar'),
       [
         { name: 'Clear ocean', points: clear },
         { name: 'Deep false risk', points: falseRisk },
         { name: 'Weak/no deep', points: weak }
-      ]
+      ],
+      { yLabel: 'Percent (0-100)', note: 'Outcome shares are shown as percent to avoid mixing 0-1 shares with 0-100 scores.' }
     );
   }
 
@@ -784,20 +818,21 @@
       const internalFeature = clamp(stress.dirty * 0.55 + stress.signal * 0.06);
       const weakDetection = clamp(0.08 + Math.max((params.attenuation || 0.9) - 0.9, 0) * 0.22 - stress.signal * 0.1);
       const outsideWindow = clamp(1 - surfaceClutter - internalFeature - weakDetection);
-      surface.push([label, round(surfaceClutter, 4)]);
-      internal.push([label, round(internalFeature, 4)]);
-      outside.push([label, round(outsideWindow, 4)]);
-      weak.push([label, round(weakDetection, 4)]);
+      surface.push([label, percentShare(surfaceClutter)]);
+      internal.push([label, percentShare(internalFeature)]);
+      outside.push([label, percentShare(outsideWindow)]);
+      weak.push([label, percentShare(weakDetection)]);
     });
     return withSeries(
       source,
-      fallbackChart('v30-live-clutter-stress', clutterStressTitle, 'Scenario', 'Score / percent', 'bar'),
+      fallbackChart('v30-live-clutter-stress', clutterStressTitle, 'Scenario', 'Percent (0-100)', 'bar'),
       [
         { name: 'Surface clutter', points: surface },
         { name: 'Internal feature', points: internal },
         { name: 'Outside shallow window', points: outside },
         { name: 'Weak/no detection', points: weak }
-      ]
+      ],
+      { yLabel: 'Percent (0-100)', note: 'All clutter-stress shares are converted to percent for consistent chart scale.' }
     );
   }
 
@@ -806,16 +841,17 @@
     const clutterPenalty = params.surfaceClutterLevel * 4;
     const signalBoost = pulseGain(params.pulseLengthUs, params.windowLossDb) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb);
     const points = [
-      [1, round(-18 - dirtyPenalty * 0.2 + signalBoost * 0.15)],
-      [2, round(-14 - dirtyPenalty * 0.45 + signalBoost * 0.12)],
-      [3, round(-10 - dirtyPenalty * 0.7 - clutterPenalty * 0.2 + signalBoost * 0.1)],
-      [4, round(-6 - dirtyPenalty * 0.95 - clutterPenalty * 0.35 + signalBoost * 0.08)],
-      [5, round(-2 - dirtyPenalty * 1.15 - clutterPenalty * 0.5 + signalBoost * 0.05)]
+      ['Cold clean ice', round(-18 - dirtyPenalty * 0.2 + signalBoost * 0.15)],
+      ['Salt-rich ice', round(-14 - dirtyPenalty * 0.45 + signalBoost * 0.12)],
+      ['Briny lens', round(-10 - dirtyPenalty * 0.7 - clutterPenalty * 0.2 + signalBoost * 0.1)],
+      ['Dirty ice mix', round(-6 - dirtyPenalty * 0.95 - clutterPenalty * 0.35 + signalBoost * 0.08)],
+      ['Ice-ocean boundary', round(-2 - dirtyPenalty * 1.15 - clutterPenalty * 0.5 + signalBoost * 0.05)]
     ];
     return withSeries(
       source,
       fallbackChart('v30-live-materials', materialTitle, 'Material / interface', 'Relative power / margin (dB)', 'bar'),
-      [{ name: 'Material/interface strength', points }]
+      [{ name: 'Material/interface strength', points }],
+      { kind: 'bar', xLabel: 'Material / interface', yLabel: 'Relative power / margin (dB)' }
     );
   }
 
@@ -831,32 +867,45 @@
       [{
         name: 'Evidence support score',
         points: [
-          [1, round(radar, 3)],
-          [2, round(thermal, 3)],
-          [3, round(composition, 3)],
-          [4, round(magnetic, 3)]
+          ['Radar', round(radar, 3)],
+          ['Thermal', round(thermal, 3)],
+          ['Composition', round(composition, 3)],
+          ['Magnetic/plasma', round(magnetic, 3)]
         ]
-      }]
+      }],
+      { kind: 'bar', xLabel: 'Instrument', yLabel: 'Support (%)' }
     );
   }
 
   function liveChartForTitle(title, liveData) {
     if (!liveData || !liveData.charts) return null;
-    return liveData.charts.find((chart) => chart.title === title) || null;
+    const lookupTitle = chartAliases.get(title) || title;
+    return liveData.charts.find((chart) => chart.title === lookupTitle) || null;
   }
 
   function adaptLiveChart(baseChart, liveChart) {
     if (!liveChart) return null;
     return {
       ...baseChart,
+      title: liveChart.title,
       sourceSheet: 'Browser model',
       section: 'Latest v30',
       kind: liveChart.kind,
       xLabel: liveChart.xLabel,
       yLabel: liveChart.yLabel,
-      note: 'Recalculated in the browser from editable v30 geometry and subsurface inputs.',
+      note: 'Interactive browser sensitivity model; not an independent rerun of the v30 workbook.',
       series: liveChart.series
     };
+  }
+
+  function dedupeCharts(charts) {
+    const seenTitles = new Set();
+    return charts.filter((chart) => {
+      const key = chart.title || chart.id;
+      if (seenTitles.has(key)) return false;
+      seenTitles.add(key);
+      return true;
+    });
   }
 
   function compute(params, baseData) {
@@ -869,20 +918,21 @@
     const geometricChart = buildGeometricChart(p, getChart(base, titleGeometric));
     const coherentChart = buildCoherentChart(p, getChart(base, titleCoherent));
     const totalVhfChart = buildTotalVhfChart(p, getChart(base, titleTotalVhf), geometricChart, coherentChart);
+    const charts = base.charts.map((chart) => {
+      if (chart.title === titlePulse) return pulseChart;
+      if (chart.title === titleGeometric) return geometricChart;
+      if (chart.title === titleCoherent) return coherentChart;
+      if (chart.title === titleTotalVhf) return totalVhfChart;
+      if (chart.title === confidenceTitle) return buildConfidenceChart(p, chart);
+      if (chart.title === workbookDepthTitle) return buildWorkbookDepthChart(p, chart);
+      if (chart.title === clutterStressTitle) return buildClutterStressChart(p, chart);
+      if (chart.title === materialTitle) return buildMaterialChart(p, chart);
+      if (chart.title === evidenceTitle) return buildEvidenceChart(p, chart);
+      return adaptLiveChart(chart, liveChartForTitle(chart.title, liveData)) || chart;
+    });
     return {
       ...base,
-      charts: base.charts.map((chart) => {
-        if (chart.title === titlePulse) return pulseChart;
-        if (chart.title === titleGeometric) return geometricChart;
-        if (chart.title === titleCoherent) return coherentChart;
-        if (chart.title === titleTotalVhf) return totalVhfChart;
-        if (chart.title === confidenceTitle) return buildConfidenceChart(p, chart);
-        if (chart.title === workbookDepthTitle) return buildWorkbookDepthChart(p, chart);
-        if (chart.title === clutterStressTitle) return buildClutterStressChart(p, chart);
-        if (chart.title === materialTitle) return buildMaterialChart(p, chart);
-        if (chart.title === evidenceTitle) return buildEvidenceChart(p, chart);
-        return adaptLiveChart(chart, liveChartForTitle(chart.title, liveData)) || chart;
-      })
+      charts: dedupeCharts(charts)
     };
   }
 
