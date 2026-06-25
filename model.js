@@ -93,7 +93,12 @@
     compositionWeight: 20,
     magneticWeight: 20,
     radargramJitter: 1.5,
-    surfaceClutterBand: 12
+    surfaceClutterBand: 12,
+    falseLayerEnabled: true,
+    falseLayerCount: 3,
+    falseLayerDepthFraction: 0.68,
+    falseLayerStrength: -16,
+    receiverAmbiguityDb: 3
   };
 
   const controls = [
@@ -108,7 +113,12 @@
     { key: 'lensMeanDepth', label: 'Lens mean depth', unit: 'm', min: 1000, max: 10000, step: 100 },
     { key: 'attenuation', label: 'Ice attenuation', unit: 'dB/km', min: 0.1, max: 3, step: 0.1 },
     { key: 'detectionThreshold', label: 'Detection threshold', unit: 'dB', min: -80, max: -10, step: 1 },
-    { key: 'boundaryUncertainty', label: 'Boundary uncertainty', unit: 'm', min: 0, max: 5000, step: 100 }
+    { key: 'boundaryUncertainty', label: 'Boundary uncertainty', unit: 'm', min: 0, max: 5000, step: 100 },
+    { key: 'falseLayerEnabled', label: 'False layers enabled', type: 'checkbox' },
+    { key: 'falseLayerCount', label: 'False layer count', min: 0, max: 8, step: 1 },
+    { key: 'falseLayerDepthFraction', label: 'False layer depth', unit: 'of shell', min: 0.35, max: 0.9, step: 0.01 },
+    { key: 'falseLayerStrength', label: 'False layer strength', unit: 'dB', min: -30, max: 0, step: 1 },
+    { key: 'receiverAmbiguityDb', label: 'Ambiguity window', unit: 'dB', min: 1, max: 8, step: 0.5 }
   ];
 
   function exp(v) { return Math.exp(v); }
@@ -280,6 +290,84 @@
     });
   }
 
+  function computeFalseLayerResponse(subRows, p) {
+    const enabled = Boolean(p.falseLayerEnabled) && p.falseLayerCount > 0;
+    const layerCount = enabled ? Math.max(1, p.falseLayerCount) : 0;
+    const stackGain = enabled ? 2.2 * Math.log2(layerCount + 1) : 0;
+    return subRows.map((r) => {
+      const depthRipple = 0.04 * sin(2 * pi * r.x / 52) + 0.025 * cos(2 * pi * r.x / 21);
+      const fraction = clamp(p.falseLayerDepthFraction + depthRipple, 0.22, 0.94);
+      const rawFalseDepth = r.oceanDepth * fraction;
+      const falseDepth = clamp(rawFalseDepth, r.lensDepth + 350, r.oceanDepth - 450);
+      const falseDelay = delayUsInIce(falseDepth, p);
+      const interference = enabled ? 1.6 * sin(2 * pi * r.x / 34) + 0.7 * cos(2 * pi * r.x / 21) : 0;
+      const falseEcho = enabled
+        ? p.falseLayerStrength + stackGain + interference - 2 * p.attenuation * (falseDepth / 1000)
+        : -999;
+      const falseMargin = falseEcho - p.detectionThreshold;
+      const oceanMargin = r.oceanMargin;
+      const falseMinusOcean = falseEcho - r.oceanEcho;
+      const surfaceClutterMargin = p.shallowEcho + p.surfaceClutterBand * 0.28 + 2 * sin(2 * pi * r.x / 28) - p.detectionThreshold;
+      const oceanDetected = oceanMargin >= 0;
+      const falseDetected = falseMargin >= 0;
+      let decision = 'Weak / no deep lock';
+      let selectedDepth = null;
+      let selectedDelay = null;
+      let decisionCode = 0;
+      let confidence = 18;
+      let reaction = 'Keep collecting echoes; no confident deep boundary is selected.';
+
+      if (falseDetected && falseMinusOcean > p.receiverAmbiguityDb) {
+        decision = oceanDetected ? 'False boundary selected' : 'False layer only visible';
+        selectedDepth = falseDepth;
+        selectedDelay = falseDelay;
+        decisionCode = 3;
+        confidence = clamp(58 + falseMinusOcean * 2.1 + falseMargin * 0.25 - (oceanDetected ? 0 : 12), 0, 100);
+        reaction = 'The strongest deep return points to the false layer; processing should flag it for frequency and continuity checks.';
+      } else if (falseDetected && oceanDetected && Math.abs(falseMinusOcean) <= p.receiverAmbiguityDb) {
+        decision = 'Ambiguous double return';
+        selectedDepth = (falseDepth + r.oceanDepth) / 2;
+        selectedDelay = (falseDelay + r.oceanDelay) / 2;
+        decisionCode = 2;
+        confidence = clamp(48 - Math.abs(falseMinusOcean) * 5 + Math.min(falseMargin, oceanMargin) * 0.2, 0, 100);
+        reaction = 'Two deep echoes are too close in strength; the result should be labeled ambiguous rather than trusted as ocean.';
+      } else if (oceanDetected) {
+        decision = 'Ocean boundary likely';
+        selectedDepth = r.oceanDepth;
+        selectedDelay = r.oceanDelay;
+        decisionCode = 1;
+        confidence = clamp(70 + (-falseMinusOcean) * 1.7 + oceanMargin * 0.35, 0, 100);
+        reaction = 'The ocean echo remains the strongest deep return; the receiver can keep the ice-ocean boundary interpretation.';
+      } else if (falseDetected) {
+        decision = 'False layer only visible';
+        selectedDepth = falseDepth;
+        selectedDelay = falseDelay;
+        decisionCode = 3;
+        confidence = clamp(44 + falseMargin * 0.45, 0, 100);
+        reaction = 'Only the false layer clears threshold; an automatic strongest-echo read would report the wrong depth.';
+      }
+
+      return {
+        x: r.x,
+        oceanDepth: r.oceanDepth,
+        falseDepth,
+        selectedDepth,
+        depthError: selectedDepth == null ? null : selectedDepth - r.oceanDepth,
+        oceanDelay: r.oceanDelay,
+        falseDelay,
+        selectedDelay,
+        oceanMargin,
+        falseMargin,
+        surfaceClutterMargin,
+        falseMinusOcean,
+        decision,
+        decisionCode,
+        confidence,
+        reaction
+      };
+    });
+  }
+
   function pts(rows, xKey, yKey) {
     return rows.map(r => [round(r[xKey]), r[yKey] == null ? null : round(r[yKey])]);
   }
@@ -296,7 +384,7 @@
       sourceSheet: 'Live JS model',
       title,
       note: note || '',
-      xLabel: 'Along-track position (km)',
+      xLabel: extra.xLabel || 'Along-track position (km)',
       yLabel,
       kind: kind || 'line',
       formulaNote: extra.formulaNote || '',
@@ -322,7 +410,7 @@
     return rows;
   }
 
-  function buildCharts(modelRows, subRows, dopplerRows, p) {
+  function buildCharts(modelRows, subRows, dopplerRows, falseRows, p) {
     const scenarios = [
       { name: 'Custom 400 km / 120 km pass', z0: p.z0, xMin: p.xMin, xMax: p.xMax, edge: p.xEdge, delta: p.deltaZEdge },
       { name: 'Paper low-altitude 35 km / 800 km pass', z0: 35, xMin: -400, xMax: 400, edge: 400, delta: 365 },
@@ -393,6 +481,42 @@
       ], 'Simple support scores for radar, thermal, composition, and magnetic/plasma evidence.', 'bar')
     );
 
+    const decisionCounts = [
+      ['Ocean likely', falseRows.filter(r => r.decision === 'Ocean boundary likely').length],
+      ['Ambiguous', falseRows.filter(r => r.decision === 'Ambiguous double return').length],
+      ['False picked', falseRows.filter(r => r.decision === 'False boundary selected' || r.decision === 'False layer only visible').length],
+      ['Weak/no lock', falseRows.filter(r => r.decision === 'Weak / no deep lock').length]
+    ].map(([label, count]) => [label, round(100 * count / falseRows.length)]);
+
+    charts.push(
+      chart('live-false-echo-race', 'False-layer response', 'False Layer Echo Race: Receiver Signal Margins', 'Margin above threshold (dB)', [
+        { name: 'Surface clutter margin', points: pts(falseRows, 'x', 'surfaceClutterMargin') },
+        { name: 'False layer margin', points: pts(falseRows, 'x', 'falseMargin') },
+        { name: 'Ocean boundary margin', points: pts(falseRows, 'x', 'oceanMargin') },
+        { name: '0 dB threshold', points: falseRows.map(r => [round(r.x), 0]) }
+      ], 'Shows which echo rises above the receiver threshold and which one is stronger.'),
+      chart('live-false-picked-depth', 'False-layer response', 'Picked Boundary Depth vs True Ocean Depth', 'Depth below local surface (m)', [
+        { name: 'True ocean boundary', points: pts(falseRows, 'x', 'oceanDepth') },
+        { name: 'False layer depth', points: pts(falseRows, 'x', 'falseDepth') },
+        { name: 'Receiver selected boundary', points: pts(falseRows, 'x', 'selectedDepth') }
+      ], 'If the selected boundary follows the false layer instead of the ocean, the interpretation is being fooled.'),
+      chart('live-false-delay', 'False-layer response', 'Return Timing: False Layer Arrives Before Ocean', 'Two-way delay in ice (us)', [
+        { name: 'False layer return', points: pts(falseRows, 'x', 'falseDelay') },
+        { name: 'Ocean boundary return', points: pts(falseRows, 'x', 'oceanDelay') },
+        { name: 'Receiver selected return', points: pts(falseRows, 'x', 'selectedDelay') }
+      ], 'A false layer is shallower, so its echo arrives earlier than the true ocean-boundary echo.'),
+      chart('live-false-depth-error', 'False-layer response', 'Depth Error If the Receiver Picks the Wrong Layer', 'Depth error (m)', [
+        { name: 'Selected minus true ocean', points: pts(falseRows, 'x', 'depthError') },
+        { name: 'No error line', points: falseRows.map(r => [round(r.x), 0]) }
+      ], 'Negative error means the radar interpretation is too shallow because it locked onto an internal layer.'),
+      chart('live-false-decision-code', 'False-layer response', 'Satellite Receiver Decision Along Track', 'Decision code', [
+        { name: '0 weak, 1 ocean, 2 ambiguous, 3 false', points: pts(falseRows, 'x', 'decisionCode') }
+      ], 'Decision code summarizes how the simplified receiver classifies each along-track point.'),
+      chart('live-false-decision-share', 'False-layer response', 'Receiver Outcome Share for This Flyby', 'Percent of along-track samples', [
+        { name: 'Share of samples', points: decisionCounts }
+      ], 'Converts the along-track receiver decisions into percent shares for the active false-layer setting.', 'bar', { xLabel: 'Receiver outcome' })
+    );
+
     charts.push(
       chart('live-doppler-angle', 'Doppler depth correction', 'Doppler-Inverted Look Angle vs Existing Geometry', 'Look angle (deg)', [
         { name: 'Doppler angle from VHF shift', points: pts(dopplerRows, 'x', 'dopplerAngle') },
@@ -422,13 +546,23 @@
     const modelRows = computeModelRows(p);
     const subRows = computeSubsurface(modelRows, p);
     const dopplerRows = computeDoppler(modelRows, subRows, p);
+    const falseRows = computeFalseLayerResponse(subRows, p);
     const mid = modelRows[Math.floor(modelRows.length / 2)];
     const subMid = subRows[Math.floor(subRows.length / 2)];
+    const falseMid = falseRows[Math.floor(falseRows.length / 2)];
     const maxTopoDoppler = Math.max(...modelRows.map(r => Math.abs(r.vhfDopplerTopo)));
     const avgBottom = mean(subRows.map(r => r.oceanDepth));
     const bestOcean = Math.max(...subRows.map(r => r.oceanMargin));
     const bestLens = Math.max(...subRows.map(r => r.lensMargin));
     const visibleOcean = subRows.filter(r => r.oceanMargin >= 0).length;
+    const clearOceanCount = falseRows.filter(r => r.decision === 'Ocean boundary likely').length;
+    const ambiguousCount = falseRows.filter(r => r.decision === 'Ambiguous double return').length;
+    const falsePickedCount = falseRows.filter(r => r.decision === 'False boundary selected' || r.decision === 'False layer only visible').length;
+    const weakCount = falseRows.filter(r => r.decision === 'Weak / no deep lock').length;
+    const pct = (count) => 100 * count / falseRows.length;
+    const depthErrors = falseRows.map(r => r.depthError).filter(Number.isFinite);
+    const worstDepthError = depthErrors.length ? Math.max(...depthErrors.map(v => Math.abs(v))) : 0;
+    const midDepthError = Number.isFinite(falseMid.depthError) ? falseMid.depthError : '';
     const evidenceWeight = p.radarWeight + p.thermalWeight + p.compositionWeight + p.magneticWeight;
     const evidence = (p.radarSupport * p.radarWeight + p.thermalSupport * p.thermalWeight + p.compositionSupport * p.compositionWeight + p.magneticSupport * p.magneticWeight) / evidenceWeight;
     const dopplerMeanRaw = mean(dopplerRows.map(r => r.uncorrectedOceanError));
@@ -467,6 +601,24 @@
         { label: 'Likely visible ocean samples', value: visibleOcean, unit: 'count', meaning: 'Pass samples clearing the detection threshold.' },
         { label: 'Total evidence support', value: evidence, unit: '%', meaning: 'Radar + thermal + composition + magnetic/plasma support.' }
       ],
+      falseResponse: [
+        { label: 'Mid-pass receiver decision', value: falseMid.decision, unit: '', meaning: falseMid.reaction },
+        { label: 'Mid-pass receiver confidence', value: falseMid.confidence, unit: '%', meaning: 'Confidence assigned by the simplified receiver rule after comparing false and ocean echoes.' },
+        { label: 'Mid-pass false minus ocean', value: falseMid.falseMinusOcean, unit: 'dB', meaning: 'Positive means the false layer is brighter than the ocean return.' },
+        { label: 'Mid-pass picked-depth error', value: midDepthError, unit: 'm', meaning: 'Selected boundary depth minus true ocean depth at mid-pass.' },
+        { label: 'Ocean-boundary likely', value: pct(clearOceanCount), unit: '%', meaning: 'Share of samples where the ocean echo remains the best deep return.' },
+        { label: 'Ambiguous double return', value: pct(ambiguousCount), unit: '%', meaning: 'Share where the false layer and ocean are too close in strength.' },
+        { label: 'False-boundary selected', value: pct(falsePickedCount), unit: '%', meaning: 'Share where a simple strongest-deep-echo rule would pick the false layer.' },
+        { label: 'Weak / no deep lock', value: pct(weakCount), unit: '%', meaning: 'Share where neither deep return is strong enough for a confident boundary.' },
+        { label: 'Worst fooled-depth error', value: worstDepthError, unit: 'm', meaning: 'Largest absolute depth error if the selected return is treated as the ocean boundary.' }
+      ],
+      falseSteps: [
+        { step: '1. Pulse enters ice', satelliteResponse: 'Record all returned echoes', result: 'Surface clutter arrives first, then internal layers, then possible ocean boundary.' },
+        { step: '2. Threshold check', satelliteResponse: 'Drop weak returns', result: 'Echoes below the detection threshold are not trusted as boundaries.' },
+        { step: '3. Deep echo ranking', satelliteResponse: 'Compare false layer vs ocean return', result: 'The model compares false-minus-ocean dB for every along-track sample.' },
+        { step: '4. Ambiguity rule', satelliteResponse: 'Flag close returns', result: `If returns are within ${formatDb(p.receiverAmbiguityDb)}, the model labels the point ambiguous.` },
+        { step: '5. Boundary pick', satelliteResponse: 'Choose or withhold interpretation', result: 'Ocean likely, false selected, ambiguous, or weak/no deep lock.' }
+      ],
       realism: window.V19_RESULTS.realism,
       doppler: [
         { label: 'Mean raw slant error', value: dopplerMeanRaw, unit: 'm' },
@@ -490,8 +642,12 @@
       ],
       subsurfaceChecks: window.V19_RESULTS.subsurfaceChecks,
       audit: window.V19_RESULTS.audit,
-      charts: buildCharts(modelRows, subRows, dopplerRows, p)
+      charts: buildCharts(modelRows, subRows, dopplerRows, falseRows, p)
     };
+  }
+
+  function formatDb(value) {
+    return `${round(value)} dB`;
   }
 
   window.V19_LIVE_MODEL = {
