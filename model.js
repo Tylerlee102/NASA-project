@@ -437,7 +437,7 @@
       chart('live-delay-flat-topo', 'Surface and motion', 'Custom Pass Two-Way Extra Delay: Flat vs Generated Topography', 'Two-way extra delay (us)', [
         { name: 'Flat surface pass', points: pts(modelRows, 'x', 'flatDelay') },
         { name: 'Topography-adjusted pass', points: pts(modelRows, 'x', 'topoDelay') }
-      ], 'Compares the flat off-nadir extra delay with the generated-terrain delay for the active v19 pass.')
+      ], 'Compares the flat off-nadir extra delay with the generated-terrain delay for the active baseline pass.')
     ];
 
     charts.push(
@@ -577,7 +577,7 @@
       status: prf >= 2 * maxTopoDoppler ? 'Above simple Doppler sampling floor' : 'Below simple Doppler sampling floor'
     }));
     return {
-      source: { workbook: 'v19 live JS model', workbookPath: 'assets/v19.xlsx', generatedFrom: 'browser-side v19 formulas' },
+      source: { workbook: 'Baseline live sensitivity model', workbookPath: 'assets/v19.xlsx', generatedFrom: 'browser-side baseline formulas' },
       overview: window.V19_RESULTS.overview,
       summary: [
         { label: 'Topography toggle', value: p.topographyOn ? 'Topography ON' : 'Topography OFF', unit: '', meaning: 'Live browser toggle for terrain terms.' },
@@ -757,10 +757,10 @@
   function fallbackChart(id, title, xLabel, yLabel, kind = 'line') {
     return {
       id,
-      section: 'Latest v30',
+      section: 'Advanced sensitivity',
       sourceSheet: 'Browser model',
       title,
-      note: 'Interactive browser sensitivity model; not an independent rerun of the v30 workbook.',
+      note: 'Interactive browser sensitivity model; not an independent mission processor or full workbook rerun.',
       xLabel,
       yLabel,
       kind,
@@ -775,8 +775,8 @@
       ...chart,
       ...overrides,
       sourceSheet: 'Browser model',
-      section: 'Latest v30',
-      note: overrides.note || 'Interactive browser sensitivity model; not an independent rerun of the v30 workbook.',
+      section: 'Advanced sensitivity',
+      note: overrides.note || 'Interactive browser sensitivity model; not an independent mission processor or full workbook rerun.',
       series
     };
   }
@@ -1045,11 +1045,11 @@
       ...baseChart,
       title: liveChart.title,
       sourceSheet: 'Browser model',
-      section: 'Latest v30',
+      section: 'Advanced sensitivity',
       kind: liveChart.kind,
       xLabel: liveChart.xLabel,
       yLabel: liveChart.yLabel,
-      note: 'Interactive browser sensitivity model; not an independent rerun of the v30 workbook.',
+      note: 'Interactive browser sensitivity model; not an independent mission processor or full workbook rerun.',
       series: liveChart.series
     };
   }
