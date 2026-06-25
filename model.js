@@ -491,31 +491,70 @@
   const titleGeometric = 'Geometric spreading power dB';
   const titleCoherent = 'Coherent Fresnel-zone gain';
   const titleTotalVhf = 'Total VHF dB: constant vs frequency-dependent response';
+  const confidenceTitle = 'HF 9 MHz Mid-Shell Confidence vs Ambiguity';
+  const workbookDepthTitle = 'HF 9 MHz Workbook-Depth Outcomes';
+  const clutterStressTitle = 'VHF 60 MHz Shallow Clutter Stress Test';
+  const materialTitle = 'Reflection Strength by Material / Interface';
+  const evidenceTitle = 'Cross-Instrument Evidence Score';
 
-  const defaults = {
+  const liveModel = window.V19_LIVE_MODEL;
+  const liveDefaults = liveModel ? liveModel.defaults : {};
+  const liveControls = liveModel ? liveModel.controls : [];
+
+  const signalDefaults = {
     iceIndex: 1.78,
     alongTrackSpacingM: 500,
     pulseLengthUs: 20,
     windowLossDb: -1.3444034312785926,
     baseReflectivityDb: 0,
     frequencySlopeDbPerOctave: -2,
-    referenceFrequencyMhz: 9
+    referenceFrequencyMhz: 9,
+    dirtyIceLevel: 0.55,
+    surfaceClutterLevel: 0.35
   };
 
+  const defaults = {
+    ...liveDefaults,
+    ...signalDefaults,
+    n: signalDefaults.iceIndex
+  };
+
+  const geometryControlKeys = new Set([
+    'z0',
+    'y',
+    'deltaZEdge',
+    'topographyOn',
+    'terrainSeed',
+    'ridgeHeight',
+    'craterDepth',
+    'nominalIceShell',
+    'lensMeanDepth',
+    'attenuation',
+    'detectionThreshold',
+    'boundaryUncertainty'
+  ]);
+
   const controls = [
+    ...liveControls.filter((control) => geometryControlKeys.has(control.key)),
     { key: 'iceIndex', label: 'Ice refractive index', min: 1.2, max: 2.2, step: 0.01 },
     { key: 'alongTrackSpacingM', label: 'Along-track spacing', unit: 'm', min: 50, max: 1500, step: 25 },
     { key: 'pulseLengthUs', label: 'Pulse length', unit: 'us', min: 5, max: 100, step: 5 },
     { key: 'windowLossDb', label: 'Window loss', unit: 'dB', min: -6, max: 0, step: 0.1 },
     { key: 'baseReflectivityDb', label: 'Base reflectivity', unit: 'dB', min: -20, max: 10, step: 0.5 },
     { key: 'frequencySlopeDbPerOctave', label: 'Frequency slope', unit: 'dB/oct', min: -8, max: 4, step: 0.25 },
-    { key: 'referenceFrequencyMhz', label: 'Reference frequency', unit: 'MHz', min: 3, max: 30, step: 1 }
+    { key: 'referenceFrequencyMhz', label: 'Reference frequency', unit: 'MHz', min: 3, max: 30, step: 1 },
+    { key: 'dirtyIceLevel', label: 'Dirty water / impurity level', min: 0, max: 1, step: 0.05 },
+    { key: 'surfaceClutterLevel', label: 'Surface clutter strength', min: 0, max: 1, step: 0.05 }
   ];
 
   function round(value, digits = 6) {
     if (!Number.isFinite(value)) return null;
     const scale = 10 ** digits;
     return Math.round(value * scale) / scale;
+  }
+
+  function clamp(value, min = 0, max = 1) {
+    return Math.max(min, Math.min(max, value));
   }
 
   function db(value) {
@@ -534,7 +573,7 @@
     return baseData && baseData.charts ? baseData.charts.find((chart) => chart.title === title) : null;
   }
 
-  function fallbackChart(id, title, xLabel, yLabel) {
+  function fallbackChart(id, title, xLabel, yLabel, kind = 'line') {
     return {
       id,
       section: 'Latest v30',
@@ -543,7 +582,7 @@
       note: 'Recalculated in the browser from editable inputs.',
       xLabel,
       yLabel,
-      kind: 'line',
+      kind,
       series: []
     };
   }
@@ -552,7 +591,8 @@
     const chart = source || fallback;
     return {
       ...chart,
-      sourceSheet: chart.sourceSheet || 'Browser model',
+      sourceSheet: 'Browser model',
+      section: 'Latest v30',
       note: 'Recalculated in the browser from editable v30 inputs.',
       series
     };
@@ -570,21 +610,28 @@
       : [5, 10, 20, 50, 100];
     const hf = lengths.map((length) => [length, round(pulseGain(length, params.windowLossDb))]);
     const vhf = lengths.map((length) => [length, round(pulseGain(length, params.windowLossDb) + 10)]);
+    const selected = [
+      [params.pulseLengthUs, round(pulseGain(params.pulseLengthUs, params.windowLossDb))],
+      [params.pulseLengthUs, round(pulseGain(params.pulseLengthUs, params.windowLossDb) + 10)]
+    ];
     return withSeries(
       source,
       fallbackChart('v30-live-pulse-gain', titlePulse, 'Pulse length (us)', 'dB'),
       [
         { name: 'HF pulse gain', points: hf },
-        { name: 'VHF pulse gain', points: vhf }
+        { name: 'VHF pulse gain', points: vhf },
+        { name: 'Selected pulse setting', points: selected }
       ]
     );
   }
 
   function buildGeometricChart(params, source) {
     const baseSeries = source ? source.series : [];
+    const rangeScale = Math.max(params.z0 || defaults.z0, 1) / Math.max(defaults.z0, 1);
+    const altitudeShift = -20 * log2(rangeScale);
     const series = baseSeries.map((item, index) => ({
       name: index === 0 ? 'HF geometric power' : 'VHF topo geometric power',
-      points: item.points.map((point) => replacePointY(point, point[1] + params.baseReflectivityDb))
+      points: item.points.map((point) => replacePointY(point, point[1] + params.baseReflectivityDb + altitudeShift))
     }));
     return withSeries(
       source,
@@ -594,15 +641,14 @@
   }
 
   function coherentAdjustment(params) {
-    const spacingRatio = defaults.alongTrackSpacingM / Math.max(params.alongTrackSpacingM, 1);
-    const iceRatio = Math.sqrt(defaults.iceIndex / Math.max(params.iceIndex, 0.1));
+    const spacingRatio = signalDefaults.alongTrackSpacingM / Math.max(params.alongTrackSpacingM, 1);
+    const iceRatio = Math.sqrt(signalDefaults.iceIndex / Math.max(params.iceIndex, 0.1));
     return db(spacingRatio * iceRatio);
   }
 
   function buildCoherentChart(params, source) {
     const adjustment = coherentAdjustment(params);
-    const baseSeries = source ? source.series : [];
-    const series = baseSeries.map((item, index) => ({
+    const series = (source ? source.series : []).map((item, index) => ({
       name: index === 0 ? 'HF coherent gain' : 'VHF coherent gain',
       points: item.points.map((point) => replacePointY(point, point[1] + adjustment))
     }));
@@ -618,9 +664,10 @@
     const coherent = coherentChart.series[1] || coherentChart.series[0] || { points: [] };
     const selectedPulseGain = pulseGain(params.pulseLengthUs, params.windowLossDb) + 10;
     const frequencyResponse = params.frequencySlopeDbPerOctave * log2(60 / Math.max(params.referenceFrequencyMhz, 0.1));
+    const attenuationPenalty = -Math.max(params.attenuation || 0, 0) * 1.5;
     const constantPoints = geom.points.map((point, index) => {
       const coherentGain = coherent.points[index] ? coherent.points[index][1] : 0;
-      return replacePointY(point, point[1] + coherentGain + selectedPulseGain);
+      return replacePointY(point, point[1] + coherentGain + selectedPulseGain + attenuationPenalty);
     });
     const frequencyPoints = constantPoints.map((point) => replacePointY(point, point[1] + frequencyResponse));
     return withSeries(
@@ -633,23 +680,209 @@
     );
   }
 
+  function categoryLabels(source, fallback) {
+    if (!source || !source.series.length) return fallback;
+    return source.series[0].points.map((point) => point[0]);
+  }
+
+  function scenarioStress(label, params) {
+    const text = String(label).toLowerCase();
+    let dirty = params.dirtyIceLevel;
+    let clutter = params.surfaceClutterLevel;
+    if (text.includes('clean')) dirty *= 0.05;
+    if (text.includes('salt')) dirty *= 0.25;
+    if (text.includes('near-surface')) dirty *= 0.55;
+    if (text.includes('warm')) dirty *= 0.65;
+    if (text.includes('briny') || text.includes('mushy')) dirty *= 0.9;
+    if (text.includes('stacked')) dirty *= 1.15;
+    if (text.includes('complex')) dirty *= 1.25;
+    if (text.includes('rough')) clutter *= 1.3;
+    if (text.includes('clutter')) clutter *= 1.45;
+    const signalGain = (pulseGain(params.pulseLengthUs, params.windowLossDb) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb)) / 15;
+    const thresholdRelief = ((signalDefaults.detectionThreshold || -45) - (params.detectionThreshold || -45)) / 80;
+    const attenuationStress = Math.max((params.attenuation || 0.9) - 0.9, 0) / 2.5;
+    return {
+      dirty: clamp(dirty),
+      clutter: clamp(clutter),
+      signal: signalGain + thresholdRelief - attenuationStress
+    };
+  }
+
+  function buildConfidenceChart(params, source) {
+    const labels = categoryLabels(source, [
+      'Clean ice',
+      'Salt layers',
+      'Near-surface brine',
+      'Warm impure ice',
+      'Briny/mushy lens',
+      'Stacked dirty layers',
+      'Complex dirty ice',
+      'Rough surface clutter',
+      'Complex + clutter'
+    ]);
+    const confidence = [];
+    const ambiguous = [];
+    labels.forEach((label) => {
+      const stress = scenarioStress(label, params);
+      const ambiguity = clamp(0.08 + stress.dirty * 0.72 + stress.clutter * 0.44 - stress.signal * 0.22);
+      const score = clamp(1 - ambiguity + stress.signal * 0.18, 0, 1) * 100;
+      confidence.push([label, round(score, 3)]);
+      ambiguous.push([label, round(ambiguity, 4)]);
+    });
+    return withSeries(
+      source,
+      fallbackChart('v30-live-confidence', confidenceTitle, 'Scenario', 'Score / percent', 'bar'),
+      [
+        { name: 'Median confidence', points: confidence },
+        { name: 'Ambiguous/false %', points: ambiguous }
+      ]
+    );
+  }
+
+  function buildWorkbookDepthChart(params, source) {
+    const labels = categoryLabels(source, [
+      'Clean ice',
+      'Salt layers',
+      'Near-surface brine',
+      'Warm impure ice',
+      'Briny/mushy lens',
+      'Stacked dirty layers',
+      'Complex dirty ice'
+    ]);
+    const clear = [];
+    const falseRisk = [];
+    const weak = [];
+    labels.forEach((label) => {
+      const stress = scenarioStress(label, params);
+      const falseShare = clamp(stress.dirty * 0.55 + stress.clutter * 0.15 - stress.signal * 0.12);
+      const weakShare = clamp(0.05 + stress.dirty * 0.25 + Math.max((params.attenuation || 0.9) - 0.9, 0) * 0.18 - stress.signal * 0.08);
+      const clearShare = clamp(1 - falseShare - weakShare);
+      clear.push([label, round(clearShare, 4)]);
+      falseRisk.push([label, round(falseShare, 4)]);
+      weak.push([label, round(clamp(1 - clearShare - falseShare), 4)]);
+    });
+    return withSeries(
+      source,
+      fallbackChart('v30-live-workbook-depth', workbookDepthTitle, 'Scenario', 'Score / percent', 'bar'),
+      [
+        { name: 'Clear ocean', points: clear },
+        { name: 'Deep false risk', points: falseRisk },
+        { name: 'Weak/no deep', points: weak }
+      ]
+    );
+  }
+
+  function buildClutterStressChart(params, source) {
+    const labels = categoryLabels(source, ['Clean ice', 'Near-surface brine', 'Rough surface clutter', 'Complex + clutter']);
+    const surface = [];
+    const internal = [];
+    const outside = [];
+    const weak = [];
+    labels.forEach((label) => {
+      const stress = scenarioStress(label, params);
+      const surfaceClutter = clamp(stress.clutter * 0.75 + stress.dirty * 0.15);
+      const internalFeature = clamp(stress.dirty * 0.55 + stress.signal * 0.06);
+      const weakDetection = clamp(0.08 + Math.max((params.attenuation || 0.9) - 0.9, 0) * 0.22 - stress.signal * 0.1);
+      const outsideWindow = clamp(1 - surfaceClutter - internalFeature - weakDetection);
+      surface.push([label, round(surfaceClutter, 4)]);
+      internal.push([label, round(internalFeature, 4)]);
+      outside.push([label, round(outsideWindow, 4)]);
+      weak.push([label, round(weakDetection, 4)]);
+    });
+    return withSeries(
+      source,
+      fallbackChart('v30-live-clutter-stress', clutterStressTitle, 'Scenario', 'Score / percent', 'bar'),
+      [
+        { name: 'Surface clutter', points: surface },
+        { name: 'Internal feature', points: internal },
+        { name: 'Outside shallow window', points: outside },
+        { name: 'Weak/no detection', points: weak }
+      ]
+    );
+  }
+
+  function buildMaterialChart(params, source) {
+    const dirtyPenalty = params.dirtyIceLevel * 8;
+    const clutterPenalty = params.surfaceClutterLevel * 4;
+    const signalBoost = pulseGain(params.pulseLengthUs, params.windowLossDb) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb);
+    const points = [
+      [1, round(-18 - dirtyPenalty * 0.2 + signalBoost * 0.15)],
+      [2, round(-14 - dirtyPenalty * 0.45 + signalBoost * 0.12)],
+      [3, round(-10 - dirtyPenalty * 0.7 - clutterPenalty * 0.2 + signalBoost * 0.1)],
+      [4, round(-6 - dirtyPenalty * 0.95 - clutterPenalty * 0.35 + signalBoost * 0.08)],
+      [5, round(-2 - dirtyPenalty * 1.15 - clutterPenalty * 0.5 + signalBoost * 0.05)]
+    ];
+    return withSeries(
+      source,
+      fallbackChart('v30-live-materials', materialTitle, 'Material / interface', 'Relative power / margin (dB)', 'bar'),
+      [{ name: 'Material/interface strength', points }]
+    );
+  }
+
+  function buildEvidenceChart(params, source) {
+    const signalBoost = pulseGain(params.pulseLengthUs, params.windowLossDb) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb);
+    const radar = clamp((72 - params.dirtyIceLevel * 35 - params.surfaceClutterLevel * 22 + signalBoost * 1.4) / 100, 0, 1) * 100;
+    const thermal = clamp((42 + params.dirtyIceLevel * 18) / 100, 0, 1) * 100;
+    const composition = clamp((48 + params.dirtyIceLevel * 28) / 100, 0, 1) * 100;
+    const magnetic = clamp((52 - params.surfaceClutterLevel * 8) / 100, 0, 1) * 100;
+    return withSeries(
+      source,
+      fallbackChart('v30-live-evidence', evidenceTitle, 'Instrument', 'Support (%)', 'bar'),
+      [{
+        name: 'Evidence support score',
+        points: [
+          [1, round(radar, 3)],
+          [2, round(thermal, 3)],
+          [3, round(composition, 3)],
+          [4, round(magnetic, 3)]
+        ]
+      }]
+    );
+  }
+
+  function liveChartForTitle(title, liveData) {
+    if (!liveData || !liveData.charts) return null;
+    return liveData.charts.find((chart) => chart.title === title) || null;
+  }
+
+  function adaptLiveChart(baseChart, liveChart) {
+    if (!liveChart) return null;
+    return {
+      ...baseChart,
+      sourceSheet: 'Browser model',
+      section: 'Latest v30',
+      kind: liveChart.kind,
+      xLabel: liveChart.xLabel,
+      yLabel: liveChart.yLabel,
+      note: 'Recalculated in the browser from editable v30 geometry and subsurface inputs.',
+      series: liveChart.series
+    };
+  }
+
   function compute(params, baseData) {
     const base = baseData || window.V30_RESULTS;
     if (!base || !base.charts) return base;
     const p = { ...defaults, ...params };
+    p.n = p.iceIndex;
+    const liveData = liveModel ? liveModel.compute(p) : null;
     const pulseChart = buildPulseChart(p, getChart(base, titlePulse));
     const geometricChart = buildGeometricChart(p, getChart(base, titleGeometric));
     const coherentChart = buildCoherentChart(p, getChart(base, titleCoherent));
     const totalVhfChart = buildTotalVhfChart(p, getChart(base, titleTotalVhf), geometricChart, coherentChart);
-    const replacements = new Map([
-      [titlePulse, pulseChart],
-      [titleGeometric, geometricChart],
-      [titleCoherent, coherentChart],
-      [titleTotalVhf, totalVhfChart]
-    ]);
     return {
       ...base,
-      charts: base.charts.map((chart) => replacements.get(chart.title) || chart)
+      charts: base.charts.map((chart) => {
+        if (chart.title === titlePulse) return pulseChart;
+        if (chart.title === titleGeometric) return geometricChart;
+        if (chart.title === titleCoherent) return coherentChart;
+        if (chart.title === titleTotalVhf) return totalVhfChart;
+        if (chart.title === confidenceTitle) return buildConfidenceChart(p, chart);
+        if (chart.title === workbookDepthTitle) return buildWorkbookDepthChart(p, chart);
+        if (chart.title === clutterStressTitle) return buildClutterStressChart(p, chart);
+        if (chart.title === materialTitle) return buildMaterialChart(p, chart);
+        if (chart.title === evidenceTitle) return buildEvidenceChart(p, chart);
+        return adaptLiveChart(chart, liveChartForTitle(chart.title, liveData)) || chart;
+      })
     };
   }
 

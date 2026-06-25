@@ -155,6 +155,14 @@
     if (!target || !v30Model) return;
     target.innerHTML = v30Model.controls.map((control) => {
       const value = v30Params[control.key];
+      if (control.type === 'checkbox') {
+        return `
+          <label class="control control-toggle">
+            <span>${escapeHtml(control.label)}</span>
+            <input type="checkbox" data-v30-key="${control.key}" ${value ? 'checked' : ''}>
+          </label>
+        `;
+      }
       return `
         <label class="control">
           <span>${escapeHtml(control.label)}</span>
@@ -166,7 +174,7 @@
     target.querySelectorAll('[data-v30-key]').forEach((input) => {
       input.addEventListener('input', () => {
         const key = input.dataset.v30Key;
-        v30Params[key] = Number(input.value);
+        v30Params[key] = input.type === 'checkbox' ? input.checked : Number(input.value);
         const output = input.parentElement.querySelector('output');
         const def = v30Model.controls.find((item) => item.key === key);
         if (output) output.textContent = `${formatValue(v30Params[key])}${def && def.unit ? ` ${def.unit}` : ''}`;
