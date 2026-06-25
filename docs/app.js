@@ -87,6 +87,7 @@
   function controlGroup(key) {
     if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth'].includes(key)) return 'Geometry';
     if (['nominalIceShell', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel'].includes(key)) return 'Subsurface';
+    if (['falseLayerEnabled', 'falseLayerCount', 'falseLayerDepthFraction', 'falseLayerStrength', 'receiverAmbiguityDb'].includes(key)) return 'False layer';
     if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz'].includes(key)) return 'Radar signal';
     return 'Model';
   }
@@ -262,6 +263,7 @@
       'Average bottom depth',
       'Best ocean echo margin',
       'Likely visible ocean samples',
+      'False-boundary selected',
       'Mean raw slant error',
     ];
     const allRows = [...data.summary, ...data.subsurface, ...data.doppler];
@@ -298,6 +300,17 @@
       { key: 'label', label: 'Input' },
       { key: 'value', label: 'Value' },
       { key: 'unit', label: 'Unit' },
+    ]);
+    renderTable('false-response-summary', data.falseResponse, [
+      { key: 'label', label: 'Output' },
+      { key: 'value', label: 'Value' },
+      { key: 'unit', label: 'Unit' },
+      { key: 'meaning', label: 'What it means' },
+    ]);
+    renderTable('false-response-steps', data.falseSteps, [
+      { key: 'step', label: 'Step' },
+      { key: 'satelliteResponse', label: 'Satellite response' },
+      { key: 'result', label: 'Result' },
     ]);
     renderTable('input-table', data.inputs, [
       { key: 'parameter', label: 'Parameter' },
@@ -481,6 +494,8 @@
 
   function chartHint(chart) {
     const text = `${chart.title} ${chart.yLabel}`.toLowerCase();
+    if (text.includes('decision code')) return 'Decision code: 0 means weak/no lock, 1 means ocean likely, 2 means ambiguous, and 3 means the false layer is selected.';
+    if (text.includes('false layer') || text.includes('picked boundary')) return 'Use this to see whether the receiver follows the true ocean boundary or gets pulled to an internal false reflector.';
     if (text.includes('delay')) return 'Read as round-trip timing: larger values mean longer extra path or deeper in-ice travel time.';
     if (text.includes('doppler')) return 'Compare angle or depth curves; residual error is expected because the live correction includes a small deterministic angle offset.';
     if (text.includes('margin') || text.includes('threshold')) return 'Values above the zero reference are easier to detect in this simplified threshold model.';
@@ -777,6 +792,7 @@
     renderDetails();
     renderCharts('Surface and motion', 'surface-charts');
     renderCharts('Subsurface model', 'subsurface-charts');
+    renderCharts('False-layer response', 'false-layer-charts');
     renderCharts('Doppler depth correction', 'doppler-charts');
     renderV30();
     renderAudit();
