@@ -114,9 +114,9 @@
     { key: 'attenuation', label: 'Ice attenuation', unit: 'dB/km', min: 0.1, max: 3, step: 0.1 },
     { key: 'detectionThreshold', label: 'Detection threshold', unit: 'dB', min: -80, max: -10, step: 1 },
     { key: 'boundaryUncertainty', label: 'Boundary uncertainty', unit: 'm', min: 0, max: 5000, step: 100 },
-    { key: 'falseLayerEnabled', label: 'False layers enabled', type: 'checkbox' },
+    { key: 'falseLayerEnabled', label: 'Simulated false reflectors enabled', type: 'checkbox' },
     { key: 'falseLayerCount', label: 'False layer count', min: 0, max: 8, step: 1 },
-    { key: 'falseLayerDepthFraction', label: 'False layer depth', unit: 'of shell', min: 0.35, max: 0.9, step: 0.01 },
+    { key: 'falseLayerDepthFraction', label: 'False-reflector depth fraction', unit: 'of shell', min: 0.35, max: 0.9, step: 0.01 },
     { key: 'falseLayerStrength', label: 'False layer strength', unit: 'dB', min: -30, max: 0, step: 1 },
     { key: 'receiverAmbiguityDb', label: 'Ambiguity window', unit: 'dB', min: 1, max: 8, step: 0.5 }
   ];
@@ -310,7 +310,7 @@
       const surfaceClutterMargin = p.shallowEcho + p.surfaceClutterBand * 0.28 + 2 * sin(2 * pi * r.x / 28) - p.detectionThreshold;
       const oceanDetected = oceanMargin >= 0;
       const falseDetected = falseMargin >= 0;
-      let decision = 'Weak / no deep lock';
+      let decision = 'Weak/no deep detection';
       let selectedDepth = null;
       let selectedDelay = null;
       let decisionCode = 0;
@@ -485,11 +485,11 @@
       ['Ocean likely', falseRows.filter(r => r.decision === 'Ocean boundary likely').length],
       ['Ambiguous', falseRows.filter(r => r.decision === 'Ambiguous double return').length],
       ['False picked', falseRows.filter(r => r.decision === 'False boundary selected' || r.decision === 'False layer only visible').length],
-      ['Weak/no lock', falseRows.filter(r => r.decision === 'Weak / no deep lock').length]
+      ['Weak/no deep detection', falseRows.filter(r => r.decision === 'Weak/no deep detection').length]
     ].map(([label, count]) => [label, round(100 * count / falseRows.length)]);
 
     charts.push(
-      chart('live-false-echo-race', 'False-layer response', 'False Layer Echo Race: Receiver Signal Margins', 'Margin above threshold (dB)', [
+      chart('live-false-echo-race', 'False-layer response', 'Competing Echo Margins: Receiver Signal Strength', 'Margin above threshold (dB)', [
         { name: 'Surface clutter margin', points: pts(falseRows, 'x', 'surfaceClutterMargin') },
         { name: 'False layer margin', points: pts(falseRows, 'x', 'falseMargin') },
         { name: 'Ocean boundary margin', points: pts(falseRows, 'x', 'oceanMargin') },
@@ -499,7 +499,7 @@
         { name: 'True ocean boundary', points: pts(falseRows, 'x', 'oceanDepth') },
         { name: 'False layer depth', points: pts(falseRows, 'x', 'falseDepth') },
         { name: 'Receiver selected boundary', points: pts(falseRows, 'x', 'selectedDepth') }
-      ], 'If the selected boundary follows the false layer instead of the ocean, the interpretation is being fooled.'),
+      ], 'If the selected boundary follows the false layer instead of the ocean, the rule selects the internal reflector.'),
       chart('live-false-delay', 'False-layer response', 'Return Timing: False Layer Arrives Before Ocean', 'Two-way delay in ice (us)', [
         { name: 'False layer return', points: pts(falseRows, 'x', 'falseDelay') },
         { name: 'Ocean boundary return', points: pts(falseRows, 'x', 'oceanDelay') },
@@ -558,7 +558,7 @@
     const clearOceanCount = falseRows.filter(r => r.decision === 'Ocean boundary likely').length;
     const ambiguousCount = falseRows.filter(r => r.decision === 'Ambiguous double return').length;
     const falsePickedCount = falseRows.filter(r => r.decision === 'False boundary selected' || r.decision === 'False layer only visible').length;
-    const weakCount = falseRows.filter(r => r.decision === 'Weak / no deep lock').length;
+    const weakCount = falseRows.filter(r => r.decision === 'Weak/no deep detection').length;
     const pct = (count) => 100 * count / falseRows.length;
     const depthErrors = falseRows.map(r => r.depthError).filter(Number.isFinite);
     const worstDepthError = depthErrors.length ? Math.max(...depthErrors.map(v => Math.abs(v))) : 0;
@@ -603,13 +603,13 @@
       ],
       falseResponse: [
         { label: 'Mid-pass receiver decision', value: falseMid.decision, unit: '', meaning: falseMid.reaction },
-        { label: 'Mid-pass receiver confidence', value: falseMid.confidence, unit: '%', meaning: 'Confidence assigned by the simplified receiver rule after comparing false and ocean echoes.' },
+        { label: 'Mid-pass heuristic score', value: falseMid.confidence, unit: '%', meaning: 'Heuristic score from the simplified receiver rule after comparing false and ocean echoes.' },
         { label: 'Mid-pass false minus ocean', value: falseMid.falseMinusOcean, unit: 'dB', meaning: 'Positive means the false layer is brighter than the ocean return.' },
         { label: 'Mid-pass picked-depth error', value: midDepthError, unit: 'm', meaning: 'Selected boundary depth minus true ocean depth at mid-pass.' },
         { label: 'Ocean-boundary likely', value: pct(clearOceanCount), unit: '%', meaning: 'Share of samples where the ocean echo remains the best deep return.' },
         { label: 'Ambiguous double return', value: pct(ambiguousCount), unit: '%', meaning: 'Share where the false layer and ocean are too close in strength.' },
         { label: 'False-boundary selected', value: pct(falsePickedCount), unit: '%', meaning: 'Share where a simple strongest-deep-echo rule would pick the false layer.' },
-        { label: 'Weak / no deep lock', value: pct(weakCount), unit: '%', meaning: 'Share where neither deep return is strong enough for a confident boundary.' },
+        { label: 'Weak/no deep detection', value: pct(weakCount), unit: '%', meaning: 'Share where neither deep return is strong enough for a confident boundary.' },
         { label: 'Worst fooled-depth error', value: worstDepthError, unit: 'm', meaning: 'Largest absolute depth error if the selected return is treated as the ocean boundary.' }
       ],
       falseSteps: [
