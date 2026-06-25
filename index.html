@@ -26,7 +26,6 @@
         <button class="tab" type="button" data-target="subsurface">Subsurface</button>
         <button class="tab" type="button" data-target="doppler">Doppler</button>
         <button class="tab" type="button" data-target="v30">Latest v30</button>
-        <button class="tab" type="button" data-target="audit">Inputs + Audit</button>
       </nav>
     </header>
 
@@ -112,51 +111,17 @@
           </div>
           <a class="download-inline" href="assets/v30_all_dynamic_graphs.xlsx" download>Download v30 workbook</a>
         </div>
-        <section class="panel v30-claim-panel">
-          <h3>Research Question</h3>
-          <p class="body-copy" id="v30-question"></p>
-          <h3>Best One-Line Claim</h3>
-          <p class="body-copy" id="v30-claim"></p>
-        </section>
-        <div id="v30-metric-grid" class="metric-grid"></div>
-        <div class="split-layout">
-          <section class="panel">
-            <h3>Top Risk Rows</h3>
-            <div id="v30-risk-table"></div>
-          </section>
-          <section class="panel">
-            <h3>Signal Test Assumptions</h3>
-            <div id="v30-signal-table"></div>
-          </section>
-        </div>
-        <section class="panel wide-panel">
-          <h3>Case Studies</h3>
-          <div id="v30-case-table"></div>
+        <section class="panel live-panel">
+          <div class="live-panel-heading">
+            <div>
+              <h3>v30 Signal Inputs</h3>
+              <p class="body-copy">These controls recalculate the v30 signal-test graphs in the browser.</p>
+            </div>
+            <button class="reset-button" type="button" id="reset-v30-model">Reset v30 defaults</button>
+          </div>
+          <div id="v30-controls" class="control-grid"></div>
         </section>
         <div id="v30-charts" class="chart-grid v30-chart-grid"></div>
-      </section>
-
-      <section id="audit" class="page-section">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">Workbook traceability</p>
-            <h2>Inputs and checks</h2>
-          </div>
-        </div>
-        <div class="split-layout">
-          <section class="panel">
-            <h3>Motion + Topography Inputs</h3>
-            <div id="input-table"></div>
-          </section>
-          <section class="panel">
-            <h3>Subsurface Inputs</h3>
-            <div id="sub-input-table"></div>
-          </section>
-        </div>
-        <section class="panel wide-panel">
-          <h3>Workbook Checks</h3>
-          <div id="checks-table"></div>
-        </section>
       </section>
     </main>
 
