@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Europa Radar v19 Results</title>
+    <title>Europa Radar Flyby Model</title>
     <link rel="stylesheet" href="styles.css">
     <script defer src="data/v19-results.js"></script>
     <script defer src="data/v30-results.js"></script>
@@ -13,19 +13,28 @@
   <body>
     <header class="site-header">
       <div class="header-inner">
-        <div>
-          <p class="eyebrow">NASA project workbook v19</p>
-          <h1>Europa Radar Results</h1>
-          <p class="lead">Parabolic flyby geometry, generated topography, subsurface layers, and Doppler correction.</p>
+        <div class="hero-copy">
+          <p class="eyebrow">NASA project - Europa radar sensitivity demo</p>
+          <h1>Europa Radar Flyby Model</h1>
+          <p class="lead">A static technical demo for testing how flyby geometry, synthetic icy topography, dirty-ice layers, attenuation, and Doppler correction can change radar interpretation.</p>
+          <div class="hero-actions" aria-label="Project actions">
+            <a class="download-link" href="assets/v19.xlsx" download>Download v19 workbook</a>
+            <a class="secondary-link" href="#v30" data-tab-jump="v30">Open v30 sensitivity</a>
+          </div>
         </div>
-        <a class="download-link" href="assets/v19.xlsx" download>Download source workbook</a>
+        <div class="hero-summary" aria-label="Model scope">
+          <span>Synthetic model</span>
+          <span>Browser recalculation</span>
+          <span>No backend</span>
+        </div>
       </div>
-      <nav class="tabs" aria-label="Result sections">
+      <nav class="tabs" aria-label="Result sections" role="tablist">
         <button class="tab is-active" type="button" data-target="overview">Overview</button>
-        <button class="tab" type="button" data-target="surface">Surface + Motion</button>
-        <button class="tab" type="button" data-target="subsurface">Subsurface</button>
-        <button class="tab" type="button" data-target="doppler">Doppler</button>
-        <button class="tab" type="button" data-target="v30">Latest v30</button>
+        <button class="tab" type="button" data-target="surface">Flyby Geometry</button>
+        <button class="tab" type="button" data-target="subsurface">Subsurface Echoes</button>
+        <button class="tab" type="button" data-target="doppler">Doppler Correction</button>
+        <button class="tab" type="button" data-target="v30">v30 Sensitivity</button>
+        <button class="tab" type="button" data-target="audit">Audit</button>
       </nav>
     </header>
 
@@ -33,16 +42,38 @@
       <section id="overview" class="page-section is-active">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">Model snapshot</p>
-            <h2>Key v19 outputs</h2>
+            <p class="section-kicker">Mission question</p>
+            <h2>Can a bright radar return be trusted as a clean ocean boundary?</h2>
           </div>
           <p class="source-note" id="source-note"></p>
+        </div>
+        <div class="narrative-grid" aria-label="Project narrative">
+          <article class="narrative-card">
+            <p class="card-kicker">Mission</p>
+            <h3>Frame the ambiguity</h3>
+            <p class="body-copy">The demo asks how Europa flyby geometry and internal ice structure could bias a simple radar reading.</p>
+          </article>
+          <article class="narrative-card">
+            <p class="card-kicker">Model</p>
+            <h3>Recompute assumptions</h3>
+            <p class="body-copy">The sliders rerun browser-side formulas for terrain, layers, attenuation, timing, and signal margins.</p>
+          </article>
+          <article class="narrative-card">
+            <p class="card-kicker">Results</p>
+            <h3>Compare what changes</h3>
+            <p class="body-copy">Charts show apparent depth, delay, Doppler, echo margin, and confidence shifts under controlled scenarios.</p>
+          </article>
+          <article class="narrative-card">
+            <p class="card-kicker">Caveats</p>
+            <h3>Keep claims bounded</h3>
+            <p class="body-copy">These are synthetic sensitivity outputs, not mission-validated evidence for Europa subsurface layers.</p>
+          </article>
         </div>
         <section class="panel live-panel">
           <div class="live-panel-heading">
             <div>
               <h3>Live Model Controls</h3>
-              <p class="body-copy">These controls run the v19 formulas in the browser and redraw the graphs immediately.</p>
+              <p class="body-copy">These inputs rerun the v19-style formulas locally in the browser. They are useful for sensitivity testing, not for replacing a full radar processing pipeline.</p>
             </div>
             <button class="reset-button" type="button" id="reset-live-model">Reset v19 defaults</button>
           </div>
@@ -51,7 +82,7 @@
         <div id="metric-grid" class="metric-grid"></div>
         <div class="split-layout">
           <section class="panel">
-            <h3>PRF Choices</h3>
+            <h3>PRF Sampling Floor</h3>
             <div id="prf-table"></div>
           </section>
           <section class="panel">
@@ -60,6 +91,28 @@
             <div id="realism-table"></div>
           </section>
         </div>
+        <div class="split-layout">
+          <section class="panel audit-panel">
+            <h3>Graph / Model Audit</h3>
+            <div id="graph-audit"></div>
+          </section>
+          <section class="panel">
+            <h3>Formula Checks</h3>
+            <div id="checks-table"></div>
+          </section>
+        </div>
+        <section class="panel assumptions-panel">
+          <div>
+            <p class="section-kicker">Model assumptions and limitations</p>
+            <h2>Synthetic, illustrative, not mission-validated</h2>
+          </div>
+          <ul class="assumption-list">
+            <li>Surface relief, internal layers, and dirty-ice structures are generated sensitivity cases, not measured Europa geology.</li>
+            <li>Echo power is relative dB: one-way attenuation is applied over a two-way path, then compared with a simple threshold.</li>
+            <li>The PRF value shown is a Nyquist-style Doppler sampling floor, not a complete radar PRF design rule.</li>
+            <li>Doppler depth correction is a controlled demonstration with deterministic residual error, not a full inversion from noisy instrument data.</li>
+          </ul>
+        </section>
       </section>
 
       <section id="surface" class="page-section">
@@ -69,6 +122,7 @@
             <h2>Surface + motion results</h2>
           </div>
         </div>
+        <p class="section-intro">These charts isolate how spacecraft path, side-looking geometry, and generated terrain affect apparent depth, two-way delay, and Doppler shift.</p>
         <div id="surface-charts" class="chart-grid"></div>
       </section>
 
@@ -79,6 +133,7 @@
             <h2>Layer and detectability results</h2>
           </div>
         </div>
+        <p class="section-intro">This section treats the ice shell as a synthetic layered testbed, then shows how possible internal reflectors and attenuation change detectability margins.</p>
         <div id="subsurface-summary" class="table-panel"></div>
         <div id="subsurface-charts" class="chart-grid"></div>
       </section>
@@ -90,6 +145,7 @@
             <h2>Doppler depth inversion</h2>
           </div>
         </div>
+        <p class="section-intro">The correction charts show a controlled slant-depth adjustment with a small deterministic angle residual so the result is no longer artificially perfect.</p>
         <div class="split-layout compact">
           <section class="panel">
             <h3>Main Result</h3>
@@ -107,21 +163,42 @@
         <div class="section-heading">
           <div>
             <p class="section-kicker">Latest workbook</p>
-            <h2>v30 dynamic results and graphs</h2>
+            <h2>v30 workbook results with live sensitivity controls</h2>
           </div>
           <a class="download-inline" href="assets/v30_all_dynamic_graphs.xlsx" download>Download v30 workbook</a>
         </div>
+        <p class="section-intro">The v30 view keeps the workbook-derived chart set but overlays browser-side sensitivity controls for signal assumptions, dirty ice, clutter, and geometry.</p>
         <section class="panel live-panel">
           <div class="live-panel-heading">
             <div>
               <h3>v30 Live Inputs</h3>
-              <p class="body-copy">These controls recalculate the v30 signal, geometry, subsurface, and Doppler graphs in the browser.</p>
+              <p class="body-copy">These controls run an interactive browser sensitivity model. The downloaded workbook remains the fixed source artifact, and the live view is marked as illustrative.</p>
             </div>
             <button class="reset-button" type="button" id="reset-v30-model">Reset v30 defaults</button>
           </div>
           <div id="v30-controls" class="control-grid"></div>
         </section>
         <div id="v30-charts" class="chart-grid v30-chart-grid"></div>
+      </section>
+
+      <section id="audit" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Validation pass</p>
+            <h2>Graph and formula audit</h2>
+          </div>
+        </div>
+        <p class="section-intro">This panel checks the rendered chart metadata and point data after live browser recalculation, then pairs it with workbook/model formula checks.</p>
+        <div class="split-layout">
+          <section class="panel audit-panel">
+            <h3>Rendered Chart Audit</h3>
+            <div id="graph-audit-full"></div>
+          </section>
+          <section class="panel">
+            <h3>Model Formula Checks</h3>
+            <div id="checks-table-full"></div>
+          </section>
+        </div>
       </section>
     </main>
 

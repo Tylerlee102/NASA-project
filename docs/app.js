@@ -7,7 +7,7 @@
   let data = liveModel ? liveModel.compute(liveParams) : sourceData;
   let v30Params = v30Model ? { ...v30Model.defaults } : {};
   let v30ViewData = v30Model && v30Data ? v30Model.compute(v30Params, v30Data) : v30Data;
-  const colors = ['#087c89', '#bd642b', '#7659a6', '#4f7d55', '#a44949', '#2f5d83', '#8b6f2e', '#48515a'];
+  const colors = ['#35c6d4', '#f18f4f', '#9b7bd8', '#6cc18f', '#e05263', '#5aa6ff', '#d6b64c', '#7b8794'];
   const tooltip = document.getElementById('chart-tooltip');
 
   if (!sourceData) {
@@ -84,19 +84,61 @@
     return '';
   }
 
+  function controlGroup(key) {
+    if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth'].includes(key)) return 'Geometry';
+    if (['nominalIceShell', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel'].includes(key)) return 'Subsurface';
+    if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz'].includes(key)) return 'Radar signal';
+    return 'Model';
+  }
+
   function initTabs() {
     const tabs = document.querySelectorAll('.tab');
     const sections = document.querySelectorAll('.page-section');
     const validTargets = new Set(Array.from(sections).map((section) => section.id));
     function setActive(target, updateHash) {
       const next = validTargets.has(target) ? target : 'overview';
-      tabs.forEach((t) => t.classList.toggle('is-active', t.dataset.target === next));
-      sections.forEach((section) => section.classList.toggle('is-active', section.id === next));
+      tabs.forEach((t) => {
+        const active = t.dataset.target === next;
+        t.classList.toggle('is-active', active);
+        t.setAttribute('aria-selected', active ? 'true' : 'false');
+        t.setAttribute('tabindex', active ? '0' : '-1');
+      });
+      sections.forEach((section) => {
+        const active = section.id === next;
+        section.classList.toggle('is-active', active);
+        section.setAttribute('role', 'tabpanel');
+        section.hidden = !active;
+      });
       if (updateHash) history.replaceState(null, '', `#${next}`);
     }
-    tabs.forEach((tab) => {
+    tabs.forEach((tab, index) => {
+      tab.setAttribute('role', 'tab');
+      tab.id = `tab-${tab.dataset.target}`;
+      const panel = document.getElementById(tab.dataset.target);
+      if (panel) {
+        tab.setAttribute('aria-controls', panel.id);
+        panel.setAttribute('aria-labelledby', tab.id);
+      }
       tab.addEventListener('click', () => {
         setActive(tab.dataset.target, true);
+      });
+      tab.addEventListener('keydown', (event) => {
+        if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        let nextIndex = index;
+        if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+        if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === 'Home') nextIndex = 0;
+        if (event.key === 'End') nextIndex = tabs.length - 1;
+        tabs[nextIndex].focus();
+        setActive(tabs[nextIndex].dataset.target, true);
+      });
+    });
+    document.querySelectorAll('[data-tab-jump]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        setActive(link.dataset.tabJump, true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
     setActive(window.location.hash.replace('#', ''), false);
@@ -115,6 +157,7 @@
       if (control.type === 'checkbox') {
         return `
           <label class="control control-toggle">
+            <span class="control-meta">${escapeHtml(controlGroup(control.key))}</span>
             <span>${escapeHtml(control.label)}</span>
             <input type="checkbox" data-live-key="${control.key}" ${value ? 'checked' : ''}>
           </label>
@@ -122,6 +165,7 @@
       }
       return `
         <label class="control">
+          <span class="control-meta">${escapeHtml(controlGroup(control.key))}</span>
           <span>${escapeHtml(control.label)}</span>
           <input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${value}" data-live-key="${control.key}">
           <output>${formatValue(value)}${control.unit ? ` ${escapeHtml(control.unit)}` : ''}</output>
@@ -158,6 +202,7 @@
       if (control.type === 'checkbox') {
         return `
           <label class="control control-toggle">
+            <span class="control-meta">${escapeHtml(controlGroup(control.key))}</span>
             <span>${escapeHtml(control.label)}</span>
             <input type="checkbox" data-v30-key="${control.key}" ${value ? 'checked' : ''}>
           </label>
@@ -165,6 +210,7 @@
       }
       return `
         <label class="control">
+          <span class="control-meta">${escapeHtml(controlGroup(control.key))}</span>
           <span>${escapeHtml(control.label)}</span>
           <input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${value}" data-v30-key="${control.key}">
           <output>${formatValue(value)}${control.unit ? ` ${escapeHtml(control.unit)}` : ''}</output>
@@ -264,16 +310,20 @@
       { key: 'value', label: 'Value' },
       { key: 'unit', label: 'Unit' },
     ], 24);
-    renderTable('checks-table', [...data.checks, ...data.subsurfaceChecks], [
+    const checkRows = [...data.checks, ...data.subsurfaceChecks];
+    const checkColumns = [
       { key: 'check', label: 'Check' },
       { key: 'status', label: 'Status', className: statusClass },
       { key: 'formula', label: 'Formula / reason', format: (v, row) => v || row.why || '' },
-    ]);
+    ];
+    renderTable('checks-table', checkRows, checkColumns);
+    renderTable('checks-table-full', checkRows, checkColumns);
   }
 
   function renderV30() {
     if (!v30ViewData) return;
     renderChartSet(v30ViewData.charts, 'v30-charts');
+    renderAudit();
   }
 
   function renderCharts(section, targetId) {
@@ -282,11 +332,170 @@
     renderChartSet(charts, targetId, target);
   }
 
+  function chartPointValues(chart) {
+    const values = [];
+    chart.series.forEach((series) => {
+      series.points.forEach((point) => {
+        if (Number.isFinite(point[1])) values.push(point[1]);
+      });
+    });
+    return values;
+  }
+
+  function seriesSignature(series) {
+    return series.points.map((point) => point.map((value) => value == null ? 'null' : String(value)).join(':')).join('|');
+  }
+
+  function validateChart(chart) {
+    const findings = [];
+    const required = ['id', 'title', 'xLabel', 'yLabel', 'sourceSheet', 'note'];
+    required.forEach((key) => {
+      if (!chart[key]) findings.push({ level: 'serious', message: `Missing ${key}` });
+    });
+    if (!chart.series || !chart.series.length) findings.push({ level: 'serious', message: 'No plotted series' });
+
+    const seenSeries = new Map();
+    (chart.series || []).forEach((series) => {
+      const points = series.points || [];
+      if (!series.name) findings.push({ level: 'serious', message: 'Series is missing a label' });
+      if (!points.length) findings.push({ level: 'warning', message: `${series.name || 'Series'} has no points` });
+      if (/!\$?[A-Z]+\$?\d+/i.test(series.name || '')) findings.push({ level: 'warning', message: `${series.name} looks like a raw workbook range` });
+      const finiteCount = points.filter((point) => Number.isFinite(point[1])).length;
+      const nullCount = points.filter((point) => point[1] === null).length;
+      if (finiteCount === 0 && nullCount === 0) findings.push({ level: 'serious', message: `${series.name || 'Series'} has no numeric y-values` });
+      points.forEach((point) => {
+        const x = point[0];
+        const y = point[1];
+        const xOk = typeof x === 'string' || Number.isFinite(x);
+        const yOk = y === null || Number.isFinite(y);
+        if (!xOk || !yOk) findings.push({ level: 'serious', message: `${series.name || 'Series'} contains a non-finite point` });
+      });
+      const signature = seriesSignature(series);
+      if (seenSeries.has(signature)) {
+        findings.push({ level: 'serious', message: `${series.name || 'Series'} duplicates ${seenSeries.get(signature)}` });
+      } else {
+        seenSeries.set(signature, series.name || 'another series');
+      }
+      if ((chart.kind || 'line') === 'line' && finiteCount === 1) {
+        findings.push({ level: 'info', message: `${series.name || 'Series'} is rendered as a marker` });
+      }
+      if (nullCount && /radargram|lens/i.test(chart.title)) {
+        findings.push({ level: 'info', message: 'Null lens-return gaps are treated as intentional' });
+      }
+    });
+
+    const values = chartPointValues(chart);
+    const labelText = `${chart.title || ''} ${chart.yLabel || ''} ${(chart.series || []).map((series) => series.name).join(' ')}`.toLowerCase();
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    if (values.length && /percent|%|score|support/.test(labelText) && max <= 1.05 && min >= 0) {
+      findings.push({ level: 'serious', message: 'Percent-style chart appears to use 0-1 shares' });
+    }
+    const yLabelText = String(chart.yLabel || '').toLowerCase();
+    if (values.length && /\(us\)|delay/.test(yLabelText) && /depth/.test(labelText)) {
+      findings.push({ level: 'serious', message: 'Delay chart text still references depth values' });
+    }
+    if ((chart.kind || 'line') === 'bar' && chart.xLabel && /scenario|material|instrument|interface/i.test(chart.xLabel)) {
+      const firstSeries = chart.series && chart.series[0];
+      const numericCategories = firstSeries && firstSeries.points.every((point) => Number.isFinite(point[0]));
+      if (numericCategories) findings.push({ level: 'warning', message: 'Categorical bar chart uses numeric category indices' });
+    }
+    return findings;
+  }
+
+  function validateChartSet(label, charts) {
+    const titleCounts = new Map();
+    (charts || []).forEach((chart) => {
+      titleCounts.set(chart.title, (titleCounts.get(chart.title) || 0) + 1);
+    });
+    const rows = [];
+    let serious = 0;
+    let warnings = 0;
+    (charts || []).forEach((chart) => {
+      const findings = validateChart(chart);
+      if (titleCounts.get(chart.title) > 1) findings.push({ level: 'serious', message: 'Duplicate chart title in this dataset' });
+      findings.forEach((finding) => {
+        if (finding.level === 'serious') serious += 1;
+        if (finding.level === 'warning') warnings += 1;
+      });
+      const visibleFindings = findings.filter((finding) => finding.level !== 'info');
+      rows.push({
+        chart: chart.title,
+        scope: label,
+        status: visibleFindings.length ? 'Review' : 'OK',
+        notes: visibleFindings.length ? visibleFindings.map((finding) => finding.message).join('; ') : 'Metadata, units, series, and values look consistent.'
+      });
+    });
+    return { label, rows, serious, warnings };
+  }
+
+  function renderAudit() {
+    const sets = [
+      validateChartSet('v19 live', data.charts || []),
+      validateChartSet('v30 live', (v30ViewData && v30ViewData.charts) || [])
+    ];
+    const serious = sets.reduce((sum, item) => sum + item.serious, 0);
+    const warnings = sets.reduce((sum, item) => sum + item.warnings, 0);
+    const rows = sets.flatMap((item) => item.rows);
+    const summary = `
+      <div class="audit-score-grid">
+        <article class="audit-score ${serious ? 'is-warn' : 'is-ok'}">
+          <span>${serious ? 'Review' : 'Clean'}</span>
+          <strong>${serious}</strong>
+          <p>serious chart issues</p>
+        </article>
+        <article class="audit-score">
+          <span>Warnings</span>
+          <strong>${warnings}</strong>
+          <p>non-blocking items</p>
+        </article>
+        <article class="audit-score">
+          <span>Charts</span>
+          <strong>${rows.length}</strong>
+          <p>rendered and checked</p>
+        </article>
+      </div>
+    `;
+    const columns = [
+      { key: 'scope', label: 'Scope' },
+      { key: 'chart', label: 'Chart' },
+      { key: 'status', label: 'Status', className: statusClass },
+      { key: 'notes', label: 'Audit note' }
+    ];
+    const overview = document.getElementById('graph-audit');
+    if (overview) {
+      const reviewRows = rows.filter((row) => row.status !== 'OK');
+      overview.innerHTML = summary + (reviewRows.length ? '<div id="graph-audit-table-inline"></div>' : '') + `<p class="audit-note">${serious ? 'Open the Audit tab for details.' : 'No serious chart issues detected after live recalculation.'}</p>`;
+      if (reviewRows.length) renderTable('graph-audit-table-inline', reviewRows, columns, 5);
+    }
+    const full = document.getElementById('graph-audit-full');
+    if (full) {
+      full.innerHTML = summary + '<div id="graph-audit-table-full"></div>';
+      renderTable('graph-audit-table-full', rows, columns);
+    }
+  }
+
+  function chartBadges(chart) {
+    return validateChart(chart).filter((finding) => finding.level !== 'info');
+  }
+
+  function chartHint(chart) {
+    const text = `${chart.title} ${chart.yLabel}`.toLowerCase();
+    if (text.includes('delay')) return 'Read as round-trip timing: larger values mean longer extra path or deeper in-ice travel time.';
+    if (text.includes('doppler')) return 'Compare angle or depth curves; residual error is expected because the live correction includes a small deterministic angle offset.';
+    if (text.includes('margin') || text.includes('threshold')) return 'Values above the zero reference are easier to detect in this simplified threshold model.';
+    if (text.includes('percent') || text.includes('support') || text.includes('confidence')) return 'Percent-style series are scaled 0-100 so scenario bars can be compared directly.';
+    if (text.includes('surface') || text.includes('terrain')) return 'Use this to compare the target terrain path against the nadir reference used by the range equations.';
+    return 'Use the axes and legend to compare each modeled series under the current live assumptions.';
+  }
+
   function renderChartSet(charts, targetId, knownTarget) {
     const target = knownTarget || document.getElementById(targetId);
     if (!target) return;
-    target.innerHTML = charts.map((chart) => `
-      <article class="chart-card">
+    target.innerHTML = charts.map((chart) => {
+      const badges = chartBadges(chart);
+      return `
+      <article class="chart-card ${badges.length ? 'has-warning' : ''}">
         <div class="chart-title-row">
           <div>
             <h3>${escapeHtml(chart.title)}</h3>
@@ -294,12 +503,16 @@
           </div>
           <span class="chart-source">${escapeHtml(chart.sourceSheet)}</span>
         </div>
+        ${badges.length ? `<div class="chart-badges">${badges.map((badge) => `<span>${escapeHtml(badge.message)}</span>`).join('')}</div>` : ''}
         <div class="chart-frame" id="${chart.id}"></div>
+        <p class="chart-explainer">${escapeHtml(chartHint(chart))}</p>
+        ${chart.formulaNote ? `<p class="formula-note">${escapeHtml(chart.formulaNote)}</p>` : ''}
         <div class="legend">${chart.series.map((series, index) => `
           <span class="legend-item"><span class="legend-swatch" style="background:${colors[index % colors.length]}"></span>${escapeHtml(series.name)}</span>
         `).join('')}</div>
       </article>
-    `).join('');
+    `;
+    }).join('');
     charts.forEach((chart) => drawChart(document.getElementById(chart.id), chart));
   }
 
@@ -337,7 +550,8 @@
     return { ...chart, series, categories: labels };
   }
 
-  function extent(values) {
+  function extent(values, options) {
+    const config = options || {};
     let min = Infinity;
     let max = -Infinity;
     values.forEach((value) => {
@@ -347,6 +561,14 @@
       }
     });
     if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+    if (config.percentScale) {
+      min = Math.min(0, min);
+      max = Math.max(100, max);
+    }
+    if (config.includeZero) {
+      min = Math.min(0, min);
+      max = Math.max(0, max);
+    }
     if (min === max) return [min - 1, max + 1];
     const pad = (max - min) * 0.08;
     return [min - pad, max + pad];
@@ -354,8 +576,25 @@
 
   function ticks(min, max, count) {
     const span = max - min || 1;
-    const step = span / (count - 1);
-    return Array.from({ length: count }, (_, index) => min + step * index);
+    const rawStep = span / Math.max(count - 1, 1);
+    const magnitude = 10 ** Math.floor(Math.log10(Math.abs(rawStep) || 1));
+    const residual = rawStep / magnitude;
+    const niceResidual = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 5 ? 5 : 10;
+    const step = niceResidual * magnitude;
+    const start = Math.ceil(min / step) * step;
+    const out = [];
+    for (let value = start; value <= max + step * 0.5; value += step) {
+      out.push(Number(value.toFixed(10)));
+    }
+    if (!out.length) return [min, max];
+    return out;
+  }
+
+  function chartUsesPercent(chart) {
+    const text = `${chart.title || ''} ${chart.yLabel || ''}`.toLowerCase();
+    const values = chartPointValues(chart);
+    const max = Math.max(...values);
+    return /percent|%|support|score/.test(text) && max <= 105 && max >= 0;
   }
 
   function drawChart(container, chart) {
@@ -363,12 +602,18 @@
     const prepared = normalizeChart(chart);
     const width = 760;
     const height = 420;
-    const margin = { top: 20, right: 26, bottom: 54, left: 70 };
+    const rotateLabels = prepared.categories && prepared.categories.some((label) => String(label).length > 12);
+    const margin = { top: 24, right: 30, bottom: prepared.categories ? (rotateLabels ? 92 : 68) : 58, left: 82 };
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
     const points = finitePoints(prepared);
     const [xMin, xMax] = extent(points.map((p) => p.x));
-    const [yMin, yMax] = extent(points.map((p) => p.y));
+    const yValues = points.map((p) => p.y);
+    const [rawYMin, rawYMax] = extent(yValues);
+    const [yMin, yMax] = extent(yValues, {
+      includeZero: prepared.kind === 'bar' || rawYMin < 0 && rawYMax > 0 || /margin|error|residual/i.test(prepared.yLabel),
+      percentScale: chartUsesPercent(prepared)
+    });
     const sx = (x) => margin.left + ((x - xMin) / (xMax - xMin || 1)) * plotWidth;
     const sy = (y) => margin.top + plotHeight - ((y - yMin) / (yMax - yMin || 1)) * plotHeight;
 
@@ -386,12 +631,22 @@
       const x = sx(tick);
       svg += `<line class="grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
       const label = prepared.categories ? shortenAxisLabel(prepared.categories[Math.round(tick) - 1] || '') : formatAxisValue(tick);
-      svg += `<text class="axis" x="${x}" y="${height - margin.bottom + 22}" text-anchor="middle">${escapeHtml(label)}</text>`;
+      if (rotateLabels) {
+        svg += `<text class="axis" x="${x - 4}" y="${height - margin.bottom + 22}" text-anchor="end" transform="rotate(-28 ${x - 4} ${height - margin.bottom + 22})">${escapeHtml(label)}</text>`;
+      } else {
+        svg += `<text class="axis" x="${x}" y="${height - margin.bottom + 22}" text-anchor="middle">${escapeHtml(label)}</text>`;
+      }
     });
     svg += `<line class="axis-line" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="axis-line" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
     svg += `<text class="axis-label" x="${margin.left + plotWidth / 2}" y="${height - 12}" text-anchor="middle">${escapeHtml(prepared.xLabel)}</text>`;
     svg += `<text class="axis-label" transform="translate(16 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(prepared.yLabel)}</text>`;
+    if (yMin < 0 && yMax > 0) {
+      const zeroY = sy(0);
+      const zeroLabel = /db|margin|threshold/i.test(prepared.yLabel) ? '0 dB' : '0';
+      svg += `<line class="reference-line" x1="${margin.left}" y1="${zeroY}" x2="${width - margin.right}" y2="${zeroY}"></line>`;
+      svg += `<text class="reference-label" x="${width - margin.right}" y="${zeroY - 6}" text-anchor="end">${zeroLabel}</text>`;
+    }
 
     if (prepared.kind === 'bar') {
       svg += drawBars(prepared, sx, sy, yMin, height - margin.bottom, plotWidth, margin.left);
@@ -400,6 +655,13 @@
         const path = linePath(series.points, sx, sy);
         if (path) {
           svg += `<path d="${path}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>`;
+        }
+        const finiteSeriesPoints = series.points.filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
+        const markerSeries = finiteSeriesPoints.length <= 20 || /selected|setting|residual/i.test(series.name);
+        if (markerSeries) {
+          finiteSeriesPoints.forEach((point) => {
+            svg += `<circle class="series-marker" cx="${sx(point[0])}" cy="${sy(point[1])}" r="4" fill="${colors[index % colors.length]}"></circle>`;
+          });
         }
       });
     }
@@ -422,7 +684,7 @@
 
   function shortenAxisLabel(value) {
     const text = String(value);
-    return text.length > 14 ? `${text.slice(0, 12)}...` : text;
+    return text.length > 20 ? `${text.slice(0, 18)}...` : text;
   }
 
   function drawBars(chart, sx, sy, yMin, baseY, plotWidth, left) {
@@ -460,6 +722,24 @@
     return path.trim();
   }
 
+  function axisName(label) {
+    return String(label || '').replace(/\s*\([^)]*\)/g, '').trim() || 'Value';
+  }
+
+  function axisUnit(label) {
+    const match = String(label || '').match(/\(([^)]+)\)/);
+    if (match) return match[1];
+    if (String(label || '').includes('%')) return '%';
+    return '';
+  }
+
+  function formatWithAxis(value, label, digits) {
+    const unit = axisUnit(label);
+    const formatted = typeof value === 'number' ? formatValue(value, digits) : String(value);
+    if (!unit) return formatted;
+    return `${formatted} ${unit}`;
+  }
+
   function showTooltip(event, chart, points, sx, sy) {
     if (!points.length) return;
     const rect = event.currentTarget.ownerSVGElement.getBoundingClientRect();
@@ -480,8 +760,8 @@
     });
     tooltip.innerHTML = `
       <p class="tooltip-title">${escapeHtml(best.seriesName)}</p>
-      <p class="tooltip-line">x: ${escapeHtml(best.label)}</p>
-      <p class="tooltip-line">y: ${formatValue(best.y, 3)}</p>
+      <p class="tooltip-line">${escapeHtml(axisName(chart.xLabel))}: ${escapeHtml(formatWithAxis(best.label, chart.xLabel, 3))}</p>
+      <p class="tooltip-line">${escapeHtml(axisName(chart.yLabel))}: ${escapeHtml(formatWithAxis(best.y, chart.yLabel, 3))}</p>
     `;
     tooltip.hidden = false;
     tooltip.style.left = `${Math.min(window.innerWidth - 300, event.clientX + 14)}px`;
@@ -499,6 +779,7 @@
     renderCharts('Subsurface model', 'subsurface-charts');
     renderCharts('Doppler depth correction', 'doppler-charts');
     renderV30();
+    renderAudit();
   }
 
   initTabs();
