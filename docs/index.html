@@ -6,6 +6,7 @@
     <title>Europa Radar v19 Results</title>
     <link rel="stylesheet" href="styles.css">
     <script defer src="data/v19-results.js"></script>
+    <script defer src="model.js"></script>
     <script defer src="app.js"></script>
   </head>
   <body>
@@ -36,6 +37,16 @@
           </div>
           <p class="source-note" id="source-note"></p>
         </div>
+        <section class="panel live-panel">
+          <div class="live-panel-heading">
+            <div>
+              <h3>Live Model Controls</h3>
+              <p class="body-copy">These controls run the v19 formulas in the browser and redraw the graphs immediately.</p>
+            </div>
+            <button class="reset-button" type="button" id="reset-live-model">Reset v19 defaults</button>
+          </div>
+          <div id="live-controls" class="control-grid"></div>
+        </section>
         <div id="metric-grid" class="metric-grid"></div>
         <div class="split-layout">
           <section class="panel">

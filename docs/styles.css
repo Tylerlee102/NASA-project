@@ -225,6 +225,74 @@ main {
   overflow: hidden;
 }
 
+.live-panel {
+  margin-bottom: 16px;
+}
+
+.live-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.reset-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 12px;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.control {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.control span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.control input[type="range"] {
+  width: 100%;
+  accent-color: var(--teal);
+}
+
+.control input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--teal);
+}
+
+.control output {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.control-toggle {
+  align-content: center;
+}
+
 .wide-panel {
   margin-top: 14px;
 }
@@ -395,8 +463,17 @@ tr:last-child td {
   }
 
   .metric-grid,
-  .chart-grid {
+  .chart-grid,
+  .control-grid {
     grid-template-columns: 1fr;
+  }
+
+  .live-panel-heading {
+    display: block;
+  }
+
+  .reset-button {
+    margin-top: 10px;
   }
 }
 

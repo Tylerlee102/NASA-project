@@ -1,9 +1,12 @@
 (function () {
-  const data = window.V19_RESULTS;
+  const sourceData = window.V19_RESULTS;
+  const liveModel = window.V19_LIVE_MODEL;
+  let liveParams = liveModel ? { ...liveModel.defaults } : {};
+  let data = liveModel ? liveModel.compute(liveParams) : sourceData;
   const colors = ['#087c89', '#bd642b', '#7659a6', '#4f7d55', '#a44949', '#2f5d83', '#8b6f2e', '#48515a'];
   const tooltip = document.getElementById('chart-tooltip');
 
-  if (!data) {
+  if (!sourceData) {
     document.body.innerHTML = '<main><h1>Site data did not load.</h1></main>';
     return;
   }
@@ -98,6 +101,54 @@
       window.setTimeout(() => window.scrollTo(0, 0), 100);
       window.setTimeout(() => window.scrollTo(0, 0), 350);
     }
+  }
+
+  function renderLiveControls() {
+    const target = document.getElementById('live-controls');
+    if (!target || !liveModel) return;
+    target.innerHTML = liveModel.controls.map((control) => {
+      const value = liveParams[control.key];
+      if (control.type === 'checkbox') {
+        return `
+          <label class="control control-toggle">
+            <span>${escapeHtml(control.label)}</span>
+            <input type="checkbox" data-live-key="${control.key}" ${value ? 'checked' : ''}>
+          </label>
+        `;
+      }
+      return `
+        <label class="control">
+          <span>${escapeHtml(control.label)}</span>
+          <input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${value}" data-live-key="${control.key}">
+          <output>${formatValue(value)}${control.unit ? ` ${escapeHtml(control.unit)}` : ''}</output>
+        </label>
+      `;
+    }).join('');
+    target.querySelectorAll('[data-live-key]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const key = input.dataset.liveKey;
+        liveParams[key] = input.type === 'checkbox' ? input.checked : Number(input.value);
+        const output = input.parentElement.querySelector('output');
+        const def = liveModel.controls.find((item) => item.key === key);
+        if (output) output.textContent = `${formatValue(liveParams[key])}${def && def.unit ? ` ${def.unit}` : ''}`;
+        updateLiveData();
+      });
+    });
+    const reset = document.getElementById('reset-live-model');
+    if (reset) {
+      reset.addEventListener('click', () => {
+        liveParams = { ...liveModel.defaults };
+        data = liveModel.compute(liveParams);
+        renderLiveControls();
+        renderAll();
+      });
+    }
+  }
+
+  function updateLiveData() {
+    if (!liveModel) return;
+    data = liveModel.compute(liveParams);
+    renderAll();
   }
 
   function renderOverview() {
@@ -331,10 +382,15 @@
     tooltip.hidden = true;
   }
 
+  function renderAll() {
+    renderOverview();
+    renderDetails();
+    renderCharts('Surface and motion', 'surface-charts');
+    renderCharts('Subsurface model', 'subsurface-charts');
+    renderCharts('Doppler depth correction', 'doppler-charts');
+  }
+
   initTabs();
-  renderOverview();
-  renderDetails();
-  renderCharts('Surface and motion', 'surface-charts');
-  renderCharts('Subsurface model', 'subsurface-charts');
-  renderCharts('Doppler depth correction', 'doppler-charts');
+  renderLiveControls();
+  renderAll();
 })();
