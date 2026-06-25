@@ -2,8 +2,11 @@
   const sourceData = window.V19_RESULTS;
   const v30Data = window.V30_RESULTS;
   const liveModel = window.V19_LIVE_MODEL;
+  const v30Model = window.V30_LIVE_MODEL;
   let liveParams = liveModel ? { ...liveModel.defaults } : {};
   let data = liveModel ? liveModel.compute(liveParams) : sourceData;
+  let v30Params = v30Model ? { ...v30Model.defaults } : {};
+  let v30ViewData = v30Model && v30Data ? v30Model.compute(v30Params, v30Data) : v30Data;
   const colors = ['#087c89', '#bd642b', '#7659a6', '#4f7d55', '#a44949', '#2f5d83', '#8b6f2e', '#48515a'];
   const tooltip = document.getElementById('chart-tooltip');
 
@@ -136,7 +139,8 @@
       });
     });
     const reset = document.getElementById('reset-live-model');
-    if (reset) {
+    if (reset && !reset.dataset.bound) {
+      reset.dataset.bound = 'true';
       reset.addEventListener('click', () => {
         liveParams = { ...liveModel.defaults };
         data = liveModel.compute(liveParams);
@@ -146,10 +150,51 @@
     }
   }
 
+  function renderV30Controls() {
+    const target = document.getElementById('v30-controls');
+    if (!target || !v30Model) return;
+    target.innerHTML = v30Model.controls.map((control) => {
+      const value = v30Params[control.key];
+      return `
+        <label class="control">
+          <span>${escapeHtml(control.label)}</span>
+          <input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${value}" data-v30-key="${control.key}">
+          <output>${formatValue(value)}${control.unit ? ` ${escapeHtml(control.unit)}` : ''}</output>
+        </label>
+      `;
+    }).join('');
+    target.querySelectorAll('[data-v30-key]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const key = input.dataset.v30Key;
+        v30Params[key] = Number(input.value);
+        const output = input.parentElement.querySelector('output');
+        const def = v30Model.controls.find((item) => item.key === key);
+        if (output) output.textContent = `${formatValue(v30Params[key])}${def && def.unit ? ` ${def.unit}` : ''}`;
+        updateV30Data();
+      });
+    });
+    const reset = document.getElementById('reset-v30-model');
+    if (reset && !reset.dataset.bound) {
+      reset.dataset.bound = 'true';
+      reset.addEventListener('click', () => {
+        v30Params = { ...v30Model.defaults };
+        v30ViewData = v30Model.compute(v30Params, v30Data);
+        renderV30Controls();
+        renderV30();
+      });
+    }
+  }
+
   function updateLiveData() {
     if (!liveModel) return;
     data = liveModel.compute(liveParams);
     renderAll();
+  }
+
+  function updateV30Data() {
+    if (!v30Model || !v30Data) return;
+    v30ViewData = v30Model.compute(v30Params, v30Data);
+    renderV30();
   }
 
   function renderOverview() {
@@ -219,33 +264,8 @@
   }
 
   function renderV30() {
-    if (!v30Data) return;
-    const question = document.getElementById('v30-question');
-    const claim = document.getElementById('v30-claim');
-    if (question) question.textContent = v30Data.overview.question || '';
-    if (claim) claim.textContent = v30Data.overview.claim || '';
-    const metricTarget = document.getElementById('v30-metric-grid');
-    if (metricTarget) metricTarget.innerHTML = v30Data.metrics.map(makeMetric).join('');
-    renderTable('v30-risk-table', v30Data.riskRows, [
-      { key: 'scenario', label: 'Scenario' },
-      { key: 'band', label: 'Band' },
-      { key: 'ambiguousFalse', label: 'Ambiguous/false' },
-      { key: 'notInterpretable', label: 'Not interpretable' },
-      { key: 'topRiskXKm', label: 'Risk x km' },
-    ]);
-    renderTable('v30-signal-table', v30Data.signalAssumptions, [
-      { key: 'parameter', label: 'Parameter' },
-      { key: 'value', label: 'Value' },
-      { key: 'unit', label: 'Unit' },
-    ]);
-    renderTable('v30-case-table', v30Data.caseStudies, [
-      { key: 'caseStudy', label: 'Case study' },
-      { key: 'scenario', label: 'Scenario' },
-      { key: 'band', label: 'Band' },
-      { key: 'score', label: 'Score' },
-      { key: 'interpretation', label: 'Interpretation' },
-    ]);
-    renderChartSet(v30Data.charts, 'v30-charts');
+    if (!v30ViewData) return;
+    renderChartSet(v30ViewData.charts, 'v30-charts');
   }
 
   function renderCharts(section, targetId) {
@@ -475,5 +495,6 @@
 
   initTabs();
   renderLiveControls();
+  renderV30Controls();
   renderAll();
 })();

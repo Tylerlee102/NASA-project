@@ -485,3 +485,177 @@
     compute
   };
 })();
+
+(function () {
+  const titlePulse = 'Pulse compression gain vs pulse length';
+  const titleGeometric = 'Geometric spreading power dB';
+  const titleCoherent = 'Coherent Fresnel-zone gain';
+  const titleTotalVhf = 'Total VHF dB: constant vs frequency-dependent response';
+
+  const defaults = {
+    iceIndex: 1.78,
+    alongTrackSpacingM: 500,
+    pulseLengthUs: 20,
+    windowLossDb: -1.3444034312785926,
+    baseReflectivityDb: 0,
+    frequencySlopeDbPerOctave: -2,
+    referenceFrequencyMhz: 9
+  };
+
+  const controls = [
+    { key: 'iceIndex', label: 'Ice refractive index', min: 1.2, max: 2.2, step: 0.01 },
+    { key: 'alongTrackSpacingM', label: 'Along-track spacing', unit: 'm', min: 50, max: 1500, step: 25 },
+    { key: 'pulseLengthUs', label: 'Pulse length', unit: 'us', min: 5, max: 100, step: 5 },
+    { key: 'windowLossDb', label: 'Window loss', unit: 'dB', min: -6, max: 0, step: 0.1 },
+    { key: 'baseReflectivityDb', label: 'Base reflectivity', unit: 'dB', min: -20, max: 10, step: 0.5 },
+    { key: 'frequencySlopeDbPerOctave', label: 'Frequency slope', unit: 'dB/oct', min: -8, max: 4, step: 0.25 },
+    { key: 'referenceFrequencyMhz', label: 'Reference frequency', unit: 'MHz', min: 3, max: 30, step: 1 }
+  ];
+
+  function round(value, digits = 6) {
+    if (!Number.isFinite(value)) return null;
+    const scale = 10 ** digits;
+    return Math.round(value * scale) / scale;
+  }
+
+  function db(value) {
+    return 10 * Math.log10(Math.max(value, 1e-12));
+  }
+
+  function log2(value) {
+    return Math.log(Math.max(value, 1e-12)) / Math.log(2);
+  }
+
+  function pulseGain(lengthUs, windowLossDb) {
+    return db(Math.max(lengthUs, 0.1)) + windowLossDb;
+  }
+
+  function getChart(baseData, title) {
+    return baseData && baseData.charts ? baseData.charts.find((chart) => chart.title === title) : null;
+  }
+
+  function fallbackChart(id, title, xLabel, yLabel) {
+    return {
+      id,
+      section: 'Latest v30',
+      sourceSheet: 'Browser model',
+      title,
+      note: 'Recalculated in the browser from editable inputs.',
+      xLabel,
+      yLabel,
+      kind: 'line',
+      series: []
+    };
+  }
+
+  function withSeries(source, fallback, series) {
+    const chart = source || fallback;
+    return {
+      ...chart,
+      sourceSheet: chart.sourceSheet || 'Browser model',
+      note: 'Recalculated in the browser from editable v30 inputs.',
+      series
+    };
+  }
+
+  function replacePointY(point, y) {
+    const next = [point[0], round(y)];
+    if (point.length > 2) next.push(point[2]);
+    return next;
+  }
+
+  function buildPulseChart(params, source) {
+    const lengths = source && source.series.length
+      ? source.series[0].points.map((point) => point[0])
+      : [5, 10, 20, 50, 100];
+    const hf = lengths.map((length) => [length, round(pulseGain(length, params.windowLossDb))]);
+    const vhf = lengths.map((length) => [length, round(pulseGain(length, params.windowLossDb) + 10)]);
+    return withSeries(
+      source,
+      fallbackChart('v30-live-pulse-gain', titlePulse, 'Pulse length (us)', 'dB'),
+      [
+        { name: 'HF pulse gain', points: hf },
+        { name: 'VHF pulse gain', points: vhf }
+      ]
+    );
+  }
+
+  function buildGeometricChart(params, source) {
+    const baseSeries = source ? source.series : [];
+    const series = baseSeries.map((item, index) => ({
+      name: index === 0 ? 'HF geometric power' : 'VHF topo geometric power',
+      points: item.points.map((point) => replacePointY(point, point[1] + params.baseReflectivityDb))
+    }));
+    return withSeries(
+      source,
+      fallbackChart('v30-live-geometric-power', titleGeometric, 'Along-track position (km)', 'dB'),
+      series
+    );
+  }
+
+  function coherentAdjustment(params) {
+    const spacingRatio = defaults.alongTrackSpacingM / Math.max(params.alongTrackSpacingM, 1);
+    const iceRatio = Math.sqrt(defaults.iceIndex / Math.max(params.iceIndex, 0.1));
+    return db(spacingRatio * iceRatio);
+  }
+
+  function buildCoherentChart(params, source) {
+    const adjustment = coherentAdjustment(params);
+    const baseSeries = source ? source.series : [];
+    const series = baseSeries.map((item, index) => ({
+      name: index === 0 ? 'HF coherent gain' : 'VHF coherent gain',
+      points: item.points.map((point) => replacePointY(point, point[1] + adjustment))
+    }));
+    return withSeries(
+      source,
+      fallbackChart('v30-live-coherent-gain', titleCoherent, 'Along-track position (km)', 'dB'),
+      series
+    );
+  }
+
+  function buildTotalVhfChart(params, source, geometricChart, coherentChart) {
+    const geom = geometricChart.series[1] || geometricChart.series[0] || { points: [] };
+    const coherent = coherentChart.series[1] || coherentChart.series[0] || { points: [] };
+    const selectedPulseGain = pulseGain(params.pulseLengthUs, params.windowLossDb) + 10;
+    const frequencyResponse = params.frequencySlopeDbPerOctave * log2(60 / Math.max(params.referenceFrequencyMhz, 0.1));
+    const constantPoints = geom.points.map((point, index) => {
+      const coherentGain = coherent.points[index] ? coherent.points[index][1] : 0;
+      return replacePointY(point, point[1] + coherentGain + selectedPulseGain);
+    });
+    const frequencyPoints = constantPoints.map((point) => replacePointY(point, point[1] + frequencyResponse));
+    return withSeries(
+      source,
+      fallbackChart('v30-live-total-vhf-db', titleTotalVhf, 'Along-track position (km)', 'dB'),
+      [
+        { name: 'Constant reflectivity', points: constantPoints },
+        { name: 'Frequency-dependent reflectivity', points: frequencyPoints }
+      ]
+    );
+  }
+
+  function compute(params, baseData) {
+    const base = baseData || window.V30_RESULTS;
+    if (!base || !base.charts) return base;
+    const p = { ...defaults, ...params };
+    const pulseChart = buildPulseChart(p, getChart(base, titlePulse));
+    const geometricChart = buildGeometricChart(p, getChart(base, titleGeometric));
+    const coherentChart = buildCoherentChart(p, getChart(base, titleCoherent));
+    const totalVhfChart = buildTotalVhfChart(p, getChart(base, titleTotalVhf), geometricChart, coherentChart);
+    const replacements = new Map([
+      [titlePulse, pulseChart],
+      [titleGeometric, geometricChart],
+      [titleCoherent, coherentChart],
+      [titleTotalVhf, totalVhfChart]
+    ]);
+    return {
+      ...base,
+      charts: base.charts.map((chart) => replacements.get(chart.title) || chart)
+    };
+  }
+
+  window.V30_LIVE_MODEL = {
+    defaults,
+    controls,
+    compute
+  };
+})();
