@@ -1,5 +1,6 @@
 (function () {
   const sourceData = window.V19_RESULTS;
+  const v30Data = window.V30_RESULTS;
   const liveModel = window.V19_LIVE_MODEL;
   let liveParams = liveModel ? { ...liveModel.defaults } : {};
   let data = liveModel ? liveModel.compute(liveParams) : sourceData;
@@ -217,9 +218,45 @@
     ]);
   }
 
+  function renderV30() {
+    if (!v30Data) return;
+    const question = document.getElementById('v30-question');
+    const claim = document.getElementById('v30-claim');
+    if (question) question.textContent = v30Data.overview.question || '';
+    if (claim) claim.textContent = v30Data.overview.claim || '';
+    const metricTarget = document.getElementById('v30-metric-grid');
+    if (metricTarget) metricTarget.innerHTML = v30Data.metrics.map(makeMetric).join('');
+    renderTable('v30-risk-table', v30Data.riskRows, [
+      { key: 'scenario', label: 'Scenario' },
+      { key: 'band', label: 'Band' },
+      { key: 'ambiguousFalse', label: 'Ambiguous/false' },
+      { key: 'notInterpretable', label: 'Not interpretable' },
+      { key: 'topRiskXKm', label: 'Risk x km' },
+    ]);
+    renderTable('v30-signal-table', v30Data.signalAssumptions, [
+      { key: 'parameter', label: 'Parameter' },
+      { key: 'value', label: 'Value' },
+      { key: 'unit', label: 'Unit' },
+    ]);
+    renderTable('v30-case-table', v30Data.caseStudies, [
+      { key: 'caseStudy', label: 'Case study' },
+      { key: 'scenario', label: 'Scenario' },
+      { key: 'band', label: 'Band' },
+      { key: 'score', label: 'Score' },
+      { key: 'interpretation', label: 'Interpretation' },
+    ]);
+    renderChartSet(v30Data.charts, 'v30-charts');
+  }
+
   function renderCharts(section, targetId) {
     const target = document.getElementById(targetId);
     const charts = data.charts.filter((chart) => chart.section === section);
+    renderChartSet(charts, targetId, target);
+  }
+
+  function renderChartSet(charts, targetId, knownTarget) {
+    const target = knownTarget || document.getElementById(targetId);
+    if (!target) return;
     target.innerHTML = charts.map((chart) => `
       <article class="chart-card">
         <div class="chart-title-row">
@@ -244,12 +281,32 @@
       series.points.forEach((point) => {
         const x = point[0];
         const y = point[1];
+        const label = point[2] ?? point[0];
         if (Number.isFinite(x) && Number.isFinite(y)) {
-          points.push({ x, y, seriesIndex, seriesName: series.name });
+          points.push({ x, y, label, seriesIndex, seriesName: series.name });
         }
       });
     });
     return points;
+  }
+
+  function normalizeChart(chart) {
+    const labels = [];
+    const labelToIndex = new Map();
+    const hasCategory = chart.series.some((series) => series.points.some((point) => typeof point[0] === 'string'));
+    if (!hasCategory) return { ...chart, categories: null };
+    const series = chart.series.map((item) => ({
+      ...item,
+      points: item.points.map((point) => {
+        const raw = String(point[0]);
+        if (!labelToIndex.has(raw)) {
+          labels.push(raw);
+          labelToIndex.set(raw, labels.length);
+        }
+        return [labelToIndex.get(raw), point[1], raw];
+      }),
+    }));
+    return { ...chart, series, categories: labels };
   }
 
   function extent(values) {
@@ -275,20 +332,23 @@
 
   function drawChart(container, chart) {
     if (!container) return;
+    const prepared = normalizeChart(chart);
     const width = 760;
     const height = 420;
     const margin = { top: 20, right: 26, bottom: 54, left: 70 };
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
-    const points = finitePoints(chart);
+    const points = finitePoints(prepared);
     const [xMin, xMax] = extent(points.map((p) => p.x));
     const [yMin, yMax] = extent(points.map((p) => p.y));
     const sx = (x) => margin.left + ((x - xMin) / (xMax - xMin || 1)) * plotWidth;
     const sy = (y) => margin.top + plotHeight - ((y - yMin) / (yMax - yMin || 1)) * plotHeight;
 
-    const xTicks = ticks(xMin, xMax, 6);
+    const xTicks = prepared.categories
+      ? categoryTicks(prepared.categories.length)
+      : ticks(xMin, xMax, 6);
     const yTicks = ticks(yMin, yMax, 5);
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(chart.title)}">`;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(prepared.title)}">`;
     yTicks.forEach((tick) => {
       const y = sy(tick);
       svg += `<line class="grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
@@ -297,17 +357,18 @@
     xTicks.forEach((tick) => {
       const x = sx(tick);
       svg += `<line class="grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
-      svg += `<text class="axis" x="${x}" y="${height - margin.bottom + 22}" text-anchor="middle">${formatAxisValue(tick)}</text>`;
+      const label = prepared.categories ? shortenAxisLabel(prepared.categories[Math.round(tick) - 1] || '') : formatAxisValue(tick);
+      svg += `<text class="axis" x="${x}" y="${height - margin.bottom + 22}" text-anchor="middle">${escapeHtml(label)}</text>`;
     });
     svg += `<line class="axis-line" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="axis-line" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
-    svg += `<text class="axis-label" x="${margin.left + plotWidth / 2}" y="${height - 12}" text-anchor="middle">${escapeHtml(chart.xLabel)}</text>`;
-    svg += `<text class="axis-label" transform="translate(16 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(chart.yLabel)}</text>`;
+    svg += `<text class="axis-label" x="${margin.left + plotWidth / 2}" y="${height - 12}" text-anchor="middle">${escapeHtml(prepared.xLabel)}</text>`;
+    svg += `<text class="axis-label" transform="translate(16 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(prepared.yLabel)}</text>`;
 
-    if (chart.kind === 'bar') {
-      svg += drawBars(chart, sx, sy, yMin, height - margin.bottom, plotWidth, margin.left);
+    if (prepared.kind === 'bar') {
+      svg += drawBars(prepared, sx, sy, yMin, height - margin.bottom, plotWidth, margin.left);
     } else {
-      chart.series.forEach((series, index) => {
+      prepared.series.forEach((series, index) => {
         const path = linePath(series.points, sx, sy);
         if (path) {
           svg += `<path d="${path}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>`;
@@ -322,16 +383,37 @@
     hit.addEventListener('mouseleave', hideTooltip);
   }
 
+  function categoryTicks(count) {
+    if (count <= 8) return Array.from({ length: count }, (_, index) => index + 1);
+    const step = Math.ceil(count / 6);
+    const ticksOut = [];
+    for (let i = 1; i <= count; i += step) ticksOut.push(i);
+    if (ticksOut[ticksOut.length - 1] !== count) ticksOut.push(count);
+    return ticksOut;
+  }
+
+  function shortenAxisLabel(value) {
+    const text = String(value);
+    return text.length > 14 ? `${text.slice(0, 12)}...` : text;
+  }
+
   function drawBars(chart, sx, sy, yMin, baseY, plotWidth, left) {
-    const series = chart.series[0];
-    const pts = series.points.filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
-    const width = Math.max(16, Math.min(48, plotWidth / Math.max(pts.length * 1.8, 1)));
-    return pts.map((point, index) => {
-      const x = sx(point[0]) - width / 2;
-      const y = sy(Math.max(point[1], yMin));
-      const h = Math.max(1, Math.abs(baseY - y));
-      return `<rect x="${x}" y="${Math.min(y, baseY)}" width="${width}" height="${h}" fill="${colors[index % colors.length]}"></rect>`;
-    }).join('');
+    const categoryCount = chart.categories ? chart.categories.length : Math.max(...chart.series.map((series) => series.points.length));
+    const groupWidth = Math.max(18, Math.min(58, plotWidth / Math.max(categoryCount * 1.5, 1)));
+    const barWidth = Math.max(3, groupWidth / Math.max(chart.series.length, 1));
+    const zeroY = sy(0);
+    const baseline = yMin < 0 ? zeroY : baseY;
+    let rects = '';
+    chart.series.forEach((series, seriesIndex) => {
+      series.points.forEach((point) => {
+        if (!Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+        const x = sx(point[0]) - groupWidth / 2 + seriesIndex * barWidth;
+        const y = sy(point[1]);
+        const h = Math.max(1, Math.abs(baseline - y));
+        rects += `<rect x="${x}" y="${Math.min(y, baseline)}" width="${Math.max(2, barWidth - 1)}" height="${h}" fill="${colors[seriesIndex % colors.length]}"></rect>`;
+      });
+    });
+    return rects;
   }
 
   function linePath(points, sx, sy) {
@@ -370,7 +452,7 @@
     });
     tooltip.innerHTML = `
       <p class="tooltip-title">${escapeHtml(best.seriesName)}</p>
-      <p class="tooltip-line">x: ${formatValue(best.x, 3)}</p>
+      <p class="tooltip-line">x: ${escapeHtml(best.label)}</p>
       <p class="tooltip-line">y: ${formatValue(best.y, 3)}</p>
     `;
     tooltip.hidden = false;
@@ -388,6 +470,7 @@
     renderCharts('Surface and motion', 'surface-charts');
     renderCharts('Subsurface model', 'subsurface-charts');
     renderCharts('Doppler depth correction', 'doppler-charts');
+    renderV30();
   }
 
   initTabs();
