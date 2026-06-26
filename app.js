@@ -66,6 +66,568 @@
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
+  const CORE_QUESTION = 'Can a bright deep radar return be trusted as the ice-ocean boundary?';
+
+  const SECTION_CAVEATS = {
+    'Surface and motion': 'This is a synthetic geometry and terrain sensitivity test, not a reconstruction of an actual Europa flyby.',
+    'Subsurface model': 'These layers and echo strengths are generated sensitivity cases; they do not prove real Europa geology.',
+    'False-layer response': 'The false reflectors are synthetic receiver stress tests, not mission-validated detections of internal Europa layers.',
+    'Doppler depth correction': 'This is a controlled browser-side correction demonstration with simplified residual error, not a full radar inversion.',
+    'Advanced sensitivity': 'The v30 charts are workbook-derived and browser-adjusted sensitivity views, not a mission-validated Europa radar processor.'
+  };
+
+  function finiteSeriesPointsFor(series) {
+    return (series && series.points ? series.points : []).filter((point) => Number.isFinite(point[1]));
+  }
+
+  function findSeries(chart, matcher) {
+    const series = chart.series || [];
+    if (!matcher) return series[0];
+    if (matcher instanceof RegExp) return series.find((item) => matcher.test(item.name || ''));
+    const needle = String(matcher).toLowerCase();
+    return series.find((item) => String(item.name || '').toLowerCase() === needle)
+      || series.find((item) => String(item.name || '').toLowerCase().includes(needle));
+  }
+
+  function pointLabel(point, chart) {
+    const raw = point[2] ?? point[0];
+    return typeof raw === 'number' ? formatWithAxis(raw, chart.xLabel, 2) : String(raw);
+  }
+
+  function seriesRangeSentence(chart, matcher, label) {
+    const series = findSeries(chart, matcher);
+    const points = finiteSeriesPointsFor(series);
+    if (!series || !points.length) return '';
+    const values = points.map((point) => point[1]);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const display = label || series.name;
+    return `${display} ranges from ${formatWithAxis(min, chart.yLabel, 2)} to ${formatWithAxis(max, chart.yLabel, 2)}.`;
+  }
+
+  function allSeriesRangeSentence(chart, limit = 4) {
+    const bits = (chart.series || []).slice(0, limit)
+      .map((series) => seriesRangeSentence(chart, series.name))
+      .filter(Boolean);
+    const remaining = Math.max((chart.series || []).length - limit, 0);
+    return `${bits.join(' ')}${remaining ? ` ${remaining} additional series are included in the same units.` : ''}`;
+  }
+
+  function pairedDifferenceSentence(chart, matcherA, matcherB, label) {
+    const a = findSeries(chart, matcherA);
+    const b = findSeries(chart, matcherB);
+    const aPoints = finiteSeriesPointsFor(a);
+    const bPoints = finiteSeriesPointsFor(b);
+    const n = Math.min(aPoints.length, bPoints.length);
+    if (!a || !b || !n) return '';
+    const diffs = [];
+    for (let i = 0; i < n; i += 1) {
+      diffs.push(aPoints[i][1] - bPoints[i][1]);
+    }
+    const min = Math.min(...diffs);
+    const max = Math.max(...diffs);
+    return `${label || `${a.name} minus ${b.name}`} ranges from ${formatWithAxis(min, chart.yLabel, 2)} to ${formatWithAxis(max, chart.yLabel, 2)}.`;
+  }
+
+  function thresholdSentence(chart, matcher, threshold = 0, label) {
+    const series = findSeries(chart, matcher);
+    const points = finiteSeriesPointsFor(series);
+    if (!series || !points.length) return '';
+    const count = points.filter((point) => point[1] >= threshold).length;
+    const display = label || series.name;
+    return `${display} is at or above ${formatWithAxis(threshold, chart.yLabel, 2)} in ${count} of ${points.length} plotted samples.`;
+  }
+
+  function zeroBehaviorSentence(chart, matcher, label) {
+    const series = findSeries(chart, matcher);
+    const points = finiteSeriesPointsFor(series);
+    if (!series || !points.length) return '';
+    const values = points.map((point) => point[1]);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const display = label || series.name;
+    if (min < 0 && max > 0) return `${display} crosses the zero reference, so the sign changes along the track.`;
+    if (max <= 0) return `${display} stays at or below zero throughout this run.`;
+    return `${display} stays at or above zero throughout this run.`;
+  }
+
+  function dominanceSentence(chart, matcherA, matcherB, labelA, labelB) {
+    const a = findSeries(chart, matcherA);
+    const b = findSeries(chart, matcherB);
+    const aPoints = finiteSeriesPointsFor(a);
+    const bPoints = finiteSeriesPointsFor(b);
+    const n = Math.min(aPoints.length, bPoints.length);
+    if (!a || !b || !n) return '';
+    let count = 0;
+    for (let i = 0; i < n; i += 1) {
+      if (aPoints[i][1] > bPoints[i][1]) count += 1;
+    }
+    return `${labelA || a.name} is stronger or higher than ${labelB || b.name} in ${count} of ${n} paired samples.`;
+  }
+
+  function categoryExtremaSentence(chart, matcher, label) {
+    const series = findSeries(chart, matcher);
+    const points = finiteSeriesPointsFor(series);
+    if (!series || !points.length) return '';
+    let minPoint = points[0];
+    let maxPoint = points[0];
+    points.forEach((point) => {
+      if (point[1] < minPoint[1]) minPoint = point;
+      if (point[1] > maxPoint[1]) maxPoint = point;
+    });
+    const display = label || series.name;
+    return `${display} is highest for ${pointLabel(maxPoint, chart)} (${formatWithAxis(maxPoint[1], chart.yLabel, 2)}) and lowest for ${pointLabel(minPoint, chart)} (${formatWithAxis(minPoint[1], chart.yLabel, 2)}).`;
+  }
+
+  function meanAbsFor(chart, matcher) {
+    const series = findSeries(chart, matcher);
+    const values = finiteSeriesPointsFor(series).map((point) => Math.abs(point[1]));
+    if (!values.length) return null;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  }
+
+  function correctionSentence(chart, beforeMatcher, afterMatcher) {
+    const before = meanAbsFor(chart, beforeMatcher);
+    const after = meanAbsFor(chart, afterMatcher);
+    if (!Number.isFinite(before) || !Number.isFinite(after)) return '';
+    const direction = after < before ? 'reduces' : 'does not reduce';
+    return `Mean absolute error changes from ${formatWithAxis(before, chart.yLabel, 2)} before correction to ${formatWithAxis(after, chart.yLabel, 2)} after correction, so the correction ${direction} the modeled error.`;
+  }
+
+  function trendSentence(chart, matcher, label) {
+    const series = findSeries(chart, matcher);
+    const points = finiteSeriesPointsFor(series);
+    if (!series || points.length < 2) return '';
+    const first = points[0];
+    const last = points[points.length - 1];
+    const display = label || series.name;
+    const direction = last[1] > first[1] ? 'increases' : last[1] < first[1] ? 'decreases' : 'stays flat';
+    return `${display} ${direction} from ${formatWithAxis(first[1], chart.yLabel, 2)} at ${pointLabel(first, chart)} to ${formatWithAxis(last[1], chart.yLabel, 2)} at ${pointLabel(last, chart)}.`;
+  }
+
+  function decisionCodeSentence(chart) {
+    const series = findSeries(chart, /weak|ocean|ambiguous|false/i);
+    const points = finiteSeriesPointsFor(series);
+    if (!series || !points.length) return '';
+    const counts = new Map([[0, 0], [1, 0], [2, 0], [3, 0]]);
+    points.forEach((point) => {
+      const code = Math.round(point[1]);
+      counts.set(code, (counts.get(code) || 0) + 1);
+    });
+    return `Code counts are 0=${counts.get(0) || 0}, 1=${counts.get(1) || 0}, 2=${counts.get(2) || 0}, and 3=${counts.get(3) || 0} out of ${points.length} samples.`;
+  }
+
+  function sectionCaveat(chart) {
+    return SECTION_CAVEATS[chart.section] || 'This chart is part of a synthetic browser-side sensitivity model, not mission-validated Europa evidence.';
+  }
+
+  const CHART_EXPLANATIONS = {
+    'Surface Height: Off-Nadir Target vs Nadir Reference Terrain': {
+      question: 'Do the side-looking target terrain and the nadir reference terrain differ enough to bias the radar range?',
+      xAxis: 'Along-track position (km): distance along the modeled flyby path, with 0 km near mid-pass.',
+      yAxis: 'Surface elevation (m): positive values are raised terrain and lower values are depressions relative to the synthetic reference.',
+      series: 'Off-nadir target terrain is the side-offset surface the radar is aimed toward. Nadir terrain is the surface directly below the spacecraft and acts as the reference range.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'Off-nadir target terrain')} ${seriesRangeSentence(chart, 'Nadir terrain')} ${pairedDifferenceSentence(chart, 'Off-nadir target terrain', 'Nadir terrain', 'Target minus nadir terrain')}`,
+      takeaway: 'If target and nadir terrain separate, a side-looking return can carry a terrain bias that looks like a range or depth change.',
+      whyItMatters: `The ${CORE_QUESTION} question depends on knowing whether a bright return is deep, or whether geometry and relief made it appear deep.`
+    },
+    'Apparent Depth: Spacecraft Motion Distortion by Run': {
+      question: 'Does flyby geometry make a flat surface look like a deeper reflector?',
+      xAxis: 'Along-track position (km): each scenario spans its modeled flyby length, so wider curves represent longer passes.',
+      yAxis: 'Apparent depth (m): higher values mean more extra slant range has been converted into a depth-like number, which is riskier for boundary interpretation.',
+      series: 'Each line is a different altitude and track-length scenario, including the active custom pass and paper-derived comparison passes.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'Different passes can create very different apparent-depth distortion even before adding real subsurface structure.',
+      whyItMatters: `A bright deep-looking return is only trustworthy if geometry alone cannot explain a similar depth-like shift.`
+    },
+    'Terrain Baseline: Surface-Height Equivalent Error': {
+      question: 'How much apparent elevation or depth error is created by generated terrain?',
+      xAxis: 'Along-track position (km): location along the active custom pass.',
+      yAxis: 'Surface-height equivalent error (m): positive and negative signs show which direction the terrain bias pushes the interpreted surface-height equivalent.',
+      series: 'Total radar elevation error converts the topography-driven apparent-depth change back into meters of surface-height-equivalent error.',
+      notice: (chart) => `${seriesRangeSentence(chart, /elevation error|surface-height/i)} ${zeroBehaviorSentence(chart, /elevation error|surface-height/i, 'The terrain error')}`,
+      takeaway: 'The sign and size of this error show where topography can pull a radar interpretation shallower or deeper.',
+      whyItMatters: `If terrain can create a comparable bias, the project cannot treat a bright deep return as automatically proving the ice-ocean boundary.`
+    },
+    'Terrain Baseline: Total Radar Elevation Error': {
+      question: 'How much radar elevation error remains after the v30 generated-terrain pass is applied?',
+      xAxis: 'Along-track position (km): location along the active custom pass.',
+      yAxis: 'Surface-height equivalent error (m): positive and negative values show the direction of the terrain-driven radar elevation bias, and larger absolute values mean more geometry/topography bias.',
+      series: 'Total radar elevation error is the v30 workbook-derived version of the terrain-baseline error curve.',
+      notice: (chart) => `${seriesRangeSentence(chart, /elevation error/i)} ${zeroBehaviorSentence(chart, /elevation error/i, 'The elevation error')}`,
+      takeaway: 'The v30 terrain baseline keeps the same warning: generated terrain can move the radar interpretation before any ocean claim is considered.',
+      whyItMatters: `The ${CORE_QUESTION} question needs this terrain-bias check as a guardrail.`
+    },
+    'Doppler: Flat Geometry vs Topography': {
+      question: 'How do flat geometry and generated topography change the expected HF and VHF Doppler shift?',
+      xAxis: 'Along-track position (km): location along the flyby, with sign changes often occurring around the closest part of the pass.',
+      yAxis: 'Doppler shift (Hz): positive and negative signs represent opposite range-rate directions; larger absolute values require more careful sampling.',
+      series: 'Flat VHF and flat HF use the smooth geometry only. Topo VHF and topo HF include generated terrain in the range-rate estimate.',
+      notice: (chart) => `${allSeriesRangeSentence(chart)} ${pairedDifferenceSentence(chart, 'Topo VHF', 'Flat VHF', 'Topo VHF minus flat VHF')}`,
+      takeaway: 'Topography can perturb the Doppler signature, and VHF has larger shifts than HF because of its shorter wavelength.',
+      whyItMatters: 'Doppler shift affects angle and depth correction, so a biased Doppler estimate can make a deep return look more or less trustworthy than it is.'
+    },
+    'Scenario Two-Way Extra Delay: Flat Surface': {
+      question: 'How much extra round-trip timing does off-nadir geometry create on a flat surface?',
+      xAxis: 'Along-track position (km): distance along each scenario flyby.',
+      yAxis: 'Two-way extra delay (us): larger values mean the radar echo traveled a longer extra path before returning.',
+      series: 'Each line is a different flyby scenario, using the same flat-surface delay formula for comparison.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'Longer or lower-altitude passes can produce larger timing shifts that should not be mistaken for subsurface delay by themselves.',
+      whyItMatters: 'The ice-ocean boundary interpretation depends on separating timing caused by geometry from timing caused by real depth.'
+    },
+    'Custom Pass Two-Way Extra Delay: Flat vs Generated Topography': {
+      question: 'How does generated terrain change the extra round-trip delay for the active custom pass?',
+      xAxis: 'Along-track position (km): location along the active custom pass.',
+      yAxis: 'Two-way extra delay (us): larger values mean a longer radar path; small timing differences can still map into apparent-depth differences.',
+      series: 'Flat surface pass uses no terrain. Topography-adjusted pass includes generated surface height at the target and nadir reference.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'Flat surface pass')} ${seriesRangeSentence(chart, 'Topography-adjusted pass')} ${pairedDifferenceSentence(chart, 'Topography-adjusted pass', 'Flat surface pass', 'Topography delay minus flat delay')}`,
+      takeaway: 'Generated terrain shifts the timing curve relative to the flat case, which is another route from surface relief to apparent depth.',
+      whyItMatters: 'A deep-looking return is less convincing if surface geometry can move the timing in a similar direction.'
+    },
+    'Nadir Radar Delay by Flyby: Without Topography': {
+      question: 'What round-trip delay is expected directly below the spacecraft when the surface is flat?',
+      xAxis: 'Along-track position (km): each flyby scenario is plotted over its own modeled path length.',
+      yAxis: 'Delay (us): larger values mean a longer spacecraft-to-surface round trip.',
+      series: 'Each line is a flyby altitude and track-length scenario before topography is included.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'The flat nadir delay sets the timing baseline for each flyby before terrain or side-looking geometry adds complexity.',
+      whyItMatters: 'The baseline matters because apparent deep returns must be interpreted relative to the surface timing reference.'
+    },
+    'Nadir Radar Delay by Flyby: With Generated Topography': {
+      question: 'How does generated terrain change the nadir surface timing for each flyby?',
+      xAxis: 'Along-track position (km): each scenario follows its modeled pass length.',
+      yAxis: 'Delay (us): larger values mean a longer surface round trip; terrain highs shorten the delay and lows lengthen it.',
+      series: 'Each line is a flyby scenario with generated topography added to the nadir range.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'Topography turns a smooth surface-timing baseline into a locally varying reference.',
+      whyItMatters: 'A trustworthy ice-ocean read needs a stable surface reference, or at least a correction for how terrain moves that reference.'
+    },
+    'Off-Nadir Radar Delay by Flyby: Without Topography': {
+      question: 'How much timing delay does side-looking geometry create before topography is added?',
+      xAxis: 'Along-track position (km): each scenario is plotted across its flyby path.',
+      yAxis: 'Delay (us): larger values mean a longer off-nadir radar path.',
+      series: 'Each line is a flyby scenario using flat off-nadir geometry.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'Off-nadir paths can be substantially longer than nadir paths, especially across long low-altitude passes.',
+      whyItMatters: 'That longer path can mimic depth unless the model separates slant geometry from true subsurface delay.'
+    },
+    'Off-Nadir Radar Delay by Flyby: With Generated Topography': {
+      question: 'How does generated terrain modify off-nadir timing across different flybys?',
+      xAxis: 'Along-track position (km): location along each scenario pass.',
+      yAxis: 'Delay (us): larger values mean a longer off-nadir round trip after terrain is included.',
+      series: 'Each line is a flyby scenario with generated target terrain included in the off-nadir range.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'The off-nadir delay is controlled by both path geometry and local terrain height.',
+      whyItMatters: 'A bright echo can only support the boundary interpretation if this geometry-plus-terrain timing has been separated from real in-ice delay.'
+    },
+    'Subsurface Truth Model: Icy Layers': {
+      question: 'Where are the synthetic surface, shallow layer, briny lens, and possible ice-ocean boundary placed?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Elevation relative to model reference (m): the surface is near positive elevation, while more negative layer elevations mean deeper modeled reflectors.',
+      series: 'Icy top surface is the generated surface. Shallow ice layer is a near-surface internal reflector. Warm/briny lens is a possible mid-shell reflector. Ice-ocean boundary is the deepest modeled reflector.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'The model intentionally includes multiple internal reflectors before the deepest boundary so the receiver has something to confuse with the ocean.',
+      whyItMatters: 'The core risk is not just seeing a deep return; it is deciding whether that return is the true deepest boundary or a competing internal layer.'
+    },
+    'Scenario Comparison: Thin / Medium / Thick Ice': {
+      question: 'How sensitive is the possible boundary depth to assumed ice-shell thickness?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Depth (m): higher values are deeper boundaries and generally harder radar paths because the signal travels farther through ice.',
+      series: 'Thin shell, medium shell, and thick shell scale the same boundary shape to different thickness assumptions.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'The same geometry can imply very different boundary depths once shell-thickness assumptions change.',
+      whyItMatters: 'Trusting a bright deep return requires knowing whether the modeled shell depth is plausible and whether the signal should still be detectable there.'
+    },
+    'Boundary Uncertainty Band': {
+      question: 'How wide is the possible range around the modeled ice-ocean boundary?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Depth (m): higher values are deeper; the band shows shallower and deeper alternatives around the mean boundary.',
+      series: 'Lower bound is the shallower edge of the uncertainty band. Mean boundary is the central modeled depth. Upper bound is the deeper edge.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'The boundary should be read as a band of possible depths, not a single exact line.',
+      whyItMatters: 'A bright return inside or near the band is still not proof of an ocean unless false layers, clutter, and attenuation are checked.'
+    },
+    'Ocean Model vs No-Ocean Control': {
+      question: 'Does the modeled ocean reflector clear the threshold more strongly than a no-ocean control?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Relative power / margin (dB): values above 0 dB clear the simplified detection threshold; below 0 dB is weak or risky.',
+      series: 'Ocean model margin is the possible boundary echo minus threshold. No-ocean control margin is a weak control case. The 0 dB line marks the detection threshold.',
+      notice: (chart) => `${thresholdSentence(chart, 'Ocean model margin', 0)} ${thresholdSentence(chart, 'No-ocean control margin', 0)} ${dominanceSentence(chart, 'Ocean model margin', 'No-ocean control margin', 'Ocean model margin', 'No-ocean control margin')}`,
+      takeaway: 'The ocean model is only meaningful if it separates from the no-ocean control under the current threshold.',
+      whyItMatters: 'This is a sanity check against treating any deep-ish return as boundary evidence.'
+    },
+    'Radargram-Style Return Timing With Clutter': {
+      question: 'When do clutter, shallow layers, a briny lens, and the ocean boundary return in time?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Delay (us): lower delays arrive earlier and are usually shallower; larger delays arrive later and usually represent deeper paths.',
+      series: 'Surface clutter upper is the near-surface clutter band. Shallow ice return is the upper internal layer. Warm/briny lens return is a mid-shell echo where present. Ocean boundary return is the deepest modeled echo.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'Earlier internal echoes can appear before the ocean echo, so timing alone does not identify the correct boundary.',
+      whyItMatters: 'A bright deep return must be interpreted in the full return sequence, not as an isolated line.'
+    },
+    'Detectability Margin vs Threshold': {
+      question: 'Do the lens and ocean echoes clear the simplified detection threshold?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Relative power / margin (dB): positive values are above threshold and easier to detect; negative values are below threshold and risky.',
+      series: 'Lens echo margin is the briny-lens echo minus threshold. Ocean echo margin is the boundary echo minus threshold. The 0 dB line is the threshold.',
+      notice: (chart) => `${thresholdSentence(chart, 'Lens echo margin', 0)} ${thresholdSentence(chart, 'Ocean echo margin', 0)} ${dominanceSentence(chart, 'Lens echo margin', 'Ocean echo margin', 'Lens echo margin', 'Ocean echo margin')}`,
+      takeaway: 'If an internal lens margin rivals or exceeds the ocean margin, a simple strongest-return interpretation becomes ambiguous.',
+      whyItMatters: 'The project question hinges on whether the boundary echo is uniquely detectable, not merely detectable.'
+    },
+    'Reflection Strength by Material / Interface': {
+      question: 'Which synthetic material or interface assumptions produce stronger modeled reflections?',
+      xAxis: 'Material / interface: categorical assumptions for different ice and boundary contrasts.',
+      yAxis: 'Relative reflector strength (dB): higher or less-negative values represent stronger assumed reflectors.',
+      series: 'Material/interface strength is the relative dB assumption used to compare cold clean ice, salt-rich ice, briny lens, dirty ice mix, and the ice-ocean boundary.',
+      notice: (chart) => categoryExtremaSentence(chart, 'Material/interface strength'),
+      takeaway: 'Internal briny or dirty interfaces can be bright enough to compete with the boundary in this simplified sensitivity model.',
+      whyItMatters: 'A bright echo is not automatically the ice-ocean boundary if another material contrast can also be bright.'
+    },
+    'Cross-Instrument Evidence Score': {
+      question: 'How much support comes from radar versus other contextual evidence channels?',
+      xAxis: 'Instrument: radar, thermal, composition, and magnetic/plasma support channels.',
+      yAxis: 'Support (%): higher values mean stronger modeled support, but this is a project scoring aid rather than mission evidence.',
+      series: 'Evidence support score assigns a simple support value to each instrument channel.',
+      notice: (chart) => categoryExtremaSentence(chart, 'Evidence support score'),
+      takeaway: 'Radar should be read with supporting context; this page does not let radar alone prove the boundary.',
+      whyItMatters: 'The ice-ocean interpretation is safer when independent evidence channels agree, and riskier when radar is isolated.'
+    },
+    'Competing Echo Margins: Receiver Signal Strength': {
+      question: 'Does the false-layer echo beat the ocean echo at the receiver?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Margin above threshold (dB): positive clears the threshold; higher values are stronger receiver candidates.',
+      series: 'Surface clutter margin is near-surface interference. False layer margin is the synthetic internal reflector. Ocean boundary margin is the possible true boundary. The 0 dB line marks detectability.',
+      notice: (chart) => `${thresholdSentence(chart, 'False layer margin', 0)} ${thresholdSentence(chart, 'Ocean boundary margin', 0)} ${dominanceSentence(chart, 'False layer margin', 'Ocean boundary margin', 'False layer margin', 'Ocean boundary margin')}`,
+      takeaway: 'Where the false layer is above threshold and stronger than the ocean, a strongest-echo rule can choose the wrong reflector.',
+      whyItMatters: 'This is the central ambiguity test for whether a bright deep return should be trusted.'
+    },
+    'Picked Boundary Depth vs True Ocean Depth': {
+      question: 'Does the receiver-selected boundary follow the true modeled ocean or the false internal layer?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Depth below local surface (m): higher values are deeper; a shallower selected depth means the receiver is underestimating the boundary.',
+      series: 'True ocean boundary is the modeled deepest reflector. False layer depth is the synthetic internal reflector. Receiver selected boundary is what the simplified receiver picks.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'True ocean boundary')} ${seriesRangeSentence(chart, 'False layer depth')} ${pairedDifferenceSentence(chart, 'Receiver selected boundary', 'True ocean boundary', 'Selected minus true-ocean depth')}`,
+      takeaway: 'If the selected boundary tracks the false-layer curve, the receiver is reporting an internal reflector as the bottom.',
+      whyItMatters: 'The site is asking whether the brightest selected return is reliable, and this graph shows when the answer is no.'
+    },
+    'Return Timing: False Layer Arrives Before Ocean': {
+      question: 'Does the shallower false layer return before the ocean echo?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Two-way delay in ice (us): lower values arrive earlier; larger values arrive later and usually correspond to deeper reflectors.',
+      series: 'False layer return is the synthetic internal reflector timing. Ocean boundary return is the possible true boundary timing. Receiver selected return is the timing the simplified rule chooses.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'False layer return')} ${seriesRangeSentence(chart, 'Ocean boundary return')} ${pairedDifferenceSentence(chart, 'Ocean boundary return', 'False layer return', 'Ocean delay minus false-layer delay')}`,
+      takeaway: 'The false layer arrives earlier because it is shallower, but it can still be strong enough to affect the selected boundary.',
+      whyItMatters: 'Timing order helps diagnose ambiguity: a strong earlier return should not automatically be labeled as the ice-ocean boundary.'
+    },
+    'Depth Error If the Receiver Picks the Wrong Layer': {
+      question: 'How wrong is the interpreted boundary if the receiver selects the false layer?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Depth error (m): zero means correct; negative means the interpreted boundary is too shallow; positive would mean too deep.',
+      series: 'Selected minus true ocean is the receiver-picked depth error. No error line is the zero reference.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'Selected minus true ocean')} ${zeroBehaviorSentence(chart, 'Selected minus true ocean', 'The selected-depth error')}`,
+      takeaway: 'Negative error is the key warning: the model has picked something shallower than the true ocean boundary.',
+      whyItMatters: 'A large shallow bias would make a bright return look like an ocean boundary when it is really an internal feature in the simulation.'
+    },
+    'Satellite Receiver Decision Along Track': {
+      question: 'How does the simplified receiver classify each along-track sample?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Decision code: 0 means weak/no deep detection, 1 means ocean likely, 2 means ambiguous, and 3 means false layer selected.',
+      series: 'The single decision-code series converts the receiver classification into numeric codes so changes along the track are visible.',
+      notice: (chart) => decisionCodeSentence(chart),
+      takeaway: 'Long stretches of code 2 or 3 are direct ambiguity warnings; code 1 is the safer ocean-likely case under this model.',
+      whyItMatters: 'The project needs a classification, not just a bright line, because the same echo strength can imply different interpretation risk.'
+    },
+    'Receiver Outcome Share for This Flyby': {
+      question: 'What percentage of this flyby falls into each receiver-outcome category?',
+      xAxis: 'Receiver outcome: categorical summary of ocean likely, ambiguous, false picked, and weak/no deep detection.',
+      yAxis: 'Percent of along-track samples: higher bars mean that outcome happens more often in the current run.',
+      series: 'Share of samples is the percent of along-track points assigned to each receiver outcome.',
+      notice: (chart) => categoryExtremaSentence(chart, 'Share of samples'),
+      takeaway: 'This graph turns the along-track decision code into an easy risk summary for the whole pass.',
+      whyItMatters: 'A flyby with a large ambiguous or false-picked share should not be summarized as a clean ocean-boundary detection.'
+    },
+    'Doppler-Inverted Look Angle vs Existing Geometry': {
+      question: 'Can Doppler shift recover the look angle implied by the existing geometry?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Look angle (deg): larger values mean the radar path is farther from nadir; angle error creates depth error.',
+      series: 'Doppler angle from VHF shift is the inferred angle. Angle used after residual adds controlled residual error. Existing model geometry angle is the baseline geometry angle.',
+      notice: (chart) => `${allSeriesRangeSentence(chart)} ${pairedDifferenceSentence(chart, 'Angle used after residual', 'Existing model geometry angle', 'Residual angle minus geometry angle')}`,
+      takeaway: 'The Doppler-derived angle tracks the geometry but is intentionally not perfect.',
+      whyItMatters: 'Angle matters because slant depth must be corrected before a deep return can be compared with a vertical ice-ocean boundary depth.'
+    },
+    'Raw Slant Depth vs Doppler-Corrected Ocean Depth': {
+      question: 'Does Doppler correction move raw slant depth closer to the true modeled ocean depth?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Depth below local surface (m): higher values are deeper; closer agreement with the true simulated ocean depth is safer.',
+      series: 'True simulated ocean depth is the reference. Raw slant depth comes from angled echo delay. Doppler-corrected depth estimate applies the angle correction.',
+      notice: (chart) => `${pairedDifferenceSentence(chart, 'Raw slant depth', 'True simulated ocean depth', 'Raw slant minus true ocean')} ${pairedDifferenceSentence(chart, 'Doppler-corrected depth estimate', 'True simulated ocean depth', 'Corrected minus true ocean')}`,
+      takeaway: 'Correction should pull the slant-depth curve toward the true simulated boundary, while residual differences remain visible.',
+      whyItMatters: 'A corrected deep return is more useful than a raw slant return, but this controlled improvement is not proof of real Europa structure.'
+    },
+    'Depth Error Before and After Angle Correction': {
+      question: 'How much does Doppler angle correction reduce depth error?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Depth error (m): zero is ideal; lower absolute error means the correction helped.',
+      series: 'Uncorrected slant-depth error is the raw geometry error. Corrected depth residual is the remaining error after Doppler correction.',
+      notice: (chart) => correctionSentence(chart, 'Uncorrected slant-depth error', 'Corrected depth residual'),
+      takeaway: 'The useful result is not a perfect line; it is whether the corrected residual is much smaller than the raw slant-depth error.',
+      whyItMatters: 'If correction cannot reduce error, a bright deep return may be positioned at the wrong depth.'
+    },
+    'Corrected Layer Depths From Doppler Angle': {
+      question: 'Where do the upper layer, briny lens, and ocean boundary land after Doppler-angle correction?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Depth below local surface (m): higher values are deeper corrected estimates.',
+      series: 'Corrected upper-layer depth, corrected briny lens depth, and corrected ocean boundary depth are the layer estimates after the angle correction.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'Corrected depth still preserves layer separation, which helps keep shallow, lens, and boundary interpretations distinct.',
+      whyItMatters: 'The boundary is more trustworthy when correction does not collapse different layers into one ambiguous depth.'
+    },
+    'Pulse compression gain vs pulse length': {
+      question: 'How does pulse length affect the simplified pulse-compression gain?',
+      xAxis: 'Pulse length (us): the modeled transmit pulse duration in microseconds.',
+      yAxis: 'dB: higher gain means stronger modeled signal after this simplified pulse-compression proxy.',
+      series: 'HF pulse gain and VHF pulse gain show the band-specific gain proxy. Selected pulse setting marks the current control value.',
+      notice: (chart) => `${trendSentence(chart, 'HF pulse gain')} ${trendSentence(chart, 'VHF pulse gain')} ${seriesRangeSentence(chart, 'Selected pulse setting')}`,
+      takeaway: 'Longer pulses increase this simplified gain proxy, but that does not replace a full radar processing model.',
+      whyItMatters: 'Signal gain affects whether ocean and false-layer echoes clear threshold, so it changes confidence in a bright deep return.'
+    },
+    'Geometric spreading power dB': {
+      question: 'How much power is lost or gained through two-way geometric spreading along the pass?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'dB: more negative values mean more geometric power loss; less negative values are stronger.',
+      series: 'HF geometric power and VHF topo geometric power are the range-spreading terms used in the advanced signal sensitivity view.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'Even small dB changes matter because they add to attenuation, pulse gain, and reflectivity assumptions.',
+      whyItMatters: 'A deep echo near threshold can become trusted or rejected depending on the combined signal budget.'
+    },
+    'Coherent Fresnel-zone gain': {
+      question: 'How much simplified coherent gain is available along the modeled track?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'dB: higher values mean more modeled coherent gain in this simplified power-ratio sensitivity.',
+      series: 'HF coherent gain and VHF coherent gain are simplified coherent-gain terms; they are not a full aperture synthesis model.',
+      notice: (chart) => allSeriesRangeSentence(chart),
+      takeaway: 'The chart shows a sensitivity term, not a complete physical aperture model.',
+      whyItMatters: 'Overstating coherent gain could make a weak or ambiguous deep return look more reliable than it is.'
+    },
+    'Total VHF dB: constant vs frequency-dependent response': {
+      question: 'How does the combined VHF signal budget change under constant versus frequency-dependent reflectivity?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'dB: higher values mean a stronger combined modeled signal; lower values mean weaker confidence.',
+      series: 'Constant reflectivity combines geometry, coherent gain, pulse gain, and attenuation with no frequency slope. Frequency-dependent reflectivity adds the selected frequency-response term.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'Constant reflectivity')} ${seriesRangeSentence(chart, 'Frequency-dependent reflectivity')} ${pairedDifferenceSentence(chart, 'Frequency-dependent reflectivity', 'Constant reflectivity', 'Frequency-dependent minus constant response')}`,
+      takeaway: 'Frequency-response assumptions can shift the total VHF signal budget enough to change a threshold read.',
+      whyItMatters: 'The boundary interpretation is only as strong as the signal assumptions that keep the deep return above threshold.'
+    },
+    'HF 9 MHz Mid-Shell Confidence vs Ambiguity': {
+      question: 'Under dirty-ice and clutter scenarios, does HF confidence drop while ambiguity rises?',
+      xAxis: 'Scenario: clean, dirty, briny, stacked, complex, and clutter stress cases.',
+      yAxis: 'Percent / score (0-100): higher confidence is safer; higher ambiguous/false percent is riskier.',
+      series: 'Median confidence is the model confidence score. Ambiguous/false % is the share converted to percent for comparison.',
+      notice: (chart) => `${categoryExtremaSentence(chart, 'Median confidence')} ${categoryExtremaSentence(chart, 'Ambiguous/false %')}`,
+      takeaway: 'Dirty and complex cases can lower confidence while raising ambiguity in the sensitivity model.',
+      whyItMatters: 'A bright return in a dirty-ice case is less trustworthy if the model says ambiguity is also high.'
+    },
+    'HF 9 MHz Workbook-Depth Outcomes': {
+      question: 'How often does the workbook-depth sensitivity view produce clear ocean, false-risk, or weak outcomes?',
+      xAxis: 'Scenario: the dirty-ice and clutter cases being compared.',
+      yAxis: 'Percent (0-100): higher values mean a larger share of modeled samples in that outcome.',
+      series: 'Clear ocean is the safer boundary interpretation. Deep false risk marks ambiguity from internal reflectors. Weak/no deep means no reliable deep return.',
+      notice: (chart) => `${categoryExtremaSentence(chart, 'Clear ocean')} ${categoryExtremaSentence(chart, 'Deep false risk')} ${categoryExtremaSentence(chart, 'Weak/no deep')}`,
+      takeaway: 'The safest scenarios are those with high clear-ocean share and low false-risk or weak/no-deep share.',
+      whyItMatters: 'The project should not trust a bright return where the same assumptions produce high false-risk outcomes.'
+    },
+    'VHF 60 MHz Shallow Clutter Stress Test': {
+      question: 'Does VHF shallow clutter dominate the interpretation under dirty or rough cases?',
+      xAxis: 'Scenario: clean, near-surface brine, rough clutter, and complex clutter cases.',
+      yAxis: 'Percent (0-100): higher bars show which outcome dominates that scenario.',
+      series: 'Surface clutter is near-surface interference. Internal feature is a shallow reflector. Outside shallow window is not in the target shallow window. Weak/no detection means no reliable detection.',
+      notice: (chart) => `${categoryExtremaSentence(chart, 'Surface clutter')} ${categoryExtremaSentence(chart, 'Internal feature')} ${categoryExtremaSentence(chart, 'Weak/no detection')}`,
+      takeaway: 'VHF shallow returns can be dominated by clutter or internal features, especially in rough or complex cases.',
+      whyItMatters: 'A shallow bright return should not be treated as deep boundary evidence, and clutter can still affect confidence.'
+    }
+  };
+
+  function explanationValue(value, chart) {
+    if (typeof value === 'function') {
+      const result = value(chart);
+      return result || '';
+    }
+    return value || '';
+  }
+
+  function fallbackChartExplanation(chart) {
+    const seriesNames = (chart.series || []).map((series) => series.name).filter(Boolean).join(', ');
+    return {
+      fallback: true,
+      question: `What does "${chart.title}" show under the current sensitivity settings?`,
+      xAxis: `${chart.xLabel}: ${axisName(chart.xLabel).toLowerCase()} in the units shown on the axis.`,
+      yAxis: `${chart.yLabel}: ${axisName(chart.yLabel).toLowerCase()} in the units shown on the axis. Higher, lower, positive, or negative values should be read with the chart note and threshold lines when present.`,
+      series: seriesNames ? `The plotted series are: ${seriesNames}.` : 'No plotted series are available for this chart.',
+      notice: `${chartTextSummary(chart)} ${chart.note || ''}`,
+      takeaway: chart.note || 'Use the axes, legend, and plotted values to compare the current model settings.',
+      whyItMatters: `This graph supports the project question: ${CORE_QUESTION}`,
+      caveat: sectionCaveat(chart)
+    };
+  }
+
+  function chartExplanationFor(chart) {
+    const custom = CHART_EXPLANATIONS[chart.id] || CHART_EXPLANATIONS[chart.title] || null;
+    const fallback = fallbackChartExplanation(chart);
+    const merged = custom ? { ...fallback, ...custom, fallback: false } : fallback;
+    const resolved = {};
+    ['question', 'xAxis', 'yAxis', 'series', 'notice', 'takeaway', 'whyItMatters', 'caveat'].forEach((key) => {
+      resolved[key] = explanationValue(merged[key], chart);
+    });
+    resolved.fallback = merged.fallback;
+    if (!resolved.caveat) resolved.caveat = sectionCaveat(chart);
+    return resolved;
+  }
+
+  function renderChartExplanation(chart) {
+    const explanation = chartExplanationFor(chart);
+    return `
+      <aside class="chart-explanation ${explanation.fallback ? 'is-fallback' : ''}" data-explanation-source="${explanation.fallback ? 'fallback' : 'custom'}">
+        <details class="explanation-details" open>
+          <summary>How to read this graph</summary>
+          <dl class="explanation-list">
+            <div>
+              <dt>Question</dt>
+              <dd>${escapeHtml(explanation.question)}</dd>
+            </div>
+            <div>
+              <dt>X-axis</dt>
+              <dd>${escapeHtml(explanation.xAxis)}</dd>
+            </div>
+            <div>
+              <dt>Y-axis</dt>
+              <dd>${escapeHtml(explanation.yAxis)}</dd>
+            </div>
+            <div>
+              <dt>Lines / bars</dt>
+              <dd>${escapeHtml(explanation.series)}</dd>
+            </div>
+            <div>
+              <dt>What to notice</dt>
+              <dd>${escapeHtml(explanation.notice)}</dd>
+            </div>
+          </dl>
+        </details>
+        <div class="explanation-cardlets">
+          <section>
+            <h4>Main takeaway</h4>
+            <p>${escapeHtml(explanation.takeaway)}</p>
+          </section>
+          <section>
+            <h4>Why it matters</h4>
+            <p>${escapeHtml(explanation.whyItMatters)}</p>
+            <p class="model-caveat"><strong>Model limitation:</strong> ${escapeHtml(explanation.caveat)}</p>
+          </section>
+        </div>
+      </aside>
+    `;
+  }
+
   function renderTable(targetId, rows, columns, limit) {
     const target = document.getElementById(targetId);
     if (!target) return;
@@ -575,6 +1137,7 @@
         ${badges.length ? `<div class="chart-badges">${badges.map((badge) => `<span>${escapeHtml(badge.message)}</span>`).join('')}</div>` : ''}
         <div class="chart-frame" id="${chart.id}"></div>
         <p class="chart-explainer">${escapeHtml(chartHint(chart))}</p>
+        ${renderChartExplanation(chart)}
         <details class="chart-data-summary">
           <summary>Text summary</summary>
           <p>${escapeHtml(chartTextSummary(chart))}</p>
@@ -800,9 +1363,15 @@
   }
 
   function axisUnit(label) {
-    const match = String(label || '').match(/\(([^)]+)\)/);
-    if (match) return match[1];
-    if (String(label || '').includes('%')) return '%';
+    const text = String(label || '');
+    const match = text.match(/\(([^)]+)\)/);
+    if (match) {
+      const unit = match[1].trim();
+      if (/^0\s*-\s*100$/i.test(unit) && /percent|score|confidence/i.test(text)) return /percent/i.test(text) ? '%' : '';
+      return unit;
+    }
+    if (/\bdb\b/i.test(text)) return 'dB';
+    if (/%|percent/i.test(text)) return '%';
     return '';
   }
 
