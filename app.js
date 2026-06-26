@@ -324,7 +324,7 @@
     'Subsurface Truth Model: Icy Layers': {
       question: 'Where are the synthetic surface, shallow layer, briny lens, and possible ice-ocean boundary placed?',
       xAxis: 'Along-track position (km): location along the modeled pass.',
-      yAxis: 'Elevation or depth (m): the surface is near positive elevation, while more negative layer elevations mean deeper modeled reflectors.',
+      yAxis: 'Elevation relative to model reference (m): the surface is near positive elevation, while more negative layer elevations mean deeper modeled reflectors.',
       series: 'Icy top surface is the generated surface. Shallow ice layer is a near-surface internal reflector. Warm/briny lens is a possible mid-shell reflector. Ice-ocean boundary is the deepest modeled reflector.',
       notice: (chart) => allSeriesRangeSentence(chart),
       takeaway: 'The model intentionally includes multiple internal reflectors before the deepest boundary so the receiver has something to confuse with the ocean.',
@@ -378,7 +378,7 @@
     'Reflection Strength by Material / Interface': {
       question: 'Which synthetic material or interface assumptions produce stronger modeled reflections?',
       xAxis: 'Material / interface: categorical assumptions for different ice and boundary contrasts.',
-      yAxis: 'Relative power / margin (dB): higher or less-negative values represent stronger assumed reflectors.',
+      yAxis: 'Relative reflector strength (dB): higher or less-negative values represent stronger assumed reflectors.',
       series: 'Material/interface strength is the relative dB assumption used to compare cold clean ice, salt-rich ice, briny lens, dirty ice mix, and the ice-ocean boundary.',
       notice: (chart) => categoryExtremaSentence(chart, 'Material/interface strength'),
       takeaway: 'Internal briny or dirty interfaces can be bright enough to compete with the boundary in this simplified sensitivity model.',

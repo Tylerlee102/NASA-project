@@ -441,7 +441,7 @@
     ];
 
     charts.push(
-      chart('live-icy-layers', 'Subsurface model', 'Subsurface Truth Model: Icy Layers', 'Elevation or depth (m)', [
+      chart('live-icy-layers', 'Subsurface model', 'Subsurface Truth Model: Icy Layers', 'Elevation relative to model reference (m)', [
         { name: 'Icy top surface', points: pts(subRows, 'x', 'surface') },
         { name: 'Shallow ice layer', points: pts(subRows, 'x', 'upperElevation') },
         { name: 'Warm/briny lens', points: pts(subRows, 'x', 'lensElevation') },
@@ -473,7 +473,7 @@
         { name: 'Ocean echo margin', points: pts(subRows, 'x', 'oceanMargin') },
         { name: '0 dB threshold', points: subRows.map(r => [round(r.x), 0]) }
       ], 'Positive values clear the simple detection threshold.'),
-      chart('live-materials', 'Subsurface model', 'Reflection Strength by Material / Interface', 'Relative power / margin (dB)', [
+      chart('live-materials', 'Subsurface model', 'Reflection Strength by Material / Interface', 'Relative reflector strength (dB)', [
         { name: 'Material/interface strength', points: [['Cold clean ice', -18], ['Salt-rich ice', -14], ['Briny lens', -10], ['Dirty ice mix', -6], ['Ice-ocean boundary', -2]] }
       ], 'Relative assumed reflector strength by material or interface.', 'bar', { xLabel: 'Material / interface' }),
       chart('live-evidence', 'Subsurface model', 'Cross-Instrument Evidence Score', 'Support (%)', [
@@ -1005,9 +1005,9 @@
     ];
     return withSeries(
       source,
-      fallbackChart('v30-live-materials', materialTitle, 'Material / interface', 'Relative power / margin (dB)', 'bar'),
+      fallbackChart('v30-live-materials', materialTitle, 'Material / interface', 'Relative reflector strength (dB)', 'bar'),
       [{ name: 'Material/interface strength', points }],
-      { kind: 'bar', xLabel: 'Material / interface', yLabel: 'Relative power / margin (dB)' }
+      { kind: 'bar', xLabel: 'Material / interface', yLabel: 'Relative reflector strength (dB)' }
     );
   }
 
