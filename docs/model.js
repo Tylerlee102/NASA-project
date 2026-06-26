@@ -475,10 +475,10 @@
       ], 'Positive values clear the simple detection threshold.'),
       chart('live-materials', 'Subsurface model', 'Reflection Strength by Material / Interface', 'Relative power / margin (dB)', [
         { name: 'Material/interface strength', points: [['Cold clean ice', -18], ['Salt-rich ice', -14], ['Briny lens', -10], ['Dirty ice mix', -6], ['Ice-ocean boundary', -2]] }
-      ], 'Relative assumed reflector strength by material or interface.', 'bar'),
+      ], 'Relative assumed reflector strength by material or interface.', 'bar', { xLabel: 'Material / interface' }),
       chart('live-evidence', 'Subsurface model', 'Cross-Instrument Evidence Score', 'Support (%)', [
         { name: 'Evidence support score', points: [['Radar', p.radarSupport], ['Thermal', p.thermalSupport], ['Composition', p.compositionSupport], ['Magnetic/plasma', p.magneticSupport]] }
-      ], 'Simple support scores for radar, thermal, composition, and magnetic/plasma evidence.', 'bar')
+      ], 'Simple support scores for radar, thermal, composition, and magnetic/plasma evidence.', 'bar', { xLabel: 'Instrument' })
     );
 
     const decisionCounts = [
@@ -1084,6 +1084,13 @@
       if (chart.title === clutterStressTitle) return buildClutterStressChart(p, chart);
       if (chart.title === materialTitle) return buildMaterialChart(p, chart);
       if (chart.title === evidenceTitle) return buildEvidenceChart(p, chart);
+      if (chart.title === 'Terrain Baseline: Total Radar Elevation Error') {
+        return {
+          ...chart,
+          yLabel: 'Surface-height equivalent error (m)',
+          note: 'Expanded workbook terrain-error chart; values are surface-height-equivalent meters in this sensitivity view.'
+        };
+      }
       return adaptLiveChart(chart, liveChartForTitle(chart.title, liveData)) || chart;
     });
     return {

@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=label-polish">
-    <script defer src="data/v19-results.js?v=label-polish"></script>
-    <script defer src="data/v30-results.js?v=label-polish"></script>
-    <script defer src="model.js?v=label-polish"></script>
-    <script defer src="app.js?v=label-polish"></script>
+    <link rel="stylesheet" href="styles.css?v=graph-explanations-audit">
+    <script defer src="data/v19-results.js?v=graph-explanations-audit"></script>
+    <script defer src="data/v30-results.js?v=graph-explanations-audit"></script>
+    <script defer src="model.js?v=graph-explanations-audit"></script>
+    <script defer src="app.js?v=graph-explanations-audit"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -55,6 +55,32 @@
           </div>
           <p class="source-note" id="source-note"></p>
         </div>
+        <p class="section-intro">This section is trying to show how to read the model as an interpretation-risk dashboard: geometry, signal strength, false layers, and formula checks all point back to whether a bright deep return should be trusted.</p>
+        <section class="reader-guide" aria-labelledby="reader-guide-title">
+          <div class="reader-guide-copy">
+            <p class="section-kicker">Reader guide</p>
+            <h3 id="reader-guide-title">Quick rules for reading the graphs</h3>
+            <ul class="guide-signals">
+              <li><strong>Green, positive, or above threshold</strong> usually means a modeled return is easier to detect or the interpretation is safer under the current assumptions.</li>
+              <li><strong>Negative or below threshold</strong> means a return is weak, hidden, or riskier to interpret as a boundary.</li>
+              <li><strong>False layer stronger than ocean</strong> means the model is warning about ambiguity, not proving a real false layer exists.</li>
+              <li><strong>Lower corrected error</strong> means the Doppler correction helped in this controlled sensitivity model.</li>
+            </ul>
+          </div>
+          <dl class="glossary-grid" aria-label="Glossary">
+            <div><dt><dfn title="A depth-like value caused by extra radar path length, not necessarily a real layer depth.">apparent depth</dfn></dt><dd>Extra slant path converted into a depth-like number.</dd></div>
+            <div><dt><dfn title="The round-trip time for a radar signal to travel to a reflector and back.">two-way delay</dfn></dt><dd>Round-trip radar travel time, shown in microseconds.</dd></div>
+            <div><dt><dfn title="A frequency shift caused by relative motion between the spacecraft and target.">Doppler shift</dfn></dt><dd>Motion-driven frequency shift, shown in Hz.</dd></div>
+            <div><dt><dfn title="A simplified signal cutoff used by this browser model.">detection threshold</dfn></dt><dd>The model's simple cutoff for whether a return clears the noise floor.</dd></div>
+            <div><dt><dfn title="Echo strength minus the detection threshold.">dB margin</dfn></dt><dd>Positive clears the threshold; negative falls below it.</dd></div>
+            <div><dt><dfn title="A modeled internal reflector that can compete with the deeper ocean-boundary echo.">false layer</dfn></dt><dd>A synthetic internal reflector that can mislead a strongest-echo rule.</dd></div>
+            <div><dt><dfn title="A possible warm or salty internal ice feature in the sensitivity model.">briny lens</dfn></dt><dd>A modeled internal contrast that can create a bright echo.</dd></div>
+            <div><dt><dfn title="The possible boundary between Europa ice and an ocean in the model.">ice-ocean boundary</dfn></dt><dd>The modeled deep boundary this project is testing for ambiguity.</dd></div>
+            <div><dt><dfn title="Pulse repetition frequency, here shown only as a simple Doppler sampling floor.">PRF</dfn></dt><dd>Pulse repetition frequency; this page uses a simplified floor only.</dd></div>
+            <div><dt><dfn title="High frequency and very high frequency radar bands.">VHF/HF</dfn></dt><dd>Radar bands used differently for shallow and deep sounding.</dd></div>
+            <div><dt><dfn title="Distance along the angled radar path before correction to vertical depth.">slant depth</dfn></dt><dd>Depth measured along an angled radar path.</dd></div>
+          </dl>
+        </section>
         <section class="research-brief" aria-label="Project narrative">
           <div class="brief-lede">
             <p class="section-kicker">Research brief</p>
@@ -102,11 +128,19 @@
           </div>
           <div id="live-controls" class="control-grid"></div>
         </section>
+        <section class="overview-guide" aria-labelledby="metric-guide-title">
+          <div>
+            <p class="section-kicker">Metric cards</p>
+            <h3 id="metric-guide-title">How the top-line metrics relate to interpretation risk</h3>
+          </div>
+          <p class="body-copy">The cards summarize the current browser-side sensitivity run. Apparent-depth and delay values describe geometry bias; dB margins describe whether echoes clear a simplified threshold; false-boundary and corrected-error metrics describe the risk of trusting the brightest deep return as the ice-ocean boundary.</p>
+        </section>
         <div id="metric-grid" class="metric-grid"></div>
         <div class="split-layout">
           <section class="panel">
             <h3>PRF Sampling Floor</h3>
             <div id="prf-table"></div>
+            <p class="table-explainer">This is a simple Nyquist-style Doppler sampling floor: PRF is compared with twice the largest modeled VHF Doppler shift. It is useful for spotting aliasing risk in this sensitivity view, but it is not a complete radar PRF design.</p>
           </section>
           <section class="panel">
             <h3>Interpretation Boundary</h3>
@@ -118,10 +152,12 @@
           <section class="panel audit-panel">
             <h3>Graph / Model Audit</h3>
             <div id="graph-audit"></div>
+            <p class="table-explainer">Graph QA checks whether rendered charts have titles, units, series labels, numeric values, and consistent scale conventions after live recalculation. OK means no visible issue was found; Review means a chart should be inspected before using it as evidence.</p>
           </section>
           <section class="panel">
             <h3>Formula Checks</h3>
             <div id="checks-table"></div>
+            <p class="table-explainer">Formula checks verify basic model assumptions such as positive inputs, valid toggles, chart-data links, and layer order. OK means the check passed, CHECK means the current controls may need attention, and REVIEW marks a caveat or item that should not be overinterpreted.</p>
           </section>
         </div>
         <section class="panel assumptions-panel">
@@ -145,7 +181,7 @@
             <h2>Surface + motion results</h2>
           </div>
         </div>
-        <p class="section-intro">These charts isolate how spacecraft path, side-looking geometry, and generated terrain affect apparent depth, two-way delay, and Doppler shift.</p>
+        <p class="section-intro">This section is trying to show how spacecraft path, side-looking geometry, and generated terrain can make a flat or shallow surface look like a deeper radar reflector.</p>
         <div id="surface-charts" class="chart-grid"></div>
       </section>
 
@@ -156,7 +192,7 @@
             <h2>Layer and detectability results</h2>
           </div>
         </div>
-        <p class="section-intro">This section treats the ice shell as a synthetic layered testbed, then shows how possible internal reflectors and attenuation change detectability margins.</p>
+        <p class="section-intro">This section is trying to show how a synthetic ice shell, internal layers, attenuation, and evidence channels change whether a deep return remains interpretable as the possible ice-ocean boundary.</p>
         <div id="subsurface-summary" class="table-panel"></div>
         <div id="subsurface-charts" class="chart-grid"></div>
       </section>
@@ -168,7 +204,7 @@
             <h2>How the simulated receiver classifies competing deep echoes</h2>
           </div>
         </div>
-        <p class="section-intro">This model does not make the spacecraft change its flight path. It simulates the radar receiver and interpretation pipeline: multiple echoes arrive, the strongest deep return is ranked, and the result is marked as ocean likely, ambiguous, weak, or fooled by a false boundary.</p>
+        <p class="section-intro">This section is trying to show how the receiver decision can change when a synthetic internal reflector competes with the modeled ocean echo. The spacecraft path is unchanged; the interpretation rule is what is being stress-tested.</p>
         <div class="split-layout compact">
           <section class="panel">
             <h3>Receiver Classification Summary</h3>
@@ -189,7 +225,7 @@
             <h2>Doppler depth inversion</h2>
           </div>
         </div>
-        <p class="section-intro">The correction charts show a controlled slant-depth adjustment with a small deterministic angle residual so the result is no longer artificially perfect.</p>
+        <p class="section-intro">This section is trying to show whether a controlled Doppler-based angle correction reduces slant-depth error enough to make the boundary interpretation less risky.</p>
         <div class="split-layout compact">
           <section class="panel">
             <h3>Main Result</h3>
@@ -211,7 +247,7 @@
           </div>
           <a class="download-inline" href="assets/v30_all_dynamic_graphs.xlsx" download>Download expanded workbook</a>
         </div>
-        <p class="section-intro">This view keeps the expanded workbook-derived chart set but overlays browser-side sensitivity controls for signal assumptions, dirty ice, clutter, and geometry.</p>
+        <p class="section-intro">This section is trying to show how expanded signal assumptions, dirty ice, clutter, geometry, and correction settings stress the same core question across the v30 chart set.</p>
         <section class="panel live-panel">
           <div class="live-panel-heading">
             <div>
@@ -232,15 +268,17 @@
             <h2>Graph and formula audit</h2>
           </div>
         </div>
-        <p class="section-intro">This panel checks the rendered chart metadata and point data after live browser recalculation, then pairs it with workbook/model formula checks.</p>
+        <p class="section-intro">This section is trying to show whether the rendered graphs and formulas are internally consistent enough to read, while keeping the model limitation visible.</p>
         <div class="split-layout">
           <section class="panel audit-panel">
             <h3>Rendered Chart Audit</h3>
             <div id="graph-audit-full"></div>
+            <p class="table-explainer">Rendered Chart Audit checks titles, labels, units, duplicate series, numeric values, percent scaling, and delay/depth wording. OK means the chart metadata and plotted values passed these checks; Review means the chart should be inspected before drawing a conclusion.</p>
           </section>
           <section class="panel">
             <h3>Model Formula Checks</h3>
             <div id="checks-table-full"></div>
+            <p class="table-explainer">Model Formula Checks verify that the live browser formulas are loaded, chart series are recalculated, PRF clears the simplified sampling floor when expected, and layer ordering remains physically sensible inside this synthetic model.</p>
           </section>
         </div>
         <div class="split-layout">
