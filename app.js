@@ -76,6 +76,78 @@
     'Advanced sensitivity': 'The v30 charts are workbook-derived and browser-adjusted sensitivity views, not a mission-validated Europa radar processor.'
   };
 
+  const V30_CHART_GROUPS = [
+    {
+      id: 'v30-outcomes',
+      kicker: 'Scenario outcomes',
+      title: 'Outcome and ambiguity stress tests',
+      description: 'These charts compare scenario-level confidence, false-risk, weak-return, and clutter outcomes under dirty ice and clutter assumptions.',
+      titles: [
+        'HF 9 MHz Mid-Shell Confidence vs Ambiguity',
+        'HF 9 MHz Workbook-Depth Outcomes',
+        'VHF 60 MHz Shallow Clutter Stress Test'
+      ]
+    },
+    {
+      id: 'v30-signal',
+      kicker: 'Radar signal budget',
+      title: 'Signal, gain, and frequency response',
+      description: 'These charts isolate pulse compression, geometric spreading, coherent looks, bandwidth, and frequency-response assumptions before interpreting layers.',
+      titles: [
+        'Pulse compression gain vs pulse length',
+        'Geometric spreading power dB',
+        'Coherent Fresnel-zone gain',
+        'Fresnel-zone coherent look count',
+        'Windowed chirp response: frequency washout',
+        'Total VHF dB: constant vs frequency-dependent response'
+      ]
+    },
+    {
+      id: 'v30-geometry',
+      kicker: 'Geometry and timing',
+      title: 'Surface, terrain, and flyby delay baselines',
+      description: 'These charts show whether spacecraft geometry, topography, Doppler, and nadir/off-nadir delay can create depth-like structure before any ocean interpretation.',
+      titles: [
+        'Surface Height: Off-Nadir Target vs Nadir Reference Terrain',
+        'Apparent Depth: Spacecraft Motion Distortion by Run',
+        'Terrain Baseline: Total Radar Elevation Error',
+        'Doppler: Flat Geometry vs Topography',
+        'Nadir Radar Delay by Flyby: Without Topography',
+        'Nadir Radar Delay by Flyby: With Generated Topography',
+        'Off-Nadir Radar Delay by Flyby: Without Topography',
+        'Off-Nadir Radar Delay by Flyby: With Generated Topography'
+      ]
+    },
+    {
+      id: 'v30-subsurface',
+      kicker: 'Subsurface interpretation',
+      title: 'Layer, boundary, and evidence checks',
+      description: 'These charts test whether the possible boundary remains interpretable when internal layers, attenuation, uncertainty, material contrasts, and context evidence are included.',
+      titles: [
+        'Subsurface Truth Model: Icy Layers',
+        'Scenario Comparison: Thin / Medium / Thick Ice',
+        'Boundary Uncertainty Band',
+        'Ocean Model vs No-Ocean Control',
+        'Radargram-Style Return Timing With Clutter',
+        'Detectability Margin vs Threshold',
+        'Reflection Strength by Material / Interface',
+        'Cross-Instrument Evidence Score'
+      ]
+    },
+    {
+      id: 'v30-doppler',
+      kicker: 'Doppler correction',
+      title: 'Angle correction and corrected depths',
+      description: 'These charts check whether the controlled Doppler-angle correction reduces slant-depth error and preserves layer ordering.',
+      titles: [
+        'Doppler-Inverted Look Angle vs Existing Geometry',
+        'Raw Slant Depth vs Doppler-Corrected Ocean Depth',
+        'Depth Error Before and After Angle Correction',
+        'Corrected Layer Depths From Doppler Angle'
+      ]
+    }
+  ];
+
   function finiteSeriesPointsFor(series) {
     return (series && series.points ? series.points : []).filter((point) => Number.isFinite(point[1]));
   }
@@ -960,7 +1032,51 @@
 
   function renderV30() {
     if (!v30ViewData) return;
-    renderChartSet(v30ViewData.charts, 'v30-charts');
+    const charts = v30ViewData.charts || [];
+    const used = new Set();
+    const groups = V30_CHART_GROUPS.map((group) => {
+      const groupCharts = group.titles
+        .map((title) => charts.find((chart) => chart.title === title))
+        .filter(Boolean);
+      groupCharts.forEach((chart) => used.add(chart.title));
+      return { ...group, charts: groupCharts };
+    }).filter((group) => group.charts.length);
+    const remaining = charts.filter((chart) => !used.has(chart.title));
+    if (remaining.length) {
+      groups.push({
+        id: 'v30-other',
+        kicker: 'Other v30 charts',
+        title: 'Additional advanced charts',
+        description: 'Charts not assigned to a named subsection yet.',
+        charts: remaining
+      });
+    }
+    const nav = document.getElementById('v30-group-nav');
+    if (nav) {
+      nav.innerHTML = groups.map((group) => `<a href="#v30" data-v30-jump="${escapeHtml(group.id)}">${escapeHtml(group.title)}</a>`).join('');
+      nav.querySelectorAll('[data-v30-jump]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const section = document.getElementById(link.dataset.v30Jump);
+          if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          window.history.replaceState(null, '', '#v30');
+        });
+      });
+    }
+    const target = document.getElementById('v30-charts');
+    if (target) {
+      target.innerHTML = groups.map((group) => `
+        <section class="v30-chart-section" id="${escapeHtml(group.id)}">
+          <div class="v30-section-heading">
+            <p class="section-kicker">${escapeHtml(group.kicker)}</p>
+            <h3>${escapeHtml(group.title)}</h3>
+            <p class="body-copy">${escapeHtml(group.description)}</p>
+          </div>
+          <div id="${escapeHtml(group.id)}-charts" class="chart-grid v30-subgrid"></div>
+        </section>
+      `).join('');
+      groups.forEach((group) => renderChartSet(group.charts, `${group.id}-charts`));
+    }
     renderAudit();
   }
 
