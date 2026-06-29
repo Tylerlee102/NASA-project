@@ -801,6 +801,43 @@
     `).join('');
   }
 
+  function initRailToggle() {
+    const frame = document.querySelector('.site-frame');
+    const button = document.getElementById('rail-toggle');
+    if (!frame || !button) return;
+    const storageKey = 'nasaProjectRailCollapsed';
+
+    function readSavedState() {
+      try {
+        return window.localStorage.getItem(storageKey) === 'true';
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function saveState(collapsed) {
+      try {
+        window.localStorage.setItem(storageKey, collapsed ? 'true' : 'false');
+      } catch (error) {
+        // Ignore storage failures; the visible toggle state still updates.
+      }
+    }
+
+    function applyState(collapsed) {
+      frame.classList.toggle('is-rail-collapsed', collapsed);
+      button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      button.setAttribute('aria-label', collapsed ? 'Open section menu' : 'Collapse section menu');
+      button.title = collapsed ? 'Open section menu' : 'Collapse section menu';
+    }
+
+    applyState(readSavedState());
+    button.addEventListener('click', () => {
+      const collapsed = !frame.classList.contains('is-rail-collapsed');
+      applyState(collapsed);
+      saveState(collapsed);
+    });
+  }
+
   function initTabs() {
     const tabs = document.querySelectorAll('.tab');
     const sections = document.querySelectorAll('.page-section');
@@ -1598,6 +1635,7 @@
     renderV30();
   }
 
+  initRailToggle();
   initTabs();
   renderLiveControls();
   renderV30Controls();
