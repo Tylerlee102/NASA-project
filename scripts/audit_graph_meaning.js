@@ -13,7 +13,7 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
-const TODAY = '2026-06-26';
+const TODAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
 
 const SOURCE_FILES = [
   'docs/index.html',
@@ -394,6 +394,26 @@ const CONTRACTS = {
     expected: 'Values should stay finite and shift with spacing/index settings.',
     interpretation: 'This is an aperture/coherence sensitivity proxy, not a full aperture-synthesis model.',
     misleadingIf: 'Misleading if described as measured coherent processing gain.'
+  },
+  'Fresnel-zone coherent look count': {
+    question: 'How many coherent along-track samples are available inside the first Fresnel-zone limit?',
+    inputData: 'Modeled depth, radar frequency, along-track spacing, coherence aperture cap, and phase-decorrelation setting.',
+    formula: 'Effective looks are computed from first-Fresnel-zone diameter, limited by aperture samples, then reduced by phase-decorrelation loss.',
+    xMeaning: 'Along-track position in kilometers.',
+    yMeaning: 'Coherent look count.',
+    expected: 'Counts should be finite and non-negative; HF should generally allow more looks than VHF for the same depth and spacing.',
+    interpretation: 'The chart explains the coherent-gain proxy by showing the sample-count driver behind it.',
+    misleadingIf: 'Misleading if described as an actual processed aperture product or if counts become negative.'
+  },
+  'Windowed chirp response: frequency washout': {
+    question: 'Does a frequency-dependent response survive chirp window averaging, or does it mostly wash out?',
+    inputData: 'HF/VHF center frequency, bandwidth, frequency slope, Hamming window weights, pulse length, and window loss.',
+    formula: 'Frequency response is sampled across each chirp band in linear power, Hamming-weighted, averaged, converted to dB, and optionally summed with pulse gain.',
+    xMeaning: 'Categorical radar band.',
+    yMeaning: 'Relative response in dB.',
+    expected: 'The chart should be a categorical bar chart in dB with finite values for both HF and VHF bands.',
+    interpretation: 'The chart separates center-frequency assumptions from the band-averaged response actually used by the v30 sensitivity model.',
+    misleadingIf: 'Misleading if the band-averaged result is presented as a measured chirp processor or if dB values are averaged directly instead of averaging linear power first.'
   },
   'Total VHF dB: constant vs frequency-dependent response': {
     question: 'How does a frequency-dependent reflectivity response change total VHF power?',
@@ -914,8 +934,21 @@ function auditTargeted(chart, issues) {
     requireMonotonicIncreasing(chart, issues, ['HF pulse gain', 'VHF pulse gain']);
   }
 
-  if (title === 'Geometric spreading power dB' || title === 'Coherent Fresnel-zone gain' || title === 'Total VHF dB: constant vs frequency-dependent response') {
+  if (title === 'Geometric spreading power dB' || title === 'Coherent Fresnel-zone gain' || title === 'Windowed chirp response: frequency washout' || title === 'Total VHF dB: constant vs frequency-dependent response') {
     if (!/\bdB\b/.test(chart.yLabel)) addIssue(issues, 'FAIL', 'Power/gain chart must use dB units.');
+  }
+
+  if (title === 'Fresnel-zone coherent look count') {
+    requireSeries(chart, issues, ['HF effective coherent looks', 'VHF effective coherent looks', 'Aperture cap in samples']);
+    if (!/Coherent looks \(count\)/.test(chart.yLabel)) addIssue(issues, 'FAIL', 'Fresnel look-count chart must use coherent look counts on the y-axis.');
+    const values = numericYValues(chart);
+    if (values.some((value) => value < -0.001)) addIssue(issues, 'FAIL', 'Coherent look counts cannot be negative.');
+  }
+
+  if (title === 'Windowed chirp response: frequency washout') {
+    if (chart.kind !== 'bar') addIssue(issues, 'FAIL', 'Windowed chirp response should use bars for HF/VHF categories.');
+    requireSeries(chart, issues, ['Center-frequency reflectivity offset', 'Windowed chirp-average reflectivity', 'Windowed response plus pulse gain', 'Window washout delta']);
+    if (!/Radar band/.test(chart.xLabel)) addIssue(issues, 'FAIL', 'Windowed chirp response x-axis must be radar-band categories.');
   }
 
   if (title === 'HF 9 MHz Workbook-Depth Outcomes' || title === 'VHF 60 MHz Shallow Clutter Stress Test') {

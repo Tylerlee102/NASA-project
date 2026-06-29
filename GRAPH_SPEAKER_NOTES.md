@@ -1,6 +1,6 @@
 # Graph Speaker Notes
 
-Generated: 2026-06-26
+Generated: 2026-06-29
 
 Use these notes with one caveat up front: this project is an illustrative synthetic radar sensitivity model, not a mission-validated NASA processor and not proof of Europa structure.
 
@@ -334,9 +334,9 @@ Use these notes with one caveat up front: this project is an illustrative synthe
 - What it is showing: This is an aperture/coherence sensitivity proxy, not a full aperture-synthesis model.
 - How to read the x-axis: Along-track position in kilometers.
 - How to read the y-axis: Relative coherent gain in dB.
-- What each line/bar means: HF coherent gain; VHF coherent gain.
+- What each line/bar means: HF coherent gain from Fresnel looks; VHF coherent gain from Fresnel looks.
 - Main takeaway: Values should stay finite and shift with spacing/index settings.
-- How to explain it out loud: How does along-track spacing and ice index affect the simplified coherent-gain proxy? It renders 2 series (HF coherent gain; VHF coherent gain) against Along-track position (km) and dB. Y-values range from 6.023 to 10.194 dB.
+- How to explain it out loud: How does along-track spacing and ice index affect the simplified coherent-gain proxy? It renders 2 series (HF coherent gain from Fresnel looks; VHF coherent gain from Fresnel looks) against Along-track position (km) and dB. Y-values range from 0 to 2.963 dB.
 - Why it matters: This is an aperture/coherence sensitivity proxy, not a full aperture-synthesis model.
 - What not to overclaim: Misleading if described as measured coherent processing gain. Also do not say the graph proves anything about Europa.
 
@@ -348,7 +348,7 @@ Use these notes with one caveat up front: this project is an illustrative synthe
 - How to read the y-axis: Relative total VHF power in dB.
 - What each line/bar means: Constant reflectivity; Frequency-dependent reflectivity.
 - Main takeaway: Both series should be finite; the frequency-dependent series should differ by the modeled response term.
-- How to explain it out loud: How does a frequency-dependent reflectivity response change total VHF power? It renders 2 series (Constant reflectivity; Frequency-dependent reflectivity) against Along-track position (km) and dB. Y-values range from -5.005 to 0.668 dB.
+- How to explain it out loud: How does a frequency-dependent reflectivity response change total VHF power? It renders 2 series (Constant reflectivity; Frequency-dependent reflectivity) against Along-track position (km) and dB. Y-values range from -11.079 to -5.355 dB.
 - Why it matters: Frequency response is a sensitivity comparison, not an observation.
 - What not to overclaim: Misleading if a single curve is presented as a validated VHF processor output. Also do not say the graph proves anything about Europa.
 
@@ -615,4 +615,28 @@ Use these notes with one caveat up front: this project is an illustrative synthe
 - How to explain it out loud: What layer depths result after applying the Doppler angle correction? It renders 3 series (Corrected upper-layer depth; Corrected briny lens depth; Corrected ocean boundary depth) against Along-track position (km) and Depth below local surface (m). Y-values range from 945.591 to 16064.362 m.
 - Why it matters: The correction preserves relative layer structure while reducing geometry bias.
 - What not to overclaim: Misleading if corrected layers are out of order or are described as measured Europa depths. Also do not say the graph proves anything about Europa.
+
+## 52. V30 - Fresnel-zone coherent look count
+
+- Status: PASS (passed deterministic audit checks).
+- What it is showing: The chart explains the coherent-gain proxy by showing the sample-count driver behind it.
+- How to read the x-axis: Along-track position in kilometers.
+- How to read the y-axis: Coherent look count.
+- What each line/bar means: HF effective coherent looks; VHF effective coherent looks; Aperture cap in samples.
+- Main takeaway: Counts should be finite and non-negative; HF should generally allow more looks than VHF for the same depth and spacing.
+- How to explain it out loud: How many coherent along-track samples are available inside the first Fresnel-zone limit? It renders 3 series (HF effective coherent looks; VHF effective coherent looks; Aperture cap in samples) against Along-track position (km) and Coherent looks (count). Y-values range from 1 to 5 count.
+- Why it matters: The chart explains the coherent-gain proxy by showing the sample-count driver behind it.
+- What not to overclaim: Misleading if described as an actual processed aperture product or if counts become negative. Also do not say the graph proves anything about Europa.
+
+## 53. V30 - Windowed chirp response: frequency washout
+
+- Status: PASS (passed deterministic audit checks).
+- What it is showing: The chart separates center-frequency assumptions from the band-averaged response actually used by the v30 sensitivity model.
+- How to read the x-axis: Categorical radar band.
+- How to read the y-axis: Relative response in dB.
+- What each line/bar means: Center-frequency reflectivity offset; Windowed chirp-average reflectivity; Windowed response plus pulse gain; Window washout delta.
+- Main takeaway: The chart should be a categorical bar chart in dB with finite values for both HF and VHF bands.
+- How to explain it out loud: Does a frequency-dependent response survive chirp window averaging, or does it mostly wash out? It renders 4 series (Center-frequency reflectivity offset; Windowed chirp-average reflectivity; Windowed response plus pulse gain; Window washout delta) against Radar band and dB. Y-values range from -5.474 to 16.195 dB.
+- Why it matters: The chart separates center-frequency assumptions from the band-averaged response actually used by the v30 sensitivity model.
+- What not to overclaim: Misleading if the band-averaged result is presented as a measured chirp processor or if dB values are averaged directly instead of averaging linear power first. Also do not say the graph proves anything about Europa.
 
