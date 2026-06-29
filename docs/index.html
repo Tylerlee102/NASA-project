@@ -4,16 +4,20 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=page-menu">
-    <script defer src="data/v19-results.js?v=page-menu"></script>
-    <script defer src="data/v30-results.js?v=page-menu"></script>
-    <script defer src="model.js?v=page-menu"></script>
-    <script defer src="app.js?v=page-menu"></script>
+    <link rel="stylesheet" href="styles.css?v=rail-collapse">
+    <script defer src="data/v19-results.js?v=rail-collapse"></script>
+    <script defer src="data/v30-results.js?v=rail-collapse"></script>
+    <script defer src="model.js?v=rail-collapse"></script>
+    <script defer src="app.js?v=rail-collapse"></script>
   </head>
   <body>
     <div class="site-frame">
       <aside class="site-rail" aria-label="Project dossier">
-        <div class="rail-sticky">
+        <button class="rail-toggle" id="rail-toggle" type="button" aria-controls="site-rail-content" aria-expanded="true">
+          <span class="rail-toggle-expanded">Collapse</span>
+          <span class="rail-toggle-collapsed">Menu</span>
+        </button>
+        <div class="rail-sticky" id="site-rail-content">
           <p class="eyebrow">NASA project</p>
           <h1>Europa Radar Flyby Model</h1>
           <p class="lead">A static research interface for testing how flyby geometry, dirty ice, false layers, attenuation, and Doppler correction can change the interpretation of a possible ice-ocean boundary.</p>
