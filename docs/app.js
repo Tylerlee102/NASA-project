@@ -486,10 +486,10 @@
     'Pulse compression gain vs pulse length': {
       question: 'How does pulse length affect the simplified pulse-compression gain?',
       xAxis: 'Pulse length (us): the modeled transmit pulse duration in microseconds.',
-      yAxis: 'dB: higher gain means stronger modeled signal after this simplified pulse-compression proxy.',
-      series: 'HF pulse gain and VHF pulse gain show the band-specific gain proxy. Selected pulse setting marks the current control value.',
+      yAxis: 'dB: higher gain means stronger modeled signal after the pulse length and bandwidth time-bandwidth product.',
+      series: 'HF pulse gain and VHF pulse gain use pulse length times band-specific bandwidth, then apply the scalar window loss. Selected pulse setting marks the current control value.',
       notice: (chart) => `${trendSentence(chart, 'HF pulse gain')} ${trendSentence(chart, 'VHF pulse gain')} ${seriesRangeSentence(chart, 'Selected pulse setting')}`,
-      takeaway: 'Longer pulses increase this simplified gain proxy, but that does not replace a full radar processing model.',
+      takeaway: 'Longer pulses and wider bandwidth increase the time-bandwidth gain, but this still stays below a full radar processor.',
       whyItMatters: 'Signal gain affects whether ocean and false-layer echoes clear threshold, so it changes confidence in a bright deep return.'
     },
     'Geometric spreading power dB': {
@@ -502,22 +502,40 @@
       whyItMatters: 'A deep echo near threshold can become trusted or rejected depending on the combined signal budget.'
     },
     'Coherent Fresnel-zone gain': {
-      question: 'How much simplified coherent gain is available along the modeled track?',
+      question: 'How much coherent gain is available from the counted Fresnel-zone looks?',
       xAxis: 'Along-track position (km): location along the modeled pass.',
-      yAxis: 'dB: higher values mean more modeled coherent gain in this simplified power-ratio sensitivity.',
-      series: 'HF coherent gain and VHF coherent gain are simplified coherent-gain terms; they are not a full aperture synthesis model.',
+      yAxis: 'dB: higher values mean more gain from the effective coherent samples available inside the first Fresnel zone.',
+      series: 'HF coherent gain from Fresnel looks and VHF coherent gain from Fresnel looks convert effective look count into 10log10(N) gain after aperture and phase-decorrelation limits.',
       notice: (chart) => allSeriesRangeSentence(chart),
-      takeaway: 'The chart shows a sensitivity term, not a complete physical aperture model.',
+      takeaway: 'The chart now uses Fresnel-zone sample count rather than a generic spacing proxy.',
       whyItMatters: 'Overstating coherent gain could make a weak or ambiguous deep return look more reliable than it is.'
     },
     'Total VHF dB: constant vs frequency-dependent response': {
       question: 'How does the combined VHF signal budget change under constant versus frequency-dependent reflectivity?',
       xAxis: 'Along-track position (km): location along the modeled pass.',
       yAxis: 'dB: higher values mean a stronger combined modeled signal; lower values mean weaker confidence.',
-      series: 'Constant reflectivity combines geometry, coherent gain, pulse gain, and attenuation with no frequency slope. Frequency-dependent reflectivity adds the selected frequency-response term.',
+      series: 'Constant reflectivity combines geometry, Fresnel-zone coherent gain, pulse gain, and attenuation with no frequency slope. Frequency-dependent reflectivity adds the windowed VHF chirp-average response.',
       notice: (chart) => `${seriesRangeSentence(chart, 'Constant reflectivity')} ${seriesRangeSentence(chart, 'Frequency-dependent reflectivity')} ${pairedDifferenceSentence(chart, 'Frequency-dependent reflectivity', 'Constant reflectivity', 'Frequency-dependent minus constant response')}`,
       takeaway: 'Frequency-response assumptions can shift the total VHF signal budget enough to change a threshold read.',
       whyItMatters: 'The boundary interpretation is only as strong as the signal assumptions that keep the deep return above threshold.'
+    },
+    'Fresnel-zone coherent look count': {
+      question: 'How many coherent samples fit inside the first Fresnel zone?',
+      xAxis: 'Along-track position (km): location along the modeled pass.',
+      yAxis: 'Coherent looks (count): the effective number of coherent samples after spacing, aperture cap, and phase-decorrelation limits.',
+      series: 'HF effective coherent looks and VHF effective coherent looks are the usable counts. Aperture cap in samples shows the maximum allowed by the coherence aperture control.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'HF effective coherent looks')} ${seriesRangeSentence(chart, 'VHF effective coherent looks')} ${seriesRangeSentence(chart, 'Aperture cap in samples')}`,
+      takeaway: 'HF usually gets more coherent looks than VHF because the longer wavelength makes the Fresnel zone wider.',
+      whyItMatters: 'This answers whether the power gain is really coming from many coherent sums or only from one or two usable looks.'
+    },
+    'Windowed chirp response: frequency washout': {
+      question: 'Does a frequency-dependent surface response survive chirp windowing, or mostly wash out?',
+      xAxis: 'Radar band: HF 9 MHz and VHF 60 MHz are compared with their active bandwidth controls.',
+      yAxis: 'dB: reflectivity offsets and the pulse-gain-included response are shown on the same dB scale.',
+      series: 'Center-frequency reflectivity offset is the old scalar reading. Windowed chirp-average reflectivity is the Hamming-weighted band average. Windowed response plus pulse gain adds pulse length and bandwidth. Window washout delta is the difference between the band average and center-only value.',
+      notice: (chart) => `${categoryExtremaSentence(chart, 'Windowed chirp-average reflectivity')} ${categoryExtremaSentence(chart, 'Window washout delta')}`,
+      takeaway: 'A smooth frequency slope mostly becomes a small weighted-average offset, while pulse length and bandwidth still move total power through time-bandwidth gain.',
+      whyItMatters: 'This is the missing washout test: it shows whether the surface frequency response is still large after windowed pulse processing.'
     },
     'HF 9 MHz Mid-Shell Confidence vs Ambiguity': {
       question: 'Under dirty-ice and clutter scenarios, does HF confidence drop while ambiguity rises?',
@@ -657,7 +675,7 @@
     if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth'].includes(key)) return 'Geometry';
     if (['nominalIceShell', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel'].includes(key)) return 'Subsurface';
     if (['falseLayerEnabled', 'falseLayerCount', 'falseLayerDepthFraction', 'falseLayerStrength', 'receiverAmbiguityDb'].includes(key)) return 'False layer';
-    if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz'].includes(key)) return 'Radar signal';
+    if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'hfBandwidthMhz', 'vhfBandwidthMhz', 'coherenceApertureM', 'phaseDecorrelationDeg', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz'].includes(key)) return 'Radar signal';
     return 'Model';
   }
 
@@ -1106,6 +1124,8 @@
     if (text.includes('delay')) return 'Read as round-trip timing: larger values mean longer extra path or deeper in-ice travel time.';
     if (text.includes('doppler')) return 'Compare angle or depth curves; residual error is expected because the live correction includes a small deterministic angle offset.';
     if (text.includes('margin') || text.includes('threshold')) return 'Values above the zero reference are easier to detect in this simplified threshold model.';
+    if (text.includes('fresnel') || text.includes('coherent look')) return 'Use this to see how many coherent samples fit inside the first Fresnel zone before converting looks into gain.';
+    if (text.includes('chirp') || text.includes('washout')) return 'Compare the center-frequency response with the Hamming-windowed chirp average to see whether the frequency slope survives processing.';
     if (text.includes('percent') || text.includes('support') || text.includes('confidence')) return 'Percent-style series are scaled 0-100 so scenario bars can be compared directly.';
     if (text.includes('surface') || text.includes('terrain')) return 'Use this to compare the target terrain path against the nadir reference used by the range equations.';
     return 'Use the axes and legend to compare each modeled series under the current live assumptions.';

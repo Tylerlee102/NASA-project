@@ -662,6 +662,8 @@
   const titleGeometric = 'Geometric spreading power dB';
   const titleCoherent = 'Coherent Fresnel-zone gain';
   const titleTotalVhf = 'Total VHF dB: constant vs frequency-dependent response';
+  const titleFresnelLooks = 'Fresnel-zone coherent look count';
+  const titleFrequencyWashout = 'Windowed chirp response: frequency washout';
   const confidenceTitle = 'HF 9 MHz Mid-Shell Confidence vs Ambiguity';
   const workbookDepthTitle = 'HF 9 MHz Workbook-Depth Outcomes';
   const clutterStressTitle = 'VHF 60 MHz Shallow Clutter Stress Test';
@@ -680,6 +682,10 @@
     alongTrackSpacingM: 500,
     pulseLengthUs: 20,
     windowLossDb: -1.3444034312785926,
+    hfBandwidthMhz: 1,
+    vhfBandwidthMhz: 10,
+    coherenceApertureM: 2000,
+    phaseDecorrelationDeg: 12,
     baseReflectivityDb: 0,
     frequencySlopeDbPerOctave: -2,
     referenceFrequencyMhz: 9,
@@ -714,6 +720,10 @@
     { key: 'alongTrackSpacingM', label: 'Along-track spacing', unit: 'm', min: 50, max: 1500, step: 25 },
     { key: 'pulseLengthUs', label: 'Pulse length', unit: 'us', min: 5, max: 100, step: 5 },
     { key: 'windowLossDb', label: 'Window loss', unit: 'dB', min: -6, max: 0, step: 0.1 },
+    { key: 'hfBandwidthMhz', label: 'HF bandwidth', unit: 'MHz', min: 0.2, max: 5, step: 0.1 },
+    { key: 'vhfBandwidthMhz', label: 'VHF bandwidth', unit: 'MHz', min: 1, max: 20, step: 0.5 },
+    { key: 'coherenceApertureM', label: 'Coherence aperture cap', unit: 'm', min: 100, max: 5000, step: 50 },
+    { key: 'phaseDecorrelationDeg', label: 'Phase decorrelation', unit: 'deg rms', min: 0, max: 90, step: 1 },
     { key: 'baseReflectivityDb', label: 'Base reflectivity', unit: 'dB', min: -20, max: 10, step: 0.5 },
     { key: 'frequencySlopeDbPerOctave', label: 'Frequency slope', unit: 'dB/oct', min: -8, max: 4, step: 0.25 },
     { key: 'referenceFrequencyMhz', label: 'Reference frequency', unit: 'MHz', min: 3, max: 30, step: 1 },
@@ -740,10 +750,9 @@
     return Math.log(Math.max(value, 1e-12)) / Math.log(2);
   }
 
-  function pulseGain(lengthUs, windowLossDb) {
-    // Sensitivity proxy for pulse-compression gain: assumes pulse length scales
-    // the time-bandwidth product relative to a 1 us reference.
-    return db(Math.max(lengthUs, 0.1)) + windowLossDb;
+  function pulseGain(lengthUs, windowLossDb, bandwidthMhz = 1) {
+    const timeBandwidth = Math.max(lengthUs * bandwidthMhz, 0.1);
+    return db(timeBandwidth) + windowLossDb;
   }
 
   function percentShare(value) {
@@ -787,15 +796,97 @@
     return next;
   }
 
+  function findSeriesByName(chart, matcher) {
+    if (!chart || !chart.series) return null;
+    const re = matcher instanceof RegExp ? matcher : new RegExp(String(matcher), 'i');
+    return chart.series.find((series) => re.test(series.name || '')) || null;
+  }
+
+  function sourceXPoints(params, liveData, source) {
+    const liveDepthChart = liveChartForTitle('Raw Slant Depth vs Doppler-Corrected Ocean Depth', liveData);
+    const liveDepthSeries = findSeriesByName(liveDepthChart, /true simulated ocean depth/i);
+    if (liveDepthSeries && liveDepthSeries.points.length) return liveDepthSeries.points;
+    const correctedChart = liveChartForTitle('Corrected Layer Depths From Doppler Angle', liveData);
+    const correctedSeries = findSeriesByName(correctedChart, /ocean boundary/i);
+    if (correctedSeries && correctedSeries.points.length) return correctedSeries.points;
+    if (source && source.series && source.series[0] && source.series[0].points.length) {
+      return source.series[0].points.map((point) => [point[0], params.nominalIceShell || signalDefaults.nominalIceShell || 15000]);
+    }
+    return Array.from({ length: 241 }, (_, index) => {
+      const x = -60 + index * 120 / 240;
+      return [round(x), params.nominalIceShell || signalDefaults.nominalIceShell || 15000];
+    });
+  }
+
+  function fresnelMetrics(depthM, frequencyMhz, params) {
+    const depth = Math.max(depthM || params.nominalIceShell || 1, 1);
+    const wavelengthIceM = params.c / (Math.max(frequencyMhz, 0.1) * 1000000) / Math.max(params.iceIndex, 0.1);
+    const radiusM = Math.sqrt(Math.max(wavelengthIceM * depth / 2, 0));
+    const diameterM = 2 * radiusM;
+    const spacingM = Math.max(params.alongTrackSpacingM, 1);
+    const fresnelLooks = Math.max(1, Math.floor(diameterM / spacingM) + 1);
+    const apertureLooks = Math.max(1, Math.floor(Math.max(params.coherenceApertureM, spacingM) / spacingM) + 1);
+    const rawLooks = Math.min(fresnelLooks, apertureLooks);
+    const phaseSigmaRad = Math.max(params.phaseDecorrelationDeg || 0, 0) * Math.PI / 180;
+    const coherence = Math.exp(-0.5 * phaseSigmaRad * phaseSigmaRad);
+    const effectiveLooks = 1 + (rawLooks - 1) * coherence;
+    return {
+      radiusM,
+      diameterM,
+      fresnelLooks,
+      apertureLooks,
+      effectiveLooks,
+      gainDb: db(effectiveLooks)
+    };
+  }
+
+  function frequencySlopeOffsetDb(frequencyMhz, params) {
+    return params.frequencySlopeDbPerOctave * log2(frequencyMhz / Math.max(params.referenceFrequencyMhz, 0.1));
+  }
+
+  function hammingWeight(t) {
+    return 0.54 - 0.46 * Math.cos(2 * Math.PI * t);
+  }
+
+  function windowedFrequencyResponse(centerMhz, bandwidthMhz, params) {
+    const center = Math.max(centerMhz, 0.1);
+    const half = Math.max(bandwidthMhz, 0.01) / 2;
+    const lo = Math.max(0.1, center - half);
+    const hi = Math.max(lo + 0.01, center + half);
+    const samples = 97;
+    let weightSum = 0;
+    let powerSum = 0;
+    let minDb = Infinity;
+    let maxDb = -Infinity;
+    for (let i = 0; i < samples; i += 1) {
+      const t = samples === 1 ? 0.5 : i / (samples - 1);
+      const f = lo + (hi - lo) * t;
+      const weight = hammingWeight(t);
+      const responseDb = frequencySlopeOffsetDb(f, params);
+      minDb = Math.min(minDb, responseDb);
+      maxDb = Math.max(maxDb, responseDb);
+      powerSum += weight * (10 ** (responseDb / 10));
+      weightSum += weight;
+    }
+    const windowedDb = db(powerSum / Math.max(weightSum, 1e-12));
+    const centerDb = frequencySlopeOffsetDb(center, params);
+    return {
+      centerDb,
+      windowedDb,
+      washoutDeltaDb: windowedDb - centerDb,
+      edgeSpanDb: maxDb - minDb
+    };
+  }
+
   function buildPulseChart(params, source) {
     const lengths = source && source.series.length
       ? source.series[0].points.map((point) => point[0])
       : [5, 10, 20, 50, 100];
-    const hf = lengths.map((length) => [length, round(pulseGain(length, params.windowLossDb))]);
-    const vhf = lengths.map((length) => [length, round(pulseGain(length, params.windowLossDb) + 10)]);
+    const hf = lengths.map((length) => [length, round(pulseGain(length, params.windowLossDb, params.hfBandwidthMhz))]);
+    const vhf = lengths.map((length) => [length, round(pulseGain(length, params.windowLossDb, params.vhfBandwidthMhz))]);
     const selected = [
-      [params.pulseLengthUs, round(pulseGain(params.pulseLengthUs, params.windowLossDb))],
-      [params.pulseLengthUs, round(pulseGain(params.pulseLengthUs, params.windowLossDb) + 10)]
+      [params.pulseLengthUs, round(pulseGain(params.pulseLengthUs, params.windowLossDb, params.hfBandwidthMhz))],
+      [params.pulseLengthUs, round(pulseGain(params.pulseLengthUs, params.windowLossDb, params.vhfBandwidthMhz))]
     ];
     return withSeries(
       source,
@@ -805,7 +896,7 @@
         { name: 'VHF pulse gain', points: vhf },
         { name: 'Selected pulse setting', points: selected }
       ],
-      { note: 'Pulse-compression sensitivity proxy: 10log10(time-bandwidth product) plus window loss, with pulse length used as the time-bandwidth proxy.' }
+      { note: 'Pulse-compression sensitivity proxy: 10log10(pulse length * bandwidth) plus scalar window loss.' }
     );
   }
 
@@ -825,31 +916,67 @@
     );
   }
 
-  function coherentAdjustment(params) {
-    const spacingRatio = signalDefaults.alongTrackSpacingM / Math.max(params.alongTrackSpacingM, 1);
-    const iceRatio = Math.sqrt(signalDefaults.iceIndex / Math.max(params.iceIndex, 0.1));
-    return db(spacingRatio * iceRatio);
-  }
-
-  function buildCoherentChart(params, source) {
-    const adjustment = coherentAdjustment(params);
-    const series = (source ? source.series : []).map((item, index) => ({
-      name: index === 0 ? 'HF coherent gain' : 'VHF coherent gain',
-      points: item.points.map((point) => replacePointY(point, point[1] + adjustment))
-    }));
+  function buildCoherentChart(params, source, liveData) {
+    const depthPoints = sourceXPoints(params, liveData, source);
+    const hf = depthPoints.map((point) => {
+      const metric = fresnelMetrics(point[1], 9, params);
+      return [point[0], round(metric.gainDb)];
+    });
+    const vhf = depthPoints.map((point) => {
+      const metric = fresnelMetrics(point[1], 60, params);
+      return [point[0], round(metric.gainDb)];
+    });
     return withSeries(
       source,
       fallbackChart('v30-live-coherent-gain', titleCoherent, 'Along-track position (km)', 'dB'),
-      series,
-      { note: 'Coherent gain is a simplified power-ratio sensitivity, not a full aperture synthesis model.' }
+      [
+        { name: 'HF coherent gain from Fresnel looks', points: hf },
+        { name: 'VHF coherent gain from Fresnel looks', points: vhf }
+      ],
+      { note: 'Coherent gain is now computed from first-Fresnel-zone diameter, along-track spacing, coherence aperture cap, and phase-decorrelation loss.' }
+    );
+  }
+
+  function buildFresnelLookChart(params, liveData, source) {
+    const depthPoints = sourceXPoints(params, liveData, source);
+    const hf = depthPoints.map((point) => [point[0], round(fresnelMetrics(point[1], 9, params).effectiveLooks, 3)]);
+    const vhf = depthPoints.map((point) => [point[0], round(fresnelMetrics(point[1], 60, params).effectiveLooks, 3)]);
+    const apertureCap = depthPoints.map((point) => [point[0], fresnelMetrics(point[1], 9, params).apertureLooks]);
+    return withSeries(
+      null,
+      fallbackChart('v30-live-fresnel-look-count', titleFresnelLooks, 'Along-track position (km)', 'Coherent looks (count)'),
+      [
+        { name: 'HF effective coherent looks', points: hf },
+        { name: 'VHF effective coherent looks', points: vhf },
+        { name: 'Aperture cap in samples', points: apertureCap }
+      ],
+      { note: 'Counts the effective coherent samples available across the first Fresnel-zone diameter after aperture and phase-decorrelation limits.' }
+    );
+  }
+
+  function buildFrequencyWashoutChart(params) {
+    const hf = windowedFrequencyResponse(9, params.hfBandwidthMhz, params);
+    const vhf = windowedFrequencyResponse(60, params.vhfBandwidthMhz, params);
+    const hfPulse = pulseGain(params.pulseLengthUs, params.windowLossDb, params.hfBandwidthMhz);
+    const vhfPulse = pulseGain(params.pulseLengthUs, params.windowLossDb, params.vhfBandwidthMhz);
+    return withSeries(
+      null,
+      fallbackChart('v30-live-windowed-chirp-washout', titleFrequencyWashout, 'Radar band', 'dB', 'bar'),
+      [
+        { name: 'Center-frequency reflectivity offset', points: [['HF 9 MHz', round(hf.centerDb)], ['VHF 60 MHz', round(vhf.centerDb)]] },
+        { name: 'Windowed chirp-average reflectivity', points: [['HF 9 MHz', round(hf.windowedDb)], ['VHF 60 MHz', round(vhf.windowedDb)]] },
+        { name: 'Windowed response plus pulse gain', points: [['HF 9 MHz', round(hf.windowedDb + hfPulse)], ['VHF 60 MHz', round(vhf.windowedDb + vhfPulse)]] },
+        { name: 'Window washout delta', points: [['HF 9 MHz', round(hf.washoutDeltaDb)], ['VHF 60 MHz', round(vhf.washoutDeltaDb)]] }
+      ],
+      { note: 'Samples each chirp band with a Hamming weight, applies the frequency-slope reflectivity in linear power, averages it, and adds time-bandwidth pulse gain for the total response series.' }
     );
   }
 
   function buildTotalVhfChart(params, source, geometricChart, coherentChart) {
     const geom = geometricChart.series[1] || geometricChart.series[0] || { points: [] };
     const coherent = coherentChart.series[1] || coherentChart.series[0] || { points: [] };
-    const selectedPulseGain = pulseGain(params.pulseLengthUs, params.windowLossDb) + 10;
-    const frequencyResponse = params.frequencySlopeDbPerOctave * log2(60 / Math.max(params.referenceFrequencyMhz, 0.1));
+    const selectedPulseGain = pulseGain(params.pulseLengthUs, params.windowLossDb, params.vhfBandwidthMhz);
+    const frequencyResponse = windowedFrequencyResponse(60, params.vhfBandwidthMhz, params).windowedDb;
     const representativeDepthKm = Math.max(params.nominalIceShell || defaults.nominalIceShell || 0, 0) / 1000;
     const attenuationPenalty = -2 * Math.max(params.attenuation || 0, 0) * representativeDepthKm;
     const constantPoints = geom.points.map((point, index) => {
@@ -864,7 +991,7 @@
         { name: 'Constant reflectivity', points: constantPoints },
         { name: 'Frequency-dependent reflectivity', points: frequencyPoints }
       ],
-      { note: 'Combines geometric power, simplified coherent gain, pulse gain, two-way attenuation loss through the nominal ice-shell depth, and a frequency-response sensitivity term.' }
+      { note: 'Combines geometric power, Fresnel-zone coherent gain, pulse time-bandwidth gain, two-way attenuation, and a Hamming-windowed frequency-response term.' }
     );
   }
 
@@ -886,7 +1013,7 @@
     if (text.includes('complex')) dirty *= 1.25;
     if (text.includes('rough')) clutter *= 1.3;
     if (text.includes('clutter')) clutter *= 1.45;
-    const signalGain = (pulseGain(params.pulseLengthUs, params.windowLossDb) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb)) / 15;
+    const signalGain = (pulseGain(params.pulseLengthUs, params.windowLossDb, params.hfBandwidthMhz) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb, signalDefaults.hfBandwidthMhz)) / 15;
     const thresholdRelief = ((signalDefaults.detectionThreshold || -45) - (params.detectionThreshold || -45)) / 80;
     const attenuationStress = Math.max((params.attenuation || 0.9) - 0.9, 0) / 2.5;
     return {
@@ -995,7 +1122,7 @@
   function buildMaterialChart(params, source) {
     const dirtyPenalty = params.dirtyIceLevel * 8;
     const clutterPenalty = params.surfaceClutterLevel * 4;
-    const signalBoost = pulseGain(params.pulseLengthUs, params.windowLossDb) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb);
+    const signalBoost = pulseGain(params.pulseLengthUs, params.windowLossDb, params.hfBandwidthMhz) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb, signalDefaults.hfBandwidthMhz);
     const points = [
       ['Cold clean ice', round(-18 - dirtyPenalty * 0.2 + signalBoost * 0.15)],
       ['Salt-rich ice', round(-14 - dirtyPenalty * 0.45 + signalBoost * 0.12)],
@@ -1012,7 +1139,7 @@
   }
 
   function buildEvidenceChart(params, source) {
-    const signalBoost = pulseGain(params.pulseLengthUs, params.windowLossDb) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb);
+    const signalBoost = pulseGain(params.pulseLengthUs, params.windowLossDb, params.hfBandwidthMhz) - pulseGain(signalDefaults.pulseLengthUs, signalDefaults.windowLossDb, signalDefaults.hfBandwidthMhz);
     const radar = clamp((72 - params.dirtyIceLevel * 35 - params.surfaceClutterLevel * 22 + signalBoost * 1.4) / 100, 0, 1) * 100;
     const thermal = clamp((42 + params.dirtyIceLevel * 18) / 100, 0, 1) * 100;
     const composition = clamp((48 + params.dirtyIceLevel * 28) / 100, 0, 1) * 100;
@@ -1072,8 +1199,10 @@
     const liveData = liveModel ? liveModel.compute(p) : null;
     const pulseChart = buildPulseChart(p, getChart(base, titlePulse));
     const geometricChart = buildGeometricChart(p, getChart(base, titleGeometric));
-    const coherentChart = buildCoherentChart(p, getChart(base, titleCoherent));
+    const coherentChart = buildCoherentChart(p, getChart(base, titleCoherent), liveData);
     const totalVhfChart = buildTotalVhfChart(p, getChart(base, titleTotalVhf), geometricChart, coherentChart);
+    const fresnelLookChart = buildFresnelLookChart(p, liveData, getChart(base, titleCoherent));
+    const frequencyWashoutChart = buildFrequencyWashoutChart(p);
     const charts = base.charts.map((chart) => {
       if (chart.title === titlePulse) return pulseChart;
       if (chart.title === titleGeometric) return geometricChart;
@@ -1095,7 +1224,7 @@
     });
     return {
       ...base,
-      charts: dedupeCharts(charts)
+      charts: dedupeCharts([...charts, fresnelLookChart, frequencyWashoutChart])
     };
   }
 
