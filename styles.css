@@ -196,14 +196,35 @@ input:focus-visible,
   font-size: 0.88rem;
 }
 
-.tabs {
-  display: grid;
-  gap: 0;
+.section-menu {
   margin-top: 30px;
   border-top: 1px solid var(--line-strong);
 }
 
+.section-menu summary {
+  min-height: 42px;
+  padding: 12px 0;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.section-menu summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.tabs {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
 .tab {
+  display: flex;
+  align-items: center;
   width: 100%;
   min-height: 42px;
   padding: 0;
@@ -216,6 +237,7 @@ input:focus-visible,
   font-size: 0.88rem;
   font-weight: 760;
   text-align: left;
+  text-decoration: none;
 }
 
 .tab.is-active {
@@ -1124,6 +1146,10 @@ tr:last-child td {
     padding-right: 14px;
   }
 
+  .section-menu {
+    margin-top: 22px;
+  }
+
   .tabs {
     position: sticky;
     top: 0;
@@ -1138,6 +1164,10 @@ tr:last-child td {
 
   .tabs::-webkit-scrollbar {
     display: none;
+  }
+
+  .section-menu .tabs {
+    position: static;
   }
 
   .tab {

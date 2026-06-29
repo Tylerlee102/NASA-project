@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=fresnel-washout">
-    <script defer src="data/v19-results.js?v=fresnel-washout"></script>
-    <script defer src="data/v30-results.js?v=fresnel-washout"></script>
-    <script defer src="model.js?v=fresnel-washout"></script>
-    <script defer src="app.js?v=fresnel-washout"></script>
+    <link rel="stylesheet" href="styles.css?v=page-menu">
+    <script defer src="data/v19-results.js?v=page-menu"></script>
+    <script defer src="data/v30-results.js?v=page-menu"></script>
+    <script defer src="model.js?v=page-menu"></script>
+    <script defer src="app.js?v=page-menu"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -18,7 +18,7 @@
           <h1>Europa Radar Flyby Model</h1>
           <p class="lead">A static research interface for testing how flyby geometry, dirty ice, false layers, attenuation, and Doppler correction can change the interpretation of a possible ice-ocean boundary.</p>
           <div class="hero-actions" aria-label="Project actions">
-            <a class="secondary-link" href="#false-layer" data-tab-jump="false-layer">Test false-layer ambiguity</a>
+            <a class="secondary-link" href="?page=false-layer" data-tab-jump="false-layer">Test false-layer ambiguity</a>
           </div>
           <dl class="dossier-meta" aria-label="Project summary">
             <div>
@@ -34,15 +34,18 @@
               <dd>Illustrative, not mission-validated</dd>
             </div>
           </dl>
-          <nav class="tabs" aria-label="Result sections" role="tablist">
-            <button class="tab is-active" type="button" data-target="overview">Overview</button>
-            <button class="tab" type="button" data-target="surface">Flyby Geometry</button>
-            <button class="tab" type="button" data-target="subsurface">Subsurface Echoes</button>
-            <button class="tab" type="button" data-target="false-layer">False-Layer Response</button>
-            <button class="tab" type="button" data-target="doppler">Doppler Correction</button>
-            <button class="tab" type="button" data-target="v30">Advanced Sensitivity</button>
-            <button class="tab" type="button" data-target="audit">Graph QA</button>
-          </nav>
+          <details class="section-menu" open>
+            <summary>Section pages</summary>
+            <nav class="tabs" aria-label="Section pages">
+              <a class="tab is-active" href="?page=overview" data-target="overview">Overview</a>
+              <a class="tab" href="?page=surface" data-target="surface">Flyby Geometry</a>
+              <a class="tab" href="?page=subsurface" data-target="subsurface">Subsurface Echoes</a>
+              <a class="tab" href="?page=false-layer" data-target="false-layer">False-Layer Response</a>
+              <a class="tab" href="?page=doppler" data-target="doppler">Doppler Correction</a>
+              <a class="tab" href="?page=v30" data-target="v30">Advanced Sensitivity</a>
+              <a class="tab" href="?page=audit" data-target="audit">Graph QA</a>
+            </nav>
+          </details>
         </div>
       </aside>
 
