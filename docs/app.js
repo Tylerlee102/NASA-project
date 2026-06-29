@@ -76,6 +76,16 @@
     'Advanced sensitivity': 'The v30 charts are workbook-derived and browser-adjusted sensitivity views, not a mission-validated Europa radar processor.'
   };
 
+  const PAGE_TITLES = {
+    overview: 'Overview',
+    surface: 'Flyby Geometry',
+    subsurface: 'Subsurface Echoes',
+    'false-layer': 'False-Layer Response',
+    doppler: 'Doppler Correction',
+    v30: 'Advanced Sensitivity',
+    audit: 'Graph QA'
+  };
+
   const V30_CHART_GROUPS = [
     {
       id: 'v30-outcomes',
@@ -795,43 +805,55 @@
     const tabs = document.querySelectorAll('.tab');
     const sections = document.querySelectorAll('.page-section');
     const validTargets = new Set(Array.from(sections).map((section) => section.id));
-    function setActive(target, updateHash) {
+
+    function targetFromLocation() {
+      const url = new URL(window.location.href);
+      const page = url.searchParams.get('page');
+      if (validTargets.has(page)) return page;
+      const hashTarget = window.location.hash.replace('#', '');
+      if (validTargets.has(hashTarget)) return hashTarget;
+      return 'overview';
+    }
+
+    function setPageUrl(target, mode) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', target);
+      url.hash = '';
+      const method = mode === 'replace' ? 'replaceState' : 'pushState';
+      history[method](null, '', url);
+    }
+
+    function setActive(target, updateUrl) {
       const next = validTargets.has(target) ? target : 'overview';
       tabs.forEach((t) => {
         const active = t.dataset.target === next;
         t.classList.toggle('is-active', active);
-        t.setAttribute('aria-selected', active ? 'true' : 'false');
-        t.setAttribute('tabindex', active ? '0' : '-1');
+        if (active) {
+          t.setAttribute('aria-current', 'page');
+        } else {
+          t.removeAttribute('aria-current');
+        }
       });
       sections.forEach((section) => {
         const active = section.id === next;
         section.classList.toggle('is-active', active);
-        section.setAttribute('role', 'tabpanel');
+        section.setAttribute('role', 'region');
         section.hidden = !active;
       });
-      if (updateHash) history.replaceState(null, '', `#${next}`);
+      document.title = `${PAGE_TITLES[next] || 'Section'} | Europa Radar Flyby Model`;
+      if (updateUrl) setPageUrl(next, 'push');
     }
-    tabs.forEach((tab, index) => {
-      tab.setAttribute('role', 'tab');
-      tab.id = `tab-${tab.dataset.target}`;
+    tabs.forEach((tab) => {
       const panel = document.getElementById(tab.dataset.target);
       if (panel) {
-        tab.setAttribute('aria-controls', panel.id);
-        panel.setAttribute('aria-labelledby', tab.id);
+        const panelTitle = panel.querySelector('h2');
+        if (panelTitle && !panelTitle.id) panelTitle.id = `${panel.id}-title`;
+        if (panelTitle) panel.setAttribute('aria-labelledby', panelTitle.id);
       }
-      tab.addEventListener('click', () => {
-        setActive(tab.dataset.target, true);
-      });
-      tab.addEventListener('keydown', (event) => {
-        if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+      tab.addEventListener('click', (event) => {
         event.preventDefault();
-        let nextIndex = index;
-        if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
-        if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
-        if (event.key === 'Home') nextIndex = 0;
-        if (event.key === 'End') nextIndex = tabs.length - 1;
-        tabs[nextIndex].focus();
-        setActive(tabs[nextIndex].dataset.target, true);
+        setActive(tab.dataset.target, true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
     document.querySelectorAll('[data-tab-jump]').forEach((link) => {
@@ -841,7 +863,15 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
-    setActive(window.location.hash.replace('#', ''), false);
+    window.addEventListener('popstate', () => {
+      setActive(targetFromLocation(), false);
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    });
+    const initialTarget = targetFromLocation();
+    setActive(initialTarget, false);
+    if (window.location.hash && validTargets.has(window.location.hash.replace('#', ''))) {
+      setPageUrl(initialTarget, 'replace');
+    }
     if (window.location.hash) {
       window.requestAnimationFrame(() => window.scrollTo(0, 0));
       window.setTimeout(() => window.scrollTo(0, 0), 100);
@@ -1059,7 +1089,10 @@
           event.preventDefault();
           const section = document.getElementById(link.dataset.v30Jump);
           if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          window.history.replaceState(null, '', '#v30');
+          const url = new URL(window.location.href);
+          url.searchParams.set('page', 'v30');
+          url.hash = '';
+          window.history.replaceState(null, '', url);
         });
       });
     }
