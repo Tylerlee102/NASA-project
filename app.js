@@ -678,7 +678,7 @@
     const explanation = chartExplanationFor(chart);
     return `
       <aside class="chart-explanation ${explanation.fallback ? 'is-fallback' : ''}" data-explanation-source="${explanation.fallback ? 'fallback' : 'custom'}">
-        <details class="explanation-details" open>
+        <details class="explanation-details">
           <summary>How to read this graph</summary>
           <dl class="explanation-list">
             <div>
