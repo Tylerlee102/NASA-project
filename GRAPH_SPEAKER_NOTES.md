@@ -1,6 +1,6 @@
 # Graph Speaker Notes
 
-Generated: 2026-06-29
+Generated: 2026-06-30
 
 Use these notes with one caveat up front: this project is an illustrative synthetic radar sensitivity model, not a mission-validated NASA processor and not proof of Europa structure.
 

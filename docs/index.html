@@ -4,19 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=rail-collapse">
-    <script defer src="data/v19-results.js?v=rail-collapse"></script>
-    <script defer src="data/v30-results.js?v=rail-collapse"></script>
-    <script defer src="model.js?v=rail-collapse"></script>
-    <script defer src="app.js?v=rail-collapse"></script>
+    <link rel="stylesheet" href="styles.css?v=v30-section-nav">
+    <script defer src="data/v19-results.js?v=v30-section-nav"></script>
+    <script defer src="data/v30-results.js?v=v30-section-nav"></script>
+    <script defer src="model.js?v=v30-section-nav"></script>
+    <script defer src="app.js?v=v30-section-nav"></script>
   </head>
   <body>
     <div class="site-frame">
       <aside class="site-rail" aria-label="Project dossier">
-        <button class="rail-toggle" id="rail-toggle" type="button" aria-controls="site-rail-content" aria-expanded="true">
-          <span class="rail-toggle-expanded">Collapse</span>
-          <span class="rail-toggle-collapsed">Menu</span>
-        </button>
         <div class="rail-sticky" id="site-rail-content">
           <p class="eyebrow">NASA project</p>
           <h1>Europa Radar Flyby Model</h1>
@@ -47,6 +43,7 @@
               <a class="tab" href="?page=false-layer" data-target="false-layer">False-Layer Response</a>
               <a class="tab" href="?page=doppler" data-target="doppler">Doppler Correction</a>
               <a class="tab" href="?page=v30" data-target="v30">Advanced Sensitivity</a>
+              <nav id="v30-group-nav" class="v30-group-nav" aria-label="Advanced sensitivity subsections"></nav>
               <a class="tab" href="?page=audit" data-target="audit">Graph QA</a>
             </nav>
           </details>
@@ -265,7 +262,6 @@
           </div>
           <div id="v30-controls" class="control-grid"></div>
         </section>
-        <nav id="v30-group-nav" class="v30-group-nav" aria-label="Advanced sensitivity subsections"></nav>
         <div id="v30-charts" class="v30-chart-groups"></div>
       </section>
 

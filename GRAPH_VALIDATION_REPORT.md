@@ -1,6 +1,6 @@
 # Graph Validation Report
 
-Generated: 2026-06-29
+Generated: 2026-06-30
 
 This audit treats the site as an illustrative synthetic radar sensitivity model. It does not claim NASA mission validation, real Europa detection, or a calibrated flight processor.
 
