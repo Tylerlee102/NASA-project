@@ -157,6 +157,29 @@
       ]
     }
   ];
+  let activeV30GroupId = null;
+
+  function resolveV30GroupId(groups) {
+    const ids = new Set(groups.map((group) => group.id));
+    const url = new URL(window.location.href);
+    const requested = url.searchParams.get('section');
+    if (ids.has(requested)) {
+      activeV30GroupId = requested;
+      return requested;
+    }
+    if (ids.has(activeV30GroupId)) return activeV30GroupId;
+    activeV30GroupId = groups[0] ? groups[0].id : null;
+    return activeV30GroupId;
+  }
+
+  function setV30SectionUrl(groupId, mode) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', 'v30');
+    if (groupId) url.searchParams.set('section', groupId);
+    url.hash = '';
+    const method = mode === 'push' ? 'pushState' : 'replaceState';
+    history[method](null, '', url);
+  }
 
   function finiteSeriesPointsFor(series) {
     return (series && series.points ? series.points : []).filter((point) => Number.isFinite(point[1]));
@@ -801,43 +824,6 @@
     `).join('');
   }
 
-  function initRailToggle() {
-    const frame = document.querySelector('.site-frame');
-    const button = document.getElementById('rail-toggle');
-    if (!frame || !button) return;
-    const storageKey = 'nasaProjectRailCollapsed';
-
-    function readSavedState() {
-      try {
-        return window.localStorage.getItem(storageKey) === 'true';
-      } catch (error) {
-        return false;
-      }
-    }
-
-    function saveState(collapsed) {
-      try {
-        window.localStorage.setItem(storageKey, collapsed ? 'true' : 'false');
-      } catch (error) {
-        // Ignore storage failures; the visible toggle state still updates.
-      }
-    }
-
-    function applyState(collapsed) {
-      frame.classList.toggle('is-rail-collapsed', collapsed);
-      button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      button.setAttribute('aria-label', collapsed ? 'Open section menu' : 'Collapse section menu');
-      button.title = collapsed ? 'Open section menu' : 'Collapse section menu';
-    }
-
-    applyState(readSavedState());
-    button.addEventListener('click', () => {
-      const collapsed = !frame.classList.contains('is-rail-collapsed');
-      applyState(collapsed);
-      saveState(collapsed);
-    });
-  }
-
   function initTabs() {
     const tabs = document.querySelectorAll('.tab');
     const sections = document.querySelectorAll('.page-section');
@@ -855,6 +841,11 @@
     function setPageUrl(target, mode) {
       const url = new URL(window.location.href);
       url.searchParams.set('page', target);
+      if (target === 'v30' && activeV30GroupId) {
+        url.searchParams.set('section', activeV30GroupId);
+      } else {
+        url.searchParams.delete('section');
+      }
       url.hash = '';
       const method = mode === 'replace' ? 'replaceState' : 'pushState';
       history[method](null, '', url);
@@ -880,6 +871,7 @@
       document.title = `${PAGE_TITLES[next] || 'Section'} | Europa Radar Flyby Model`;
       if (updateUrl) setPageUrl(next, 'push');
     }
+    window.setActiveProjectPage = setActive;
     tabs.forEach((tab) => {
       const panel = document.getElementById(tab.dataset.target);
       if (panel) {
@@ -901,7 +893,9 @@
       });
     });
     window.addEventListener('popstate', () => {
-      setActive(targetFromLocation(), false);
+      const next = targetFromLocation();
+      setActive(next, false);
+      if (next === 'v30') renderV30();
       window.scrollTo({ top: 0, behavior: 'auto' });
     });
     const initialTarget = targetFromLocation();
@@ -1118,24 +1112,29 @@
         charts: remaining
       });
     }
+    const selectedGroupId = resolveV30GroupId(groups);
+    const visibleGroups = groups.filter((group) => group.id === selectedGroupId);
     const nav = document.getElementById('v30-group-nav');
     if (nav) {
-      nav.innerHTML = groups.map((group) => `<a href="#v30" data-v30-jump="${escapeHtml(group.id)}">${escapeHtml(group.title)}</a>`).join('');
-      nav.querySelectorAll('[data-v30-jump]').forEach((link) => {
+      nav.innerHTML = groups.map((group) => {
+        const active = group.id === selectedGroupId;
+        return `<a href="?page=v30&amp;section=${encodeURIComponent(group.id)}" data-v30-section="${escapeHtml(group.id)}"${active ? ' class="is-active" aria-current="page"' : ''}>${escapeHtml(group.title)}</a>`;
+      }).join('');
+      nav.querySelectorAll('[data-v30-section]').forEach((link) => {
         link.addEventListener('click', (event) => {
           event.preventDefault();
-          const section = document.getElementById(link.dataset.v30Jump);
-          if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          const url = new URL(window.location.href);
-          url.searchParams.set('page', 'v30');
-          url.hash = '';
-          window.history.replaceState(null, '', url);
+          activeV30GroupId = link.dataset.v30Section;
+          if (typeof window.setActiveProjectPage === 'function') {
+            window.setActiveProjectPage('v30', false);
+          }
+          setV30SectionUrl(activeV30GroupId, 'push');
+          renderV30();
         });
       });
     }
     const target = document.getElementById('v30-charts');
     if (target) {
-      target.innerHTML = groups.map((group) => `
+      target.innerHTML = visibleGroups.map((group) => `
         <section class="v30-chart-section" id="${escapeHtml(group.id)}">
           <div class="v30-section-heading">
             <p class="section-kicker">${escapeHtml(group.kicker)}</p>
@@ -1145,7 +1144,7 @@
           <div id="${escapeHtml(group.id)}-charts" class="chart-grid v30-subgrid"></div>
         </section>
       `).join('');
-      groups.forEach((group) => renderChartSet(group.charts, `${group.id}-charts`));
+      visibleGroups.forEach((group) => renderChartSet(group.charts, `${group.id}-charts`));
     }
     renderAudit();
   }
@@ -1635,7 +1634,6 @@
     renderV30();
   }
 
-  initRailToggle();
   initTabs();
   renderLiveControls();
   renderV30Controls();
