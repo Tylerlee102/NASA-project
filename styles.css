@@ -764,6 +764,9 @@ input:focus-visible,
 
 .chart-card {
   display: grid;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   gap: 12px;
 }
 
@@ -773,6 +776,8 @@ input:focus-visible,
 
 .chart-title-row {
   display: grid;
+  width: 100%;
+  min-width: 0;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   align-items: start;
@@ -799,6 +804,7 @@ input:focus-visible,
 
 .chart-badges {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   gap: 6px;
 }
@@ -1122,6 +1128,8 @@ input:focus-visible,
 }
 
 .table-wrap {
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   margin-top: 10px;
