@@ -826,6 +826,96 @@ input:focus-visible,
   height: 100%;
 }
 
+.folding-preview-panel {
+  margin-bottom: 20px;
+}
+
+.folding-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.radargram-shell {
+  width: 100%;
+  min-height: 300px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fffefa;
+  overflow: hidden;
+}
+
+.radargram-shell svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.radargram-bg {
+  fill: #fffefa;
+}
+
+.radargram-window {
+  fill: rgba(47, 111, 115, 0.1);
+}
+
+.radargram-target-line {
+  stroke: var(--accent-2);
+  stroke-width: 2.4;
+  stroke-dasharray: 8 6;
+}
+
+.radargram-clutter-point {
+  fill: var(--copper);
+  stroke: rgba(255, 254, 250, 0.9);
+  stroke-width: 1;
+}
+
+.radargram-label {
+  fill: var(--accent-2);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.radargram-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.radargram-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.radargram-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 8px;
+  border-radius: 8px;
+}
+
+.radargram-legend strong {
+  color: var(--ink);
+  font-weight: 850;
+}
+
+.legend-target {
+  background: var(--accent-2);
+}
+
+.legend-window {
+  background: rgba(47, 111, 115, 0.22);
+  border: 1px solid rgba(47, 111, 115, 0.35);
+}
+
+.legend-clutter {
+  background: var(--copper);
+}
+
 .axis,
 .axis-label {
   fill: #645f56;

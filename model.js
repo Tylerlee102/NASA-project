@@ -658,6 +658,278 @@
 })();
 
 (function () {
+  const pi = Math.PI;
+  const c = 299792458;
+  const rowCount = 181;
+
+  const defaults = {
+    z0: 400,
+    deltaZEdge: 4,
+    xMin: -60,
+    xMax: 60,
+    xEdge: 60,
+    speed: 4,
+    iceIndex: 1.78,
+    targetDepthM: 6000,
+    pulseLengthUs: 20,
+    prfCapHz: 5000,
+    wavelengthM: 5,
+    surfaceScatteringDb: -10,
+    targetSignalDb: -24,
+    listenGuardUs: 5
+  };
+
+  const controls = [
+    { key: 'z0', label: 'Closest altitude', unit: 'km', min: 25, max: 1000, step: 5 },
+    { key: 'deltaZEdge', label: 'Altitude rise at edge', unit: 'km', min: 0, max: 120, step: 1 },
+    { key: 'speed', label: 'Flyby speed', unit: 'km/s', min: 1, max: 8, step: 0.1 },
+    { key: 'targetDepthM', label: 'Target depth', unit: 'm', min: 1000, max: 30000, step: 250 },
+    { key: 'pulseLengthUs', label: 'Pulse length', unit: 'us', min: 2, max: 120, step: 2 },
+    { key: 'prfCapHz', label: 'Commanded PRF cap', unit: 'Hz', min: 100, max: 6000, step: 50 },
+    { key: 'wavelengthM', label: 'Radar wavelength', unit: 'm', min: 3, max: 35, step: 0.5 },
+    { key: 'surfaceScatteringDb', label: 'Surface scattering', unit: 'dB', min: -35, max: 5, step: 1 },
+    { key: 'targetSignalDb', label: 'Target signal', unit: 'dB', min: -45, max: 0, step: 1 }
+  ];
+
+  function clamp(value, min = 0, max = 1) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function round(value, digits = 6) {
+    if (!Number.isFinite(value)) return null;
+    const scale = 10 ** digits;
+    return Math.round(value * scale) / scale;
+  }
+
+  function db(value) {
+    return 10 * Math.log10(Math.max(value, 1e-12));
+  }
+
+  function altitudeAt(x, p) {
+    const edge = Math.max(Math.abs(p.xEdge || 60), 1);
+    return p.z0 + p.deltaZEdge * (x / edge) ** 2;
+  }
+
+  function pulseLimitedPrf(zKm, depthM, p) {
+    const pulseSec = Math.max(p.pulseLengthUs, 0) * 1e-6;
+    const guardSec = Math.max(p.listenGuardUs, 0) * 1e-6;
+    const pathM = zKm * 1000 + p.iceIndex * depthM;
+    const listenSec = pulseSec + guardSec + 2 * pathM / c;
+    return 1 / Math.max(listenSec, 1e-9);
+  }
+
+  function apparentDepthForOffset(zKm, offsetKm, p) {
+    return (Math.sqrt(zKm ** 2 + offsetKm ** 2) - zKm) * 1000 / p.iceIndex;
+  }
+
+  function offNadirForDepth(zKm, depthM, p) {
+    const rangeKm = zKm + p.iceIndex * depthM / 1000;
+    return Math.sqrt(Math.max(rangeKm ** 2 - zKm ** 2, 0));
+  }
+
+  function surfaceDoppler(offsetKm, zKm, p) {
+    const rangeKm = Math.sqrt(zKm ** 2 + offsetKm ** 2);
+    const sinTheta = rangeKm > 0 ? offsetKm / rangeKm : 0;
+    return 2 * p.speed * 1000 * sinTheta / Math.max(p.wavelengthM, 0.01);
+  }
+
+  function zeroFoldDepths(zKm, effectivePrf, maxDepthM, p) {
+    const vMps = Math.max(p.speed * 1000, 1);
+    const lambda = Math.max(p.wavelengthM, 0.01);
+    const maxOffsetKm = offNadirForDepth(zKm, maxDepthM, p);
+    const maxDoppler = surfaceDoppler(maxOffsetKm, zKm, p);
+    const maxOrder = Math.floor(maxDoppler / Math.max(effectivePrf, 1));
+    const folds = [];
+    for (let order = 1; order <= maxOrder; order += 1) {
+      const sinTheta = order * effectivePrf * lambda / (2 * vMps);
+      if (sinTheta <= 0 || sinTheta >= 0.995) continue;
+      const rangeKm = zKm / Math.sqrt(1 - sinTheta ** 2);
+      const depthM = (rangeKm - zKm) * 1000 / p.iceIndex;
+      if (depthM >= 0 && depthM <= maxDepthM * 1.05) {
+        folds.push({ order, depthM });
+      }
+    }
+    return folds;
+  }
+
+  function chart(id, title, yLabel, series, note, kind = 'line', options = {}) {
+    return {
+      id,
+      section: 'PRF Doppler folding',
+      sourceSheet: 'ClutterFold JS model',
+      title,
+      note,
+      xLabel: options.xLabel || 'Along-track position (km)',
+      yLabel,
+      kind,
+      formulaNote: options.formulaNote || '',
+      series
+    };
+  }
+
+  function computeRows(p) {
+    const rows = [];
+    const pulseDepthWindowM = Math.max(150, c * Math.max(p.pulseLengthUs, 0) * 1e-6 / (2 * Math.max(p.iceIndex, 0.1)));
+    for (let i = 0; i < rowCount; i += 1) {
+      const t = rowCount === 1 ? 0.5 : i / (rowCount - 1);
+      const x = p.xMin + t * (p.xMax - p.xMin);
+      const z = altitudeAt(x, p);
+      const pulsePrf = pulseLimitedPrf(z, p.targetDepthM, p);
+      const effectivePrf = Math.max(1, Math.min(p.prfCapHz, pulsePrf));
+      const maxOffsetKm = offNadirForDepth(z, p.targetDepthM, p);
+      const maxSurfaceDopplerHz = surfaceDoppler(maxOffsetKm, z, p);
+      const requiredNyquistPrfHz = 2 * maxSurfaceDopplerHz;
+      const sampledHalfBandHz = effectivePrf / 2;
+      const folds = zeroFoldDepths(z, effectivePrf, p.targetDepthM, p);
+      let nearest = null;
+      folds.forEach((fold) => {
+        const gap = Math.abs(fold.depthM - p.targetDepthM);
+        if (!nearest || gap < nearest.depthGapM) {
+          nearest = { ...fold, depthGapM: gap };
+        }
+      });
+      const overlapScore = nearest ? clamp(1 - nearest.depthGapM / pulseDepthWindowM, 0, 1) : 0;
+      const aliasDeficit = Math.max(requiredNyquistPrfHz / effectivePrf - 1, 0);
+      const deficitScore = clamp(aliasDeficit / 3, 0, 1);
+      const scatterScore = clamp((p.surfaceScatteringDb + 35) / 40, 0.04, 1);
+      const riskScore = nearest ? 100 * overlapScore * (0.35 + 0.65 * deficitScore) * scatterScore : 0;
+      const foldedClutterDb = nearest ? p.surfaceScatteringDb + db(Math.max(riskScore / 100, 0.001)) : null;
+      rows.push({
+        x,
+        z,
+        pulsePrf,
+        effectivePrf,
+        requiredNyquistPrfHz,
+        sampledHalfBandHz,
+        maxSurfaceDopplerHz,
+        maxOffsetKm,
+        pulseDepthWindowM,
+        foldCount: folds.length,
+        nearestFoldOrder: nearest ? nearest.order : null,
+        nearestFoldDepthM: nearest ? nearest.depthM : null,
+        foldDepthGapM: nearest ? nearest.depthGapM : null,
+        riskScore,
+        aliasDeficitPercent: clamp((requiredNyquistPrfHz / effectivePrf - 1) * 100, 0, 400),
+        foldedClutterDb,
+        clutterToTargetDb: foldedClutterDb == null ? null : foldedClutterDb - p.targetSignalDb
+      });
+    }
+    return rows;
+  }
+
+  function pts(rows, key, digits = 6) {
+    return rows.map((row) => [round(row.x), row[key] == null ? null : round(row[key], digits)]);
+  }
+
+  function fixedLine(rows, value) {
+    return rows.map((row) => [round(row.x), round(value)]);
+  }
+
+  function buildCharts(rows, p) {
+    return [
+      chart('folding-prf-budget', 'PRF Limit vs Doppler Nyquist Requirement', 'Frequency (Hz)', [
+        { name: 'Required PRF for surface Doppler Nyquist', points: pts(rows, 'requiredNyquistPrfHz') },
+        { name: 'Pulse/listen-time limited PRF', points: pts(rows, 'pulsePrf') },
+        { name: 'Effective PRF after command cap', points: pts(rows, 'effectivePrf') }
+      ], 'Compares the PRF needed to sample the surface Doppler bandwidth with the PRF allowed by pulse length plus round-trip listening time.'),
+      chart('folding-doppler-band', 'Surface Doppler Bandwidth vs Sampled Half-Band', 'Doppler frequency (Hz)', [
+        { name: 'Surface Doppler edge at target delay', points: pts(rows, 'maxSurfaceDopplerHz') },
+        { name: 'Sampled Nyquist half-band', points: pts(rows, 'sampledHalfBandHz') }
+      ], 'Aliasing begins where the surface Doppler edge rises above the sampled PRF/2 half-band.'),
+      chart('folding-depth', 'Where Zero-Doppler Folded Clutter Appears', 'Depth below surface (m)', [
+        { name: 'Nadir subsurface target depth', points: fixedLine(rows, p.targetDepthM) },
+        { name: 'Nearest folded surface-clutter depth', points: pts(rows, 'nearestFoldDepthM') },
+        { name: 'Pulse window upper edge', points: fixedLine(rows, p.targetDepthM + rows[0].pulseDepthWindowM) },
+        { name: 'Pulse window lower edge', points: fixedLine(rows, Math.max(0, p.targetDepthM - rows[0].pulseDepthWindowM)) }
+      ], 'Shows the apparent depths where surface Doppler aliases back near nadir. Overlap with the target window is the clutter-contamination case.'),
+      chart('folding-risk', 'Aliasing Severity Along Flyby', 'Risk score (%)', [
+        { name: 'Folded clutter overlap risk', points: pts(rows, 'riskScore', 3) },
+        { name: 'Nyquist deficit proxy', points: pts(rows, 'aliasDeficitPercent', 3) }
+      ], 'Risk rises when the effective PRF is below the Nyquist requirement and a zero-Doppler fold lands inside the target depth window.')
+    ];
+  }
+
+  function riskLabel(value) {
+    if (value >= 60) return 'High';
+    if (value >= 25) return 'Moderate';
+    if (value > 0) return 'Low';
+    return 'None in this simplified view';
+  }
+
+  function compute(params) {
+    const p = { ...defaults, ...params };
+    const rows = computeRows(p);
+    const worst = rows.reduce((best, row) => row.riskScore > best.riskScore ? row : best, rows[0]);
+    const closest = rows
+      .filter((row) => Number.isFinite(row.foldDepthGapM))
+      .reduce((best, row) => !best || row.foldDepthGapM < best.foldDepthGapM ? row : best, null);
+    const mid = rows[Math.floor(rows.length / 2)];
+    const riskRows = rows.filter((row) => row.riskScore >= 25);
+    const effectiveMin = Math.min(...rows.map((row) => row.effectivePrf));
+    const requiredMax = Math.max(...rows.map((row) => row.requiredNyquistPrfHz));
+    const pulsePrfMin = Math.min(...rows.map((row) => row.pulsePrf));
+    const targetGap = closest && Number.isFinite(closest.foldDepthGapM) ? closest.foldDepthGapM : null;
+    const targetOverlapPct = 100 * riskRows.length / rows.length;
+    const depthText = closest && Number.isFinite(closest.nearestFoldDepthM)
+      ? `${round(closest.nearestFoldDepthM, 1)} m apparent depth, ${round(closest.foldDepthGapM, 1)} m from the target window`
+      : 'No zero-Doppler fold inside the current receive window';
+
+    return {
+      source: { workbook: 'ClutterFold browser model', generatedFrom: 'simple PRF-Doppler folding formulas' },
+      summary: [
+        { label: 'Worst folding risk', value: worst.riskScore, unit: '%', meaning: `${riskLabel(worst.riskScore)} contamination proxy for the current knobs.` },
+        { label: 'Depth of strongest fold', value: worst.nearestFoldDepthM, unit: 'm', meaning: 'Apparent depth where folded surface clutter is strongest in this simplified pass.' },
+        { label: 'Target depth', value: p.targetDepthM, unit: 'm', meaning: 'Depth of the single nadir subsurface target.' },
+        { label: 'Closest fold-target gap', value: targetGap, unit: 'm', meaning: 'Small values mean folded surface clutter lands near the target depth.' },
+        { label: 'Required PRF peak', value: requiredMax, unit: 'Hz', meaning: 'Twice the maximum surface Doppler bandwidth at the target delay.' },
+        { label: 'Pulse-limited PRF floor', value: pulsePrfMin, unit: 'Hz', meaning: 'Fastest PRF allowed by pulse length plus two-way listening time.' },
+        { label: 'Effective PRF minimum', value: effectiveMin, unit: 'Hz', meaning: 'The smaller of commanded PRF cap and pulse/listen-time PRF.' },
+        { label: 'Affected flyby samples', value: targetOverlapPct, unit: '%', meaning: 'Share of along-track samples with moderate or high folded-clutter risk.' }
+      ],
+      answers: [
+        { question: 'How bad is it?', answer: `${riskLabel(worst.riskScore)} in this run; the peak overlap proxy is ${round(worst.riskScore, 1)}%.` },
+        { question: 'What depth does it occur at?', answer: depthText },
+        { question: 'How does pulse length affect it?', answer: `The ${round(p.pulseLengthUs, 1)} us pulse helps set a ${round(mid.pulsePrf, 1)} Hz mid-pass PRF ceiling; longer pulses lower that ceiling and widen the depth window.` },
+        { question: 'How does surface scattering affect it?', answer: `The surface term is ${round(p.surfaceScatteringDb, 1)} dB; stronger scattering raises the folded clutter-to-target proxy.` },
+        { question: 'Under which conditions?', answer: `Closest altitude ${round(p.z0, 1)} km, speed ${round(p.speed, 2)} km/s, target depth ${round(p.targetDepthM, 0)} m, wavelength ${round(p.wavelengthM, 2)} m.` },
+        { question: 'Can we get around it?', answer: 'This page sets up the effect. Next tests would compare staggered PRFs, shallower receive windows, masking predicted fold depths, or multi-channel angle filtering.' }
+      ],
+      conditions: [
+        { label: 'Mid-pass altitude', value: mid.z, unit: 'km' },
+        { label: 'Mid-pass effective PRF', value: mid.effectivePrf, unit: 'Hz' },
+        { label: 'Mid-pass Nyquist PRF needed', value: mid.requiredNyquistPrfHz, unit: 'Hz' },
+        { label: 'Mid-pass sampled half-band', value: mid.sampledHalfBandHz, unit: 'Hz' },
+        { label: 'Surface offset at target delay', value: mid.maxOffsetKm, unit: 'km' },
+        { label: 'Pulse depth window', value: mid.pulseDepthWindowM, unit: 'm' },
+        { label: 'Nearest fold order', value: mid.nearestFoldOrder || '', unit: 'k' },
+        { label: 'Folded clutter-to-target proxy', value: mid.clutterToTargetDb, unit: 'dB' }
+      ],
+      preview: {
+        xMin: p.xMin,
+        xMax: p.xMax,
+        depthMax: Math.max(p.targetDepthM + mid.pulseDepthWindowM * 1.6, ...rows.map((row) => row.nearestFoldDepthM || 0), 1000),
+        targetDepthM: p.targetDepthM,
+        pulseDepthWindowM: mid.pulseDepthWindowM,
+        rows: rows.map((row, index) => ({
+          x: row.x,
+          targetDepthM: p.targetDepthM,
+          foldedDepthM: row.nearestFoldDepthM,
+          riskScore: row.riskScore,
+          showPoint: index % 3 === 0 || row.riskScore >= 25
+        }))
+      },
+      charts: buildCharts(rows, p)
+    };
+  }
+
+  window.PRF_FOLDING_MODEL = {
+    defaults,
+    controls,
+    compute
+  };
+})();
+
+(function () {
   const titlePulse = 'Pulse compression gain vs pulse length';
   const titleGeometric = 'Geometric spreading power dB';
   const titleCoherent = 'Coherent Fresnel-zone gain';
