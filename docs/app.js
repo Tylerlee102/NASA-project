@@ -3,10 +3,13 @@
   const v30Data = window.V30_RESULTS;
   const liveModel = window.V19_LIVE_MODEL;
   const v30Model = window.V30_LIVE_MODEL;
+  const foldingModel = window.PRF_FOLDING_MODEL;
   let liveParams = liveModel ? { ...liveModel.defaults } : {};
   let data = liveModel ? liveModel.compute(liveParams) : sourceData;
   let v30Params = v30Model ? { ...v30Model.defaults } : {};
   let v30ViewData = v30Model && v30Data ? v30Model.compute(v30Params, v30Data) : v30Data;
+  let foldingParams = foldingModel ? { ...foldingModel.defaults } : {};
+  let foldingData = foldingModel ? foldingModel.compute(foldingParams) : null;
   const colors = ['#1f6b70', '#9b4e2f', '#5f4f8f', '#3f7a55', '#9b3d3f', '#315f88', '#7a641f', '#59615d'];
   const tooltip = document.getElementById('chart-tooltip');
 
@@ -73,6 +76,7 @@
     'Subsurface model': 'These layers and echo strengths are generated sensitivity cases; they do not prove real Europa geology.',
     'False-layer response': 'The false reflectors are synthetic receiver stress tests, not mission-validated detections of internal Europa layers.',
     'Doppler depth correction': 'This is a controlled browser-side correction demonstration with simplified residual error, not a full radar inversion.',
+    'PRF Doppler folding': 'This is a simplified one-target plus along-track surface-scatterer model; it is intended to expose aliasing behavior, not to validate a mission PRF design.',
     'Advanced sensitivity': 'The v30 charts are workbook-derived and browser-adjusted sensitivity views, not a mission-validated Europa radar processor.'
   };
 
@@ -82,6 +86,7 @@
     subsurface: 'Subsurface Echoes',
     'false-layer': 'False-Layer Response',
     doppler: 'Doppler Correction',
+    folding: 'PRF Folding',
     v30: 'Advanced Sensitivity',
     audit: 'Graph QA'
   };
@@ -327,6 +332,42 @@
   }
 
   const CHART_EXPLANATIONS = {
+    'folding-prf-budget': {
+      question: 'Is the allowed PRF high enough to sample the full surface Doppler bandwidth?',
+      xAxis: 'Along-track position (km): location during the synthetic flyby.',
+      yAxis: 'Frequency (Hz): PRF values and Doppler sampling requirements in cycles per second.',
+      series: 'Required PRF is twice the modeled surface Doppler edge. Pulse/listen-time limited PRF is the fastest rate allowed by pulse length plus echo travel time. Effective PRF is the actual rate after the command cap.',
+      notice: (chart) => `${dominanceSentence(chart, 'Required PRF', 'Effective PRF', 'The required PRF', 'the effective PRF')} ${seriesRangeSentence(chart, 'Pulse/listen-time limited PRF')}`,
+      takeaway: 'Where the required PRF rises above the effective PRF, Doppler aliasing is expected.',
+      whyItMatters: 'This is the exact PRF-vs-Nyquist check Dustin described before asking how bad the folding becomes.'
+    },
+    'folding-doppler-band': {
+      question: 'Does the surface Doppler bandwidth fit inside the sampled PRF half-band?',
+      xAxis: 'Along-track position (km): location during the synthetic flyby.',
+      yAxis: 'Doppler frequency (Hz): surface Doppler edge compared with PRF/2.',
+      series: 'The surface Doppler edge is the maximum clutter Doppler within the receive window. The sampled half-band is the unaliased Doppler range set by PRF.',
+      notice: (chart) => dominanceSentence(chart, 'Surface Doppler edge', 'Sampled Nyquist half-band', 'The surface Doppler edge', 'the sampled half-band'),
+      takeaway: 'If the surface Doppler edge exceeds PRF/2, some surface clutter folds back into the sampled Doppler band.',
+      whyItMatters: 'Folded clutter can land in a low-Doppler bin that looks like nadir subsurface signal.'
+    },
+    'folding-depth': {
+      question: 'At what apparent depth does zero-Doppler folded surface clutter land?',
+      xAxis: 'Along-track position (km): location during the synthetic flyby.',
+      yAxis: 'Depth below surface (m): range delay converted into a depth-like value.',
+      series: 'The target line is the real nadir subsurface point. The folded clutter line shows the closest surface-clutter fold. The upper/lower lines show a simple pulse-length depth window.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'Nearest folded surface-clutter depth')} ${pairedDifferenceSentence(chart, 'Nearest folded surface-clutter depth', 'Nadir subsurface target depth', 'Folded clutter minus target depth')}`,
+      takeaway: 'Folding is most dangerous when the folded clutter depth sits inside the pulse window around the target.',
+      whyItMatters: 'This turns the aliasing question into a depth-contamination question.'
+    },
+    'folding-risk': {
+      question: 'How severe is the overlap between folded clutter and the target window?',
+      xAxis: 'Along-track position (km): location during the synthetic flyby.',
+      yAxis: 'Risk score (%): a 0-100 proxy from PRF deficit, surface scattering, and depth overlap.',
+      series: 'Folded clutter overlap risk combines whether aliasing exists and whether a fold lands near the target. Nyquist deficit proxy shows how far below the sampling condition the PRF is.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'Folded clutter overlap risk')} ${thresholdSentence(chart, 'Folded clutter overlap risk', 25, 'Moderate-or-higher folding risk')}`,
+      takeaway: 'Higher risk means surface clutter is more likely to contaminate the selected subsurface depth.',
+      whyItMatters: 'This answers the practical "how bad is it?" question for the current knobs.'
+    },
     'Surface Height: Off-Nadir Target vs Nadir Reference Terrain': {
       question: 'Do the side-looking target terrain and the nadir reference terrain differ enough to bias the radar range?',
       xAxis: 'Along-track position (km): distance along the modeled flyby path, with 0 km near mid-pass.',
@@ -778,14 +819,15 @@
 
   function controlGroup(key) {
     if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth'].includes(key)) return 'Geometry';
-    if (['nominalIceShell', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel'].includes(key)) return 'Subsurface';
+    if (['speed', 'prfCapHz', 'wavelengthM'].includes(key)) return 'PRF / Doppler';
+    if (['nominalIceShell', 'targetDepthM', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel', 'targetSignalDb'].includes(key)) return 'Subsurface';
     if (['falseLayerEnabled', 'falseLayerCount', 'falseLayerDepthFraction', 'falseLayerStrength', 'receiverAmbiguityDb'].includes(key)) return 'False layer';
-    if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'hfBandwidthMhz', 'vhfBandwidthMhz', 'coherenceApertureM', 'phaseDecorrelationDeg', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz'].includes(key)) return 'Radar signal';
+    if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'hfBandwidthMhz', 'vhfBandwidthMhz', 'coherenceApertureM', 'phaseDecorrelationDeg', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz', 'surfaceScatteringDb'].includes(key)) return 'Radar signal';
     return 'Model';
   }
 
   function controlMarkup(control, value, dataKey) {
-    const dataAttr = dataKey === 'v30' ? 'data-v30-key' : 'data-live-key';
+    const dataAttr = dataKey === 'v30' ? 'data-v30-key' : dataKey === 'folding' ? 'data-folding-key' : 'data-live-key';
     if (control.type === 'checkbox') {
       return `
         <label class="control control-toggle">
@@ -962,6 +1004,32 @@
     }
   }
 
+  function renderFoldingControls() {
+    const target = document.getElementById('folding-controls');
+    if (!target || !foldingModel) return;
+    target.innerHTML = groupedControls(foldingModel.controls, foldingParams, 'folding');
+    target.querySelectorAll('[data-folding-key]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const key = input.dataset.foldingKey;
+        foldingParams[key] = input.type === 'checkbox' ? input.checked : Number(input.value);
+        const output = input.parentElement.querySelector('output');
+        const def = foldingModel.controls.find((item) => item.key === key);
+        if (output) output.textContent = `${formatValue(foldingParams[key])}${def && def.unit ? ` ${def.unit}` : ''}`;
+        updateFoldingData();
+      });
+    });
+    const reset = document.getElementById('reset-folding-model');
+    if (reset && !reset.dataset.bound) {
+      reset.dataset.bound = 'true';
+      reset.addEventListener('click', () => {
+        foldingParams = { ...foldingModel.defaults };
+        foldingData = foldingModel.compute(foldingParams);
+        renderFoldingControls();
+        renderFolding();
+      });
+    }
+  }
+
   function updateLiveData() {
     if (!liveModel) return;
     data = liveModel.compute(liveParams);
@@ -972,6 +1040,12 @@
     if (!v30Model || !v30Data) return;
     v30ViewData = v30Model.compute(v30Params, v30Data);
     renderV30();
+  }
+
+  function updateFoldingData() {
+    if (!foldingModel) return;
+    foldingData = foldingModel.compute(foldingParams);
+    renderFolding();
   }
 
   function renderOverview() {
@@ -1149,6 +1223,83 @@
     renderAudit();
   }
 
+  function renderFolding() {
+    if (!foldingData) return;
+    const metricGrid = document.getElementById('folding-metric-grid');
+    if (metricGrid) metricGrid.innerHTML = (foldingData.summary || []).map(makeMetric).join('');
+    renderTable('folding-answer-table', foldingData.answers || [], [
+      { key: 'question', label: 'Question' },
+      { key: 'answer', label: 'Current model answer' }
+    ]);
+    renderTable('folding-condition-table', foldingData.conditions || [], [
+      { key: 'label', label: 'Condition' },
+      { key: 'value', label: 'Value' },
+      { key: 'unit', label: 'Unit' }
+    ]);
+    renderFoldingPreview();
+    renderChartSet(foldingData.charts || [], 'folding-charts');
+    renderAudit();
+  }
+
+  function renderFoldingPreview() {
+    const target = document.getElementById('folding-preview');
+    if (!target || !foldingData || !foldingData.preview) return;
+    const preview = foldingData.preview;
+    const rows = (preview.rows || []).filter((row) => row.showPoint);
+    const width = 960;
+    const height = 430;
+    const margin = { top: 24, right: 28, bottom: 54, left: 86 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const xMin = preview.xMin;
+    const xMax = preview.xMax;
+    const depthMax = Math.max(preview.depthMax || 1, 1);
+    const sx = (x) => margin.left + ((x - xMin) / (xMax - xMin || 1)) * plotWidth;
+    const sy = (depth) => margin.top + (Math.max(0, depth) / depthMax) * plotHeight;
+    const xTicks = ticks(xMin, xMax, 7);
+    const yTicks = ticks(0, depthMax, 6);
+    const targetY = sy(preview.targetDepthM);
+    const upperY = sy(preview.targetDepthM + preview.pulseDepthWindowM);
+    const lowerY = sy(Math.max(0, preview.targetDepthM - preview.pulseDepthWindowM));
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Generated radargram preview showing target depth and folded clutter">`;
+    svg += `<rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" class="radargram-bg"></rect>`;
+    svg += `<rect x="${margin.left}" y="${Math.min(lowerY, upperY)}" width="${plotWidth}" height="${Math.abs(upperY - lowerY)}" class="radargram-window"></rect>`;
+    yTicks.forEach((tick) => {
+      const y = sy(tick);
+      svg += `<line class="grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+      svg += `<text class="axis" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${formatAxisValue(tick)}</text>`;
+    });
+    xTicks.forEach((tick) => {
+      const x = sx(tick);
+      svg += `<line class="grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
+      svg += `<text class="axis" x="${x}" y="${height - margin.bottom + 24}" text-anchor="middle">${formatAxisValue(tick)}</text>`;
+    });
+    svg += `<line class="axis-line" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
+    svg += `<line class="axis-line" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
+    svg += `<text class="axis-label" x="${margin.left + plotWidth / 2}" y="${height - 13}" text-anchor="middle">Along-track position (km)</text>`;
+    svg += `<text class="axis-label" transform="translate(18 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">Apparent depth below surface (m)</text>`;
+    svg += `<line class="radargram-target-line" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}"></line>`;
+    svg += `<text class="radargram-label" x="${width - margin.right - 8}" y="${targetY - 8}" text-anchor="end">nadir target</text>`;
+    rows.forEach((row) => {
+      if (!Number.isFinite(row.foldedDepthM)) return;
+      const risk = Math.max(0, Math.min(100, row.riskScore || 0));
+      const radius = 2.4 + risk * 0.055;
+      const opacity = 0.16 + risk * 0.008;
+      svg += `<circle class="radargram-clutter-point" cx="${sx(row.x)}" cy="${sy(row.foldedDepthM)}" r="${radius.toFixed(2)}" opacity="${Math.min(opacity, 0.95).toFixed(3)}"></circle>`;
+    });
+    svg += '</svg>';
+    const maxRisk = Math.max(...(preview.rows || []).map((row) => row.riskScore || 0));
+    target.innerHTML = `
+      <div class="radargram-shell">${svg}</div>
+      <div class="radargram-legend" aria-label="Radargram preview legend">
+        <span><i class="legend-target"></i>Nadir subsurface target</span>
+        <span><i class="legend-window"></i>Pulse-depth window</span>
+        <span><i class="legend-clutter"></i>Folded surface clutter, opacity scales with risk</span>
+        <strong>Peak risk: ${escapeHtml(formatValue(maxRisk))}%</strong>
+      </div>
+    `;
+  }
+
   function renderCharts(section, targetId) {
     const target = document.getElementById(targetId);
     const charts = data.charts.filter((chart) => chart.section === section);
@@ -1257,6 +1408,9 @@
       validateChartSet('Baseline live model', data.charts || []),
       validateChartSet('Advanced sensitivity model', (v30ViewData && v30ViewData.charts) || [])
     ];
+    if (foldingData && foldingData.charts) {
+      sets.push(validateChartSet('PRF folding model', foldingData.charts || []));
+    }
     const serious = sets.reduce((sum, item) => sum + item.serious, 0);
     const warnings = sets.reduce((sum, item) => sum + item.warnings, 0);
     const rows = sets.flatMap((item) => item.rows);
@@ -1632,10 +1786,12 @@
   function renderAll() {
     renderLiveSections();
     renderV30();
+    renderFolding();
   }
 
   initTabs();
   renderLiveControls();
   renderV30Controls();
+  renderFoldingControls();
   renderAll();
 })();

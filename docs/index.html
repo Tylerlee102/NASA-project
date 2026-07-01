@@ -42,6 +42,7 @@
               <a class="tab" href="?page=subsurface" data-target="subsurface">Subsurface Echoes</a>
               <a class="tab" href="?page=false-layer" data-target="false-layer">False-Layer Response</a>
               <a class="tab" href="?page=doppler" data-target="doppler">Doppler Correction</a>
+              <a class="tab" href="?page=folding" data-target="folding">PRF Folding</a>
               <a class="tab" href="?page=v30" data-target="v30">Advanced Sensitivity</a>
               <nav id="v30-group-nav" class="v30-group-nav" aria-label="Advanced sensitivity subsections"></nav>
               <a class="tab" href="?page=audit" data-target="audit">Graph QA</a>
@@ -241,6 +242,47 @@
           </section>
         </div>
         <div id="doppler-charts" class="chart-grid"></div>
+      </section>
+
+      <section id="folding" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">PRF-limited Doppler sampling</p>
+            <h2>Surface clutter folding onto a nadir subsurface target</h2>
+          </div>
+        </div>
+        <p class="section-intro">This section is trying to show Dustin's question directly: when the pulse timing caps PRF below the Doppler Nyquist requirement, along-track surface clutter can alias into the nadir Doppler bin and appear at depth-like delays.</p>
+        <section class="panel live-panel">
+          <div class="live-panel-heading">
+            <div>
+              <h3>ClutterFold Controls</h3>
+              <p class="body-copy">These knobs generate a simple one-target plus surface-scatterer model. It is meant to expose the folding mechanism, not to replace a full radar simulator.</p>
+            </div>
+            <button class="reset-button" type="button" id="reset-folding-model">Reset folding settings</button>
+          </div>
+          <div id="folding-controls" class="control-grid"></div>
+        </section>
+        <div id="folding-metric-grid" class="metric-grid"></div>
+        <div class="split-layout compact">
+          <section class="panel">
+            <h3>Question Checklist</h3>
+            <div id="folding-answer-table"></div>
+          </section>
+          <section class="panel">
+            <h3>Active Timing Limits</h3>
+            <div id="folding-condition-table"></div>
+          </section>
+        </div>
+        <section class="panel folding-preview-panel">
+          <div class="live-panel-heading">
+            <div>
+              <h3>Generated Radargram-Style Preview</h3>
+              <p class="body-copy">Teal marks the nadir subsurface target. Copper marks surface clutter that has folded near zero Doppler after PRF aliasing.</p>
+            </div>
+          </div>
+          <div id="folding-preview" class="folding-preview"></div>
+        </section>
+        <div id="folding-charts" class="chart-grid"></div>
       </section>
 
       <section id="v30" class="page-section">
