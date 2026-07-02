@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=prf-folding-20260701">
+    <link rel="stylesheet" href="styles.css?v=prf-speed-breakdown-20260701">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
-    <script defer src="model.js?v=prf-folding-20260701"></script>
-    <script defer src="app.js?v=prf-folding-20260701"></script>
+    <script defer src="model.js?v=prf-speed-breakdown-20260701"></script>
+    <script defer src="app.js?v=prf-speed-breakdown-20260701"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -255,12 +255,33 @@
         <section class="panel live-panel">
           <div class="live-panel-heading">
             <div>
-              <h3>ClutterFold Controls</h3>
-              <p class="body-copy">These knobs generate a simple one-target plus surface-scatterer model. It is meant to expose the folding mechanism, not to replace a full radar simulator.</p>
+              <h3>ClutterFold and Breakdown Controls</h3>
+              <p class="body-copy">These knobs generate a simple one-target plus surface-scatterer model and a speed stress test. Both are educational views meant to expose the folding mechanism, not replace a full radar PRF design.</p>
             </div>
             <button class="reset-button" type="button" id="reset-folding-model">Reset folding settings</button>
           </div>
           <div id="folding-controls" class="control-grid"></div>
+        </section>
+        <section class="panel breakdown-panel">
+          <p class="section-kicker">Simplified speed stress test</p>
+          <h3>Flyby Speed PRF Breakdown Test</h3>
+          <p class="body-copy">This stress test increases flyby speed and geometry rate to find where the radar's effective PRF no longer satisfies the Doppler Nyquist requirement. Below this margin, surface clutter can fold into the zero-Doppler/nadir bin and become harder to separate from a real subsurface reflector.</p>
+          <p class="body-copy">The failure is not only "cannot update PRF fast enough." The required PRF exceeds the usable PRF window, or the PRF schedule cannot adapt within the current dwell/CPI.</p>
+        </section>
+        <div id="folding-breakdown-metric-grid" class="metric-grid breakdown-metric-grid"></div>
+        <section class="panel">
+          <h3>Computed PRF Breakdown Outputs</h3>
+          <div id="folding-breakdown-output-table"></div>
+        </section>
+        <div id="folding-breakdown-charts" class="chart-grid breakdown-chart-grid"></div>
+        <section class="panel breakdown-read-panel">
+          <h3>How to read this</h3>
+          <ul class="assumption-list breakdown-read-list">
+            <li>Start with PRF margin: above 1.25 is SAFE, 1.00 to 1.25 is WARNING, and below 1.00 is ALIASING/FOLDING RISK.</li>
+            <li>The speed where the margin crosses 1.0 is the simplified breakdown speed for the current altitude, look angle, wavelength, usable PRF, CPI, and safety factor.</li>
+            <li>If the Doppler edge rises above the sampled half-band, the model expects surface clutter to alias into the sampled band instead of staying cleanly separated.</li>
+            <li>Read these outputs as a browser-side stress test only; they are not mission-validated Europa flight rules.</li>
+          </ul>
         </section>
         <div id="folding-metric-grid" class="metric-grid"></div>
         <div class="split-layout compact">
