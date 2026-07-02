@@ -836,6 +836,29 @@ input:focus-visible,
   margin-bottom: 20px;
 }
 
+.breakdown-panel,
+.breakdown-read-panel,
+.breakdown-chart-grid {
+  margin-bottom: 20px;
+}
+
+.breakdown-panel {
+  border-color: var(--line-strong);
+}
+
+.breakdown-panel .body-copy + .body-copy {
+  margin-top: 10px;
+}
+
+.breakdown-metric-grid .metric-number {
+  overflow-wrap: anywhere;
+  font-size: clamp(1.18rem, 2.1vw, 1.95rem);
+}
+
+.breakdown-read-list {
+  margin-top: 12px;
+}
+
 .folding-preview {
   display: grid;
   gap: 10px;

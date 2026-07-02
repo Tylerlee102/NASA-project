@@ -368,6 +368,33 @@
       takeaway: 'Higher risk means surface clutter is more likely to contaminate the selected subsurface depth.',
       whyItMatters: 'This answers the practical "how bad is it?" question for the current knobs.'
     },
+    'folding-speed-required-prf': {
+      question: 'At what flyby speed does the required PRF overtake the usable PRF?',
+      xAxis: 'Flyby speed (km/s): speed swept through the simplified flyby stress test.',
+      yAxis: 'PRF (Hz): required Doppler sampling PRF compared with effective usable PRF.',
+      series: 'Required PRF rises with speed. Effective usable PRF is limited by the max usable PRF, pulse/listen timing, and a simplified dwell/CPI schedule guard.',
+      notice: (chart) => dominanceSentence(chart, 'Required PRF', 'Effective usable PRF', 'The required PRF', 'the effective usable PRF'),
+      takeaway: 'The breakdown point is where the required PRF crosses above the effective usable PRF.',
+      whyItMatters: 'Above that crossing, the model expects Doppler aliasing or folding risk.'
+    },
+    'folding-speed-margin': {
+      question: 'How much PRF headroom remains as speed increases?',
+      xAxis: 'Flyby speed (km/s): speed swept through the simplified flyby stress test.',
+      yAxis: 'PRF margin (ratio): effective usable PRF divided by required PRF.',
+      series: 'The margin line should stay above the 1.25 safe threshold. The 1.0 line is the aliasing threshold.',
+      notice: (chart) => `${thresholdSentence(chart, 'PRF margin = effective / required', 1, 'Aliasing threshold')} ${thresholdSentence(chart, 'PRF margin = effective / required', 1.25, 'Safe threshold')}`,
+      takeaway: 'Margin below 1.0 means the required PRF exceeds the usable PRF window.',
+      whyItMatters: 'This is the easiest graph for visually testing when the flyby becomes too fast for the current PRF assumptions.'
+    },
+    'folding-bandwidth-half-band': {
+      question: 'Does the Doppler edge fit inside the sampled half-band?',
+      xAxis: 'Flyby speed (km/s): speed swept through the simplified flyby stress test.',
+      yAxis: 'Doppler frequency (Hz): one-sided Doppler edge compared with sampled PRF/2.',
+      series: 'Max Doppler edge grows with speed. Sampled half-band is effective usable PRF divided by 2.',
+      notice: (chart) => dominanceSentence(chart, 'Max Doppler edge', 'Sampled half-band', 'The Doppler edge', 'the sampled half-band'),
+      takeaway: 'When the Doppler edge is above the half-band, clutter cannot be sampled cleanly without aliasing.',
+      whyItMatters: 'This makes the Nyquist failure visible in Doppler units.'
+    },
     'Surface Height: Off-Nadir Target vs Nadir Reference Terrain': {
       question: 'Do the side-looking target terrain and the nadir reference terrain differ enough to bias the radar range?',
       xAxis: 'Along-track position (km): distance along the modeled flyby path, with 0 km near mid-pass.',
@@ -818,8 +845,8 @@
   }
 
   function controlGroup(key) {
-    if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth'].includes(key)) return 'Geometry';
-    if (['speed', 'prfCapHz', 'wavelengthM'].includes(key)) return 'PRF / Doppler';
+    if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth', 'lookAngleDeg', 'roughnessSpreadDeg'].includes(key)) return 'Geometry';
+    if (['speed', 'prfCapHz', 'maxUsablePrfHz', 'wavelengthM', 'prfUpdateIntervalMs', 'cpiMs', 'safetyFactor'].includes(key)) return 'PRF / Doppler';
     if (['nominalIceShell', 'targetDepthM', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel', 'targetSignalDb'].includes(key)) return 'Subsurface';
     if (['falseLayerEnabled', 'falseLayerCount', 'falseLayerDepthFraction', 'falseLayerStrength', 'receiverAmbiguityDb'].includes(key)) return 'False layer';
     if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'hfBandwidthMhz', 'vhfBandwidthMhz', 'coherenceApertureM', 'phaseDecorrelationDeg', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz', 'surfaceScatteringDb'].includes(key)) return 'Radar signal';
@@ -1227,6 +1254,16 @@
     if (!foldingData) return;
     const metricGrid = document.getElementById('folding-metric-grid');
     if (metricGrid) metricGrid.innerHTML = (foldingData.summary || []).map(makeMetric).join('');
+    const breakdown = foldingData.breakdown || {};
+    const breakdownMetricGrid = document.getElementById('folding-breakdown-metric-grid');
+    if (breakdownMetricGrid) breakdownMetricGrid.innerHTML = (breakdown.summary || []).map(makeMetric).join('');
+    renderTable('folding-breakdown-output-table', breakdown.outputs || [], [
+      { key: 'label', label: 'Output' },
+      { key: 'value', label: 'Value' },
+      { key: 'unit', label: 'Unit' },
+      { key: 'meaning', label: 'Meaning' }
+    ]);
+    renderChartSet(breakdown.charts || [], 'folding-breakdown-charts');
     renderTable('folding-answer-table', foldingData.answers || [], [
       { key: 'question', label: 'Question' },
       { key: 'answer', label: 'Current model answer' }
@@ -1346,7 +1383,13 @@
       });
       const signature = seriesSignature(series);
       if (seenSeries.has(signature)) {
-        findings.push({ level: 'serious', message: `${series.name || 'Series'} duplicates ${seenSeries.get(signature)}` });
+        const duplicateOf = seenSeries.get(signature);
+        const expectedPrfLimitDuplicate = chart.id === 'folding-prf-budget'
+          && /effective prf/i.test(series.name || '')
+          && /pulse\/listen-time limited prf/i.test(duplicateOf || '');
+        if (!expectedPrfLimitDuplicate) {
+          findings.push({ level: 'serious', message: `${series.name || 'Series'} duplicates ${duplicateOf}` });
+        }
       } else {
         seenSeries.set(signature, series.name || 'another series');
       }
@@ -1408,8 +1451,8 @@
       validateChartSet('Baseline live model', data.charts || []),
       validateChartSet('Advanced sensitivity model', (v30ViewData && v30ViewData.charts) || [])
     ];
-    if (foldingData && foldingData.charts) {
-      sets.push(validateChartSet('PRF folding model', foldingData.charts || []));
+    if (foldingData && (foldingData.allCharts || foldingData.charts)) {
+      sets.push(validateChartSet('PRF folding model', foldingData.allCharts || foldingData.charts || []));
     }
     const serious = sets.reduce((sum, item) => sum + item.serious, 0);
     const warnings = sets.reduce((sum, item) => sum + item.warnings, 0);
