@@ -368,6 +368,15 @@
       takeaway: 'Higher risk means surface clutter is more likely to contaminate the selected subsurface depth.',
       whyItMatters: 'This answers the practical "how bad is it?" question for the current knobs.'
     },
+    'folding-clutter-strength': {
+      question: 'If folding happens, is the folded surface clutter bright enough to compete with the target?',
+      xAxis: 'Along-track position (km): location during the synthetic flyby.',
+      yAxis: 'Relative power (dB): simplified clutter and target power proxies.',
+      series: 'Surface clutter before folding is the base surface scattering plus dirty-ice boost. Folded surface clutter proxy applies the modeled folding/risk loss. Nadir target signal proxy is the single target reference.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'Folded surface clutter proxy')} ${dominanceSentence(chart, 'Folded surface clutter proxy', 'Nadir target signal proxy', 'Folded clutter', 'the nadir target')}`,
+      takeaway: 'Dirty or rough ice does not set the Nyquist limit, but it can make folded clutter more dangerous after aliasing starts.',
+      whyItMatters: 'This connects your original dirty-ice idea to Dustin\'s PRF folding question without making dirty ice the cause of Doppler aliasing.'
+    },
     'folding-speed-required-prf': {
       question: 'At what flyby speed does the required PRF overtake the usable PRF?',
       xAxis: 'Flyby speed (km/s): speed swept through the simplified flyby stress test.',
@@ -846,8 +855,8 @@
 
   function controlGroup(key) {
     if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth', 'lookAngleDeg', 'roughnessSpreadDeg'].includes(key)) return 'Geometry';
-    if (['speed', 'prfCapHz', 'maxUsablePrfHz', 'wavelengthM', 'prfUpdateIntervalMs', 'cpiMs', 'safetyFactor'].includes(key)) return 'PRF / Doppler';
-    if (['nominalIceShell', 'targetDepthM', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel', 'targetSignalDb'].includes(key)) return 'Subsurface';
+    if (['speed', 'prfCapHz', 'maxUsablePrfHz', 'wavelengthM', 'prfUpdateIntervalMs', 'cpiMs', 'safetyFactor', 'listenGuardUs', 'receiverDeadTimeUs'].includes(key)) return 'PRF / Doppler';
+    if (['nominalIceShell', 'targetDepthM', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel', 'targetSignalDb', 'dirtyIceClutterBoostDb'].includes(key)) return 'Subsurface';
     if (['falseLayerEnabled', 'falseLayerCount', 'falseLayerDepthFraction', 'falseLayerStrength', 'receiverAmbiguityDb'].includes(key)) return 'False layer';
     if (['attenuation', 'detectionThreshold', 'iceIndex', 'alongTrackSpacingM', 'pulseLengthUs', 'windowLossDb', 'hfBandwidthMhz', 'vhfBandwidthMhz', 'coherenceApertureM', 'phaseDecorrelationDeg', 'baseReflectivityDb', 'frequencySlopeDbPerOctave', 'referenceFrequencyMhz', 'surfaceScatteringDb'].includes(key)) return 'Radar signal';
     return 'Model';
@@ -1272,6 +1281,11 @@
       { key: 'label', label: 'Condition' },
       { key: 'value', label: 'Value' },
       { key: 'unit', label: 'Unit' }
+    ]);
+    renderTable('folding-accuracy-table', foldingData.accuracyDrivers || [], [
+      { key: 'input', label: 'Added data' },
+      { key: 'added', label: 'Controls / outputs' },
+      { key: 'effect', label: 'Why it improves the prediction' }
     ]);
     renderFoldingPreview();
     renderChartSet(foldingData.charts || [], 'folding-charts');
