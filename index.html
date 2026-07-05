@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=prf-speed-breakdown-20260701">
+    <link rel="stylesheet" href="styles.css?v=prf-accuracy-data-20260705">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
-    <script defer src="model.js?v=prf-speed-breakdown-20260701"></script>
-    <script defer src="app.js?v=prf-speed-breakdown-20260701"></script>
+    <script defer src="model.js?v=prf-accuracy-data-20260705"></script>
+    <script defer src="app.js?v=prf-accuracy-data-20260705"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -294,6 +294,11 @@
             <div id="folding-condition-table"></div>
           </section>
         </div>
+        <section class="panel breakdown-read-panel">
+          <h3>Accuracy Drivers Added</h3>
+          <p class="body-copy">These are the extra data terms that make the model more useful for predicting what should happen. They improve the stress-test logic, but the page is still a simplified educational model rather than a mission radar processor.</p>
+          <div id="folding-accuracy-table"></div>
+        </section>
         <section class="panel folding-preview-panel">
           <div class="live-panel-heading">
             <div>

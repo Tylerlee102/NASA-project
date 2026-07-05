@@ -681,8 +681,10 @@
     cpiMs: 80,
     safetyFactor: 1.15,
     surfaceScatteringDb: -10,
+    dirtyIceClutterBoostDb: 4,
     targetSignalDb: -24,
-    listenGuardUs: 5
+    listenGuardUs: 5,
+    receiverDeadTimeUs: 10
   };
 
   const controls = [
@@ -699,6 +701,9 @@
     { key: 'safetyFactor', label: 'Safety factor', unit: 'x', min: 1, max: 2, step: 0.05 },
     { key: 'roughnessSpreadDeg', label: 'Slope clutter spread', unit: 'deg', min: 0, max: 20, step: 0.5 },
     { key: 'surfaceScatteringDb', label: 'Surface scattering', unit: 'dB', min: -35, max: 5, step: 1 },
+    { key: 'dirtyIceClutterBoostDb', label: 'Dirty-ice clutter boost', unit: 'dB', min: 0, max: 15, step: 0.5 },
+    { key: 'listenGuardUs', label: 'Listen/processing guard', unit: 'us', min: 0, max: 100, step: 1 },
+    { key: 'receiverDeadTimeUs', label: 'Receiver dead time', unit: 'us', min: 0, max: 250, step: 5 },
     { key: 'targetSignalDb', label: 'Target signal', unit: 'dB', min: -45, max: 0, step: 1 }
   ];
 
@@ -721,12 +726,25 @@
     return p.z0 + p.deltaZEdge * (x / edge) ** 2;
   }
 
-  function pulseLimitedPrf(zKm, depthM, p) {
+  function timingBudget(zKm, depthM, p) {
     const pulseSec = Math.max(p.pulseLengthUs, 0) * 1e-6;
     const guardSec = Math.max(p.listenGuardUs, 0) * 1e-6;
-    const pathM = zKm * 1000 + p.iceIndex * depthM;
-    const listenSec = pulseSec + guardSec + 2 * pathM / c;
-    return 1 / Math.max(listenSec, 1e-9);
+    const deadTimeSec = Math.max(p.receiverDeadTimeUs || 0, 0) * 1e-6;
+    const pathM = zKm * 1000 + Math.max(p.iceIndex, 0.1) * Math.max(depthM, 0);
+    const twoWayTravelSec = 2 * pathM / c;
+    const listenSec = pulseSec + guardSec + deadTimeSec + twoWayTravelSec;
+    return {
+      pulseUs: pulseSec * 1e6,
+      guardUs: guardSec * 1e6,
+      receiverDeadTimeUs: deadTimeSec * 1e6,
+      twoWayTravelUs: twoWayTravelSec * 1e6,
+      totalListenUs: listenSec * 1e6,
+      prfHz: 1 / Math.max(listenSec, 1e-9)
+    };
+  }
+
+  function pulseLimitedPrf(zKm, depthM, p) {
+    return timingBudget(zKm, depthM, p).prfHz;
   }
 
   function apparentDepthForOffset(zKm, offsetKm, p) {
@@ -746,6 +764,12 @@
 
   function usablePrfLimit(p) {
     return Math.max(p.maxUsablePrfHz ?? p.prfCapHz ?? defaults.maxUsablePrfHz, 1);
+  }
+
+  function effectiveSurfaceScatteringDb(p) {
+    const baseSurfaceDb = safeNumber(p.surfaceScatteringDb, defaults.surfaceScatteringDb, -80, 40);
+    const dirtyBoostDb = safeNumber(p.dirtyIceClutterBoostDb, defaults.dirtyIceClutterBoostDb, 0, 30);
+    return baseSurfaceDb + dirtyBoostDb;
   }
 
   function degToRad(value) {
@@ -791,7 +815,8 @@
     // Nyquist-style stress-test floor: usable PRF should exceed the two-sided
     // Doppler bandwidth, padded by a user-selected safety factor.
     const requiredPrfHz = surfaceDopplerBandwidthHz * safetyFactor;
-    const pulsePrfHz = pulseLimitedPrf(altitudeKm, targetDepthM, { ...p, wavelengthM });
+    const timing = timingBudget(altitudeKm, targetDepthM, { ...p, wavelengthM });
+    const pulsePrfHz = timing.prfHz;
     const rawUsablePrfHz = Math.min(usablePrfLimit(p), pulsePrfHz);
 
     // This educational model treats a PRF schedule slower than the current CPI
@@ -804,6 +829,8 @@
     const centerFrequencyMhz = c / wavelengthM / 1000000;
     const footprintOffsetKm = altitudeKm * Math.tan(degToRad(lookAngleDeg));
     const cpiDistanceM = speedMps * cpiMs / 1000;
+    const surfaceClutterDb = effectiveSurfaceScatteringDb(p);
+    const clutterToTargetDb = surfaceClutterDb - safeNumber(p.targetSignalDb, defaults.targetSignalDb, -120, 80);
 
     return {
       speedKmS: speed,
@@ -824,6 +851,13 @@
       sampledHalfBandHz,
       prfMargin,
       cpiDistanceM,
+      pulseUs: timing.pulseUs,
+      guardUs: timing.guardUs,
+      receiverDeadTimeUs: timing.receiverDeadTimeUs,
+      twoWayTravelUs: timing.twoWayTravelUs,
+      totalListenUs: timing.totalListenUs,
+      surfaceClutterDb,
+      clutterToTargetDb,
       riskState: prfRiskState(prfMargin)
     };
   }
@@ -885,7 +919,8 @@
       const t = rowCount === 1 ? 0.5 : i / (rowCount - 1);
       const x = p.xMin + t * (p.xMax - p.xMin);
       const z = altitudeAt(x, p);
-      const pulsePrf = pulseLimitedPrf(z, p.targetDepthM, p);
+      const timing = timingBudget(z, p.targetDepthM, p);
+      const pulsePrf = timing.prfHz;
       const effectivePrf = Math.max(1, Math.min(usablePrfLimit(p), pulsePrf));
       const maxOffsetKm = offNadirForDepth(z, p.targetDepthM, p);
       const maxSurfaceDopplerHz = surfaceDoppler(maxOffsetKm, z, p);
@@ -902,9 +937,10 @@
       const overlapScore = nearest ? clamp(1 - nearest.depthGapM / pulseDepthWindowM, 0, 1) : 0;
       const aliasDeficit = Math.max(requiredNyquistPrfHz / effectivePrf - 1, 0);
       const deficitScore = clamp(aliasDeficit / 3, 0, 1);
-      const scatterScore = clamp((p.surfaceScatteringDb + 35) / 40, 0.04, 1);
+      const surfaceClutterDb = effectiveSurfaceScatteringDb(p);
+      const scatterScore = clamp((surfaceClutterDb + 35) / 45, 0.04, 1);
       const riskScore = nearest ? 100 * overlapScore * (0.35 + 0.65 * deficitScore) * scatterScore : 0;
-      const foldedClutterDb = nearest ? p.surfaceScatteringDb + db(Math.max(riskScore / 100, 0.001)) : null;
+      const foldedClutterDb = nearest ? surfaceClutterDb + db(Math.max(riskScore / 100, 0.001)) : null;
       rows.push({
         x,
         z,
@@ -915,12 +951,16 @@
         maxSurfaceDopplerHz,
         maxOffsetKm,
         pulseDepthWindowM,
+        twoWayTravelUs: timing.twoWayTravelUs,
+        totalListenUs: timing.totalListenUs,
+        timingOverheadUs: timing.pulseUs + timing.guardUs + timing.receiverDeadTimeUs,
         foldCount: folds.length,
         nearestFoldOrder: nearest ? nearest.order : null,
         nearestFoldDepthM: nearest ? nearest.depthM : null,
         foldDepthGapM: nearest ? nearest.depthGapM : null,
         riskScore,
         aliasDeficitPercent: clamp((requiredNyquistPrfHz / effectivePrf - 1) * 100, 0, 400),
+        surfaceClutterDb,
         foldedClutterDb,
         clutterToTargetDb: foldedClutterDb == null ? null : foldedClutterDb - p.targetSignalDb
       });
@@ -964,7 +1004,12 @@
       chart('folding-risk', 'Aliasing Severity Along Flyby', 'Risk score (%)', [
         { name: 'Folded clutter overlap risk', points: pts(rows, 'riskScore', 3) },
         { name: 'Nyquist deficit proxy', points: pts(rows, 'aliasDeficitPercent', 3) }
-      ], 'Risk rises when the effective PRF is below the Nyquist requirement and a zero-Doppler fold lands inside the target depth window.')
+      ], 'Risk rises when the effective PRF is below the Nyquist requirement and a zero-Doppler fold lands inside the target depth window.'),
+      chart('folding-clutter-strength', 'Folded Clutter Strength vs Target Signal', 'Relative power (dB)', [
+        { name: 'Folded surface clutter proxy', points: pts(rows, 'foldedClutterDb', 3) },
+        { name: 'Nadir target signal proxy', points: fixedLine(rows, p.targetSignalDb) },
+        { name: 'Surface clutter before folding', points: pts(rows, 'surfaceClutterDb', 3) }
+      ], 'Dirty ice and rough scattering do not create the Doppler aliasing condition, but they can make aliased clutter stronger once folding occurs.')
     ];
   }
 
@@ -1029,6 +1074,8 @@
     const scheduleText = currentBreakdown.scheduleAdaptationFactor >= 0.999
       ? 'PRF schedule fits within the current dwell/CPI.'
       : 'PRF schedule interval is longer than the dwell/CPI, so the stress test reduces the usable PRF window.';
+    const effectiveSurfaceDb = effectiveSurfaceScatteringDb(p);
+    const timingOverheadUs = mid.timingOverheadUs;
 
     return {
       source: { workbook: 'ClutterFold browser model', generatedFrom: 'simple PRF-Doppler folding formulas' },
@@ -1046,19 +1093,31 @@
         { question: 'How bad is it?', answer: `${riskLabel(worst.riskScore)} in this run; the peak overlap proxy is ${round(worst.riskScore, 1)}%.` },
         { question: 'What depth does it occur at?', answer: depthText },
         { question: 'How does pulse length affect it?', answer: `The ${round(p.pulseLengthUs, 1)} us pulse helps set a ${round(mid.pulsePrf, 1)} Hz mid-pass PRF ceiling; longer pulses lower that ceiling and widen the depth window.` },
-        { question: 'How does surface scattering affect it?', answer: `The surface term is ${round(p.surfaceScatteringDb, 1)} dB; stronger scattering raises the folded clutter-to-target proxy.` },
+        { question: 'How does dirty or rough ice affect it?', answer: `It does not change the Doppler Nyquist requirement directly. It raises severity: base surface scattering ${round(p.surfaceScatteringDb, 1)} dB plus dirty-ice boost ${round(p.dirtyIceClutterBoostDb, 1)} dB gives ${round(effectiveSurfaceDb, 1)} dB before folding.` },
         { question: 'Under which conditions?', answer: `Closest altitude ${round(p.z0, 1)} km, speed ${round(p.speed, 2)} km/s, target depth ${round(p.targetDepthM, 0)} m, wavelength ${round(p.wavelengthM, 2)} m.` },
+        { question: 'Will adding this data improve the prediction?', answer: `Yes for trend accuracy: the model now separates geometry/timing inputs that decide whether aliasing happens from scattering inputs that decide how visible the folded clutter becomes.` },
         { question: 'Can we get around it?', answer: 'This page sets up the effect. Next tests would compare staggered PRFs, shallower receive windows, masking predicted fold depths, or multi-channel angle filtering.' }
       ],
       conditions: [
         { label: 'Mid-pass altitude', value: mid.z, unit: 'km' },
         { label: 'Mid-pass effective PRF', value: mid.effectivePrf, unit: 'Hz' },
         { label: 'Mid-pass Nyquist PRF needed', value: mid.requiredNyquistPrfHz, unit: 'Hz' },
+        { label: 'Mid-pass two-way travel time', value: mid.twoWayTravelUs, unit: 'us' },
+        { label: 'Pulse + guard + dead time', value: timingOverheadUs, unit: 'us' },
+        { label: 'Total listen window', value: mid.totalListenUs, unit: 'us' },
         { label: 'Mid-pass sampled half-band', value: mid.sampledHalfBandHz, unit: 'Hz' },
         { label: 'Surface offset at target delay', value: mid.maxOffsetKm, unit: 'km' },
         { label: 'Pulse depth window', value: mid.pulseDepthWindowM, unit: 'm' },
+        { label: 'Effective surface clutter', value: effectiveSurfaceDb, unit: 'dB' },
         { label: 'Nearest fold order', value: mid.nearestFoldOrder || '', unit: 'k' },
         { label: 'Folded clutter-to-target proxy', value: mid.clutterToTargetDb, unit: 'dB' }
+      ],
+      accuracyDrivers: [
+        { input: 'Flyby trajectory', added: 'altitude, speed, look angle, slope spread', effect: 'Sets LOS velocity and the surface Doppler bandwidth.' },
+        { input: 'Radar timing', added: 'pulse length, listen guard, receiver dead time, target-depth travel time', effect: 'Sets the pulse/listen PRF ceiling before any max usable PRF cap.' },
+        { input: 'Sampling schedule', added: 'max usable PRF, PRF update interval, CPI/dwell time, safety factor', effect: 'Turns ideal PRF into the effective usable PRF margin.' },
+        { input: 'Surface strength', added: 'surface scattering plus dirty-ice clutter boost', effect: 'Does not cause aliasing by itself; increases how visible folded clutter becomes.' },
+        { input: 'False-layer severity', added: 'target depth, target signal, folded clutter-to-target dB', effect: 'Shows whether folded surface clutter could compete with the nadir subsurface target.' }
       ],
       breakdown: {
         summary: [
@@ -1069,6 +1128,7 @@
           { label: 'Breakdown speed', value: displayBreakdownSpeed(breakdownSpeedKmS), unit: Number.isFinite(breakdownSpeedKmS) ? 'km/s' : '', meaning: 'Speed where margin crosses below 1.0 for the current geometry.' },
           { label: 'Max Doppler shift', value: currentBreakdown.maxDopplerShiftHz, unit: 'Hz', meaning: 'Monostatic Doppler edge from the current LOS velocity.' },
           { label: 'Sampled half-band', value: currentBreakdown.sampledHalfBandHz, unit: 'Hz', meaning: 'Effective usable PRF divided by 2.' },
+          { label: 'Total listen window', value: currentBreakdown.totalListenUs, unit: 'us', meaning: 'Pulse length plus receive/guard/dead time and two-way travel time.' },
           { label: 'Schedule factor', value: currentBreakdown.scheduleAdaptationFactor, unit: 'x', meaning: scheduleText }
         ],
         outputs: [
@@ -1082,6 +1142,12 @@
           { label: 'PRF margin', value: currentBreakdown.prfMargin, unit: 'x', meaning: 'Effective/usable PRF divided by required PRF.' },
           { label: 'Breakdown speed', value: displayBreakdownSpeed(breakdownSpeedKmS), unit: Number.isFinite(breakdownSpeedKmS) ? 'km/s' : '', meaning: 'Speed where margin drops below 1.0 under the current settings.' },
           { label: 'Risk state', value: currentBreakdown.riskState, unit: '', meaning: 'Margin > 1.25 = SAFE; 1.00 to 1.25 = WARNING; < 1.00 = ALIASING/FOLDING RISK.' },
+          { label: 'Pulse length', value: currentBreakdown.pulseUs, unit: 'us', meaning: 'Transmit pulse duration included in the timing window.' },
+          { label: 'Two-way travel/listen time', value: currentBreakdown.twoWayTravelUs, unit: 'us', meaning: 'Round-trip time through altitude plus the selected target depth.' },
+          { label: 'Receiver guard + dead time', value: currentBreakdown.guardUs + currentBreakdown.receiverDeadTimeUs, unit: 'us', meaning: 'Extra simplified timing overhead before the next pulse can be sent.' },
+          { label: 'Total listen window', value: currentBreakdown.totalListenUs, unit: 'us', meaning: 'Pulse plus overhead plus round-trip travel time; its inverse is the pulse/listen PRF ceiling.' },
+          { label: 'Effective surface clutter', value: currentBreakdown.surfaceClutterDb, unit: 'dB', meaning: 'Surface scattering plus dirty-ice boost; used only for severity, not the PRF Nyquist requirement.' },
+          { label: 'Surface clutter minus target', value: currentBreakdown.clutterToTargetDb, unit: 'dB', meaning: 'How bright the surface clutter proxy is relative to the nadir target before folding loss.' },
           { label: 'Look-angle footprint offset', value: currentBreakdown.footprintOffsetKm, unit: 'km', meaning: 'Simple altitude x tan(look angle) geometry check.' },
           { label: 'Distance moved during CPI', value: currentBreakdown.cpiDistanceM, unit: 'm', meaning: 'Flyby distance covered inside the current coherent processing / dwell window.' }
         ],
