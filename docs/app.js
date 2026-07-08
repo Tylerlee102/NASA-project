@@ -44,12 +44,13 @@
     return `<p class="metric-value"><span class="metric-number">${formatValue(row.value)}</span>${unit}</p>`;
   }
 
-  function makeMetric(row) {
+  function makeMetric(row, options = {}) {
+    const showNote = options.showNote !== false && row.meaning;
     return `
       <article class="metric">
         <p class="metric-label">${escapeHtml(row.label)}</p>
         ${metricValue(row)}
-        <p class="metric-note">${escapeHtml(row.meaning || '')}</p>
+        ${showNote ? `<p class="metric-note">${escapeHtml(row.meaning)}</p>` : ''}
       </article>
     `;
   }
@@ -1208,15 +1209,14 @@
   function renderFolding() {
     if (!foldingData) return;
     const metricGrid = document.getElementById('folding-metric-grid');
-    if (metricGrid) metricGrid.innerHTML = (foldingData.summary || []).map(makeMetric).join('');
+    if (metricGrid) metricGrid.innerHTML = (foldingData.summary || []).map((row) => makeMetric(row, { showNote: false })).join('');
     const breakdown = foldingData.breakdown || {};
     const breakdownMetricGrid = document.getElementById('folding-breakdown-metric-grid');
-    if (breakdownMetricGrid) breakdownMetricGrid.innerHTML = (breakdown.summary || []).map(makeMetric).join('');
+    if (breakdownMetricGrid) breakdownMetricGrid.innerHTML = (breakdown.summary || []).map((row) => makeMetric(row, { showNote: false })).join('');
     renderTable('folding-breakdown-output-table', breakdown.outputs || [], [
       { key: 'label', label: 'Output' },
       { key: 'value', label: 'Value' },
-      { key: 'unit', label: 'Unit' },
-      { key: 'meaning', label: 'Meaning' }
+      { key: 'unit', label: 'Unit' }
     ]);
     renderTable('folding-answer-table', foldingData.answers || [], [
       { key: 'question', label: 'Question' },
@@ -1227,12 +1227,7 @@
       { key: 'value', label: 'Value' },
       { key: 'unit', label: 'Unit' }
     ]);
-    renderTable('folding-accuracy-table', foldingData.accuracyDrivers || [], [
-      { key: 'input', label: 'Added data' },
-      { key: 'added', label: 'Controls / outputs' },
-      { key: 'effect', label: 'Why it improves the prediction' }
-    ]);
-    renderChartSet(foldingData.charts || [], 'folding-charts');
+    renderChartSet(foldingData.charts || [], 'folding-charts', null, { compact: true });
     renderAudit();
   }
 
@@ -1476,9 +1471,10 @@
     return `Series: ${series}. Value range: ${formatValue(min)} to ${formatValue(max)} ${axisUnit(chart.yLabel) || axisName(chart.yLabel)}.`;
   }
 
-  function renderChartSet(charts, targetId, knownTarget) {
+  function renderChartSet(charts, targetId, knownTarget, options = {}) {
     const target = knownTarget || document.getElementById(targetId);
     if (!target) return;
+    const compact = options.compact === true;
     target.innerHTML = charts.map((chart) => {
       const badges = chartBadges(chart);
       return `
@@ -1492,13 +1488,15 @@
         </div>
         ${badges.length ? `<div class="chart-badges">${badges.map((badge) => `<span>${escapeHtml(badge.message)}</span>`).join('')}</div>` : ''}
         <div class="chart-frame" id="${chart.id}"></div>
-        <p class="chart-explainer">${escapeHtml(chartHint(chart))}</p>
-        ${renderChartExplanation(chart)}
+        ${compact ? '' : `<p class="chart-explainer">${escapeHtml(chartHint(chart))}</p>`}
+        ${compact ? '' : renderChartExplanation(chart)}
+        ${compact ? '' : `
         <details class="chart-data-summary">
           <summary>Text summary</summary>
           <p>${escapeHtml(chartTextSummary(chart))}</p>
         </details>
-        ${chart.formulaNote ? `<p class="formula-note">${escapeHtml(chart.formulaNote)}</p>` : ''}
+        `}
+        ${!compact && chart.formulaNote ? `<p class="formula-note">${escapeHtml(chart.formulaNote)}</p>` : ''}
         <div class="legend">${chart.series.map((series, index) => `
           <span class="legend-item"><span class="legend-swatch" style="background:${colors[index % colors.length]}"></span>${escapeHtml(series.name)}</span>
         `).join('')}</div>
