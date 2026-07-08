@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=trace-prf-usability-20260708">
+    <link rel="stylesheet" href="styles.css?v=folding-subsections-20260708">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
-    <script defer src="model.js?v=trace-prf-usability-20260708"></script>
-    <script defer src="app.js?v=trace-prf-usability-20260708"></script>
+    <script defer src="model.js?v=folding-subsections-20260708"></script>
+    <script defer src="app.js?v=folding-subsections-20260708"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -43,8 +43,9 @@
               <a class="tab" href="?page=false-layer" data-target="false-layer">False-Layer Response</a>
               <a class="tab" href="?page=doppler" data-target="doppler">Doppler Correction</a>
               <a class="tab" href="?page=folding" data-target="folding">PRF Folding</a>
+              <nav id="folding-group-nav" class="section-group-nav" aria-label="PRF folding subsections"></nav>
               <a class="tab" href="?page=v30" data-target="v30">Advanced Sensitivity</a>
-              <nav id="v30-group-nav" class="v30-group-nav" aria-label="Advanced sensitivity subsections"></nav>
+              <nav id="v30-group-nav" class="section-group-nav" aria-label="Advanced sensitivity subsections"></nav>
               <a class="tab" href="?page=audit" data-target="audit">Graph QA</a>
             </nav>
           </details>
@@ -251,7 +252,7 @@
             <h2>Surface clutter folding onto a nadir subsurface target</h2>
           </div>
         </div>
-        <p class="section-intro">Flat-surface PRF folding test: compare the usable PRF, alias threshold, and zero-Doppler overlap point.</p>
+        <p class="section-intro">Flat-surface PRF folding test split into focused subsections for PRF thresholds, zero-Doppler overlap, point-target folding, and trace-removal usability.</p>
         <section class="panel live-panel">
           <div class="live-panel-heading">
             <div>
@@ -261,52 +262,7 @@
           </div>
           <div id="folding-controls" class="control-grid"></div>
         </section>
-        <div id="folding-charts" class="chart-grid"></div>
-        <section class="folding-live-section">
-          <div class="v30-section-heading">
-            <p class="section-kicker">Live point-target visual checks</p>
-            <h3>Flat PRF folding graphs</h3>
-          </div>
-          <div class="chart-grid live-prf-grid">
-            <article class="chart-card">
-              <div class="chart-title-row">
-                <div>
-                  <h3>Bad PRF Zero-Doppler Clutter Overlap</h3>
-                </div>
-                <span class="chart-source">Live JS model</span>
-              </div>
-              <div id="folding-zero-overlap-live" class="chart-frame live-prf-frame"></div>
-              <div class="legend">
-                <span class="legend-item"><span class="legend-swatch" style="background:#9b4e2f"></span>Zero-Doppler clutter power</span>
-                <span class="legend-item"><span class="legend-swatch" style="background:#1f6b70"></span>Target depth</span>
-              </div>
-            </article>
-            <article class="chart-card">
-              <div class="chart-title-row">
-                <div>
-                  <h3>Flat Point-Target Doppler Folding Threshold</h3>
-                </div>
-                <span class="chart-source">Live JS model</span>
-              </div>
-              <div id="folding-point-target-live" class="chart-frame live-prf-frame live-prf-triptych"></div>
-              <div id="folding-point-target-profiles" class="live-prf-profile-grid"></div>
-              <div id="folding-point-target-summary" class="live-prf-summary"></div>
-              <div class="legend">
-                <span class="legend-item"><span class="legend-swatch" style="background:#9b4e2f"></span>+Doppler fold</span>
-                <span class="legend-item"><span class="legend-swatch" style="background:#1f6b70"></span>-Doppler fold</span>
-                <span class="legend-item"><span class="legend-swatch" style="background:#7a641f"></span>Same-delay points</span>
-                <span class="legend-item"><span class="legend-swatch" style="background:#315f88"></span>Nadir target</span>
-              </div>
-            </article>
-          </div>
-        </section>
-        <section class="folding-live-section">
-          <div class="v30-section-heading">
-            <p class="section-kicker">Optimal PRF and trace-removal limit</p>
-            <h3>Trace removal PRF usability</h3>
-          </div>
-          <div id="folding-trace-usability" class="trace-usability-grid"></div>
-        </section>
+        <div id="folding-subsections" class="v30-chart-groups folding-chart-groups"></div>
       </section>
 
       <section id="v30" class="page-section">

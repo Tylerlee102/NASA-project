@@ -163,7 +163,46 @@
       ]
     }
   ];
+
+  const FOLDING_CHART_GROUPS = [
+    {
+      id: 'folding-thresholds',
+      kicker: 'PRF thresholds',
+      title: 'Alias threshold sweeps',
+      description: 'Compare the usable PRF band against the same-delay surface Doppler edge and show where the edge lands after aliasing.',
+      chartIds: [
+        'folding-flat-prf-threshold',
+        'folding-flat-alias-landing'
+      ]
+    },
+    {
+      id: 'folding-zero-overlap',
+      kicker: 'Zero-Doppler overlap',
+      title: 'Bad PRF zero-Doppler overlap',
+      description: 'A live depth profile showing whether folded surface clutter lands near the nadir target bin.',
+      kind: 'zero-overlap'
+    },
+    {
+      id: 'folding-point-target',
+      kicker: 'Point-target folding',
+      title: 'Flat point-target folding threshold',
+      description: 'Three live PRF cases show how same-delay surface points fold relative to the nadir subsurface target.',
+      kind: 'point-target'
+    },
+    {
+      id: 'folding-trace-removal',
+      kicker: 'Optimal PRF and trace-removal limit',
+      title: 'Trace removal PRF usability',
+      description: 'The trace-removal graphs and HF/VHF usability cards show how far the effective PRF can be reduced before the window breaks.',
+      chartIds: [
+        'folding-trace-removal-alias-landing',
+        'folding-trace-removal-false-layer-score'
+      ],
+      kind: 'trace-usability'
+    }
+  ];
   let activeV30GroupId = null;
+  let activeFoldingGroupId = null;
 
   function resolveV30GroupId(groups) {
     const ids = new Set(groups.map((group) => group.id));
@@ -182,6 +221,32 @@
     const url = new URL(window.location.href);
     url.searchParams.set('page', 'v30');
     if (groupId) url.searchParams.set('section', groupId);
+    url.hash = '';
+    const method = mode === 'push' ? 'pushState' : 'replaceState';
+    history[method](null, '', url);
+  }
+
+  function resolveFoldingGroupId(groups) {
+    const ids = new Set(groups.map((group) => group.id));
+    const url = new URL(window.location.href);
+    const requested = url.searchParams.get('section');
+    if (ids.has(requested)) {
+      activeFoldingGroupId = requested;
+      return requested;
+    }
+    if (ids.has(activeFoldingGroupId)) return activeFoldingGroupId;
+    activeFoldingGroupId = groups[0] ? groups[0].id : null;
+    return activeFoldingGroupId;
+  }
+
+  function setFoldingSectionUrl(groupId, mode) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', 'folding');
+    if (groupId) {
+      url.searchParams.set('section', groupId);
+    } else {
+      url.searchParams.delete('section');
+    }
     url.hash = '';
     const method = mode === 'push' ? 'pushState' : 'replaceState';
     history[method](null, '', url);
@@ -868,6 +933,8 @@
       url.searchParams.set('page', target);
       if (target === 'v30' && activeV30GroupId) {
         url.searchParams.set('section', activeV30GroupId);
+      } else if (target === 'folding' && activeFoldingGroupId) {
+        url.searchParams.set('section', activeFoldingGroupId);
       } else {
         url.searchParams.delete('section');
       }
@@ -920,6 +987,7 @@
     window.addEventListener('popstate', () => {
       const next = targetFromLocation();
       setActive(next, false);
+      if (next === 'folding') renderFolding();
       if (next === 'v30') renderV30();
       window.scrollTo({ top: 0, behavior: 'auto' });
     });
@@ -1206,10 +1274,117 @@
     renderAudit();
   }
 
+  function buildFoldingGroups() {
+    const chartById = new Map((foldingData.charts || []).map((chart) => [chart.id, chart]));
+    return FOLDING_CHART_GROUPS.map((group) => {
+      const charts = (group.chartIds || [])
+        .map((id) => chartById.get(id))
+        .filter(Boolean);
+      return { ...group, charts };
+    }).filter((group) => group.kind || group.charts.length);
+  }
+
+  function renderFoldingZeroOverlapCard() {
+    return `
+      <div class="chart-grid live-prf-grid">
+        <article class="chart-card">
+          <div class="chart-title-row">
+            <div>
+              <h3>Bad PRF Zero-Doppler Clutter Overlap</h3>
+            </div>
+            <span class="chart-source">Live JS model</span>
+          </div>
+          <div id="folding-zero-overlap-live" class="chart-frame live-prf-frame"></div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:#9b4e2f"></span>Zero-Doppler clutter power</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#1f6b70"></span>Target depth</span>
+          </div>
+        </article>
+      </div>
+    `;
+  }
+
+  function renderFoldingPointTargetCard() {
+    return `
+      <div class="chart-grid live-prf-grid">
+        <article class="chart-card">
+          <div class="chart-title-row">
+            <div>
+              <h3>Flat Point-Target Doppler Folding Threshold</h3>
+            </div>
+            <span class="chart-source">Live JS model</span>
+          </div>
+          <div id="folding-point-target-live" class="chart-frame live-prf-frame live-prf-triptych"></div>
+          <div id="folding-point-target-profiles" class="live-prf-profile-grid"></div>
+          <div id="folding-point-target-summary" class="live-prf-summary"></div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:#9b4e2f"></span>+Doppler fold</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#1f6b70"></span>-Doppler fold</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#7a641f"></span>Same-delay points</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#315f88"></span>Nadir target</span>
+          </div>
+        </article>
+      </div>
+    `;
+  }
+
+  function renderFoldingGroupMarkup(group) {
+    const chartTarget = group.charts && group.charts.length
+      ? `<div id="${escapeHtml(group.id)}-charts" class="chart-grid v30-subgrid folding-subgrid"></div>`
+      : '';
+    const liveMarkup = group.kind === 'zero-overlap'
+      ? renderFoldingZeroOverlapCard()
+      : group.kind === 'point-target'
+        ? renderFoldingPointTargetCard()
+        : group.kind === 'trace-usability'
+          ? '<div id="folding-trace-usability" class="trace-usability-grid"></div>'
+          : '';
+    return `
+      <section class="v30-chart-section folding-chart-section" id="${escapeHtml(group.id)}">
+        <div class="v30-section-heading">
+          <p class="section-kicker">${escapeHtml(group.kicker)}</p>
+          <h3>${escapeHtml(group.title)}</h3>
+          <p class="body-copy">${escapeHtml(group.description)}</p>
+        </div>
+        ${chartTarget}
+        ${liveMarkup}
+      </section>
+    `;
+  }
+
   function renderFolding() {
     if (!foldingData) return;
-    renderChartSet(foldingData.charts || [], 'folding-charts', null, { compact: true });
-    renderLivePrfFigures();
+    const groups = buildFoldingGroups();
+    const selectedGroupId = resolveFoldingGroupId(groups);
+    const visibleGroups = groups.filter((group) => group.id === selectedGroupId);
+    const nav = document.getElementById('folding-group-nav');
+    if (nav) {
+      nav.innerHTML = groups.map((group) => {
+        const active = group.id === selectedGroupId;
+        return `<a href="?page=folding&amp;section=${encodeURIComponent(group.id)}" data-folding-section="${escapeHtml(group.id)}"${active ? ' class="is-active" aria-current="page"' : ''}>${escapeHtml(group.title)}</a>`;
+      }).join('');
+      nav.querySelectorAll('[data-folding-section]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          activeFoldingGroupId = link.dataset.foldingSection;
+          if (typeof window.setActiveProjectPage === 'function') {
+            window.setActiveProjectPage('folding', false);
+          }
+          setFoldingSectionUrl(activeFoldingGroupId, 'push');
+          renderFolding();
+        });
+      });
+    }
+    const target = document.getElementById('folding-subsections');
+    if (target) {
+      target.innerHTML = visibleGroups.map((group) => renderFoldingGroupMarkup(group)).join('');
+      visibleGroups.forEach((group) => {
+        if (group.charts && group.charts.length) {
+          renderChartSet(group.charts, `${group.id}-charts`, null, { compact: true });
+        }
+      });
+      renderLivePrfFigures();
+    }
     renderAudit();
   }
 
