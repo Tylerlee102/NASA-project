@@ -452,14 +452,14 @@ input:focus-visible,
 }
 
 .live-prf-frame {
-  min-height: 420px;
-  aspect-ratio: 16 / 9;
-  background: #080d13;
+  min-height: 360px;
+  aspect-ratio: 2 / 1;
+  background: #fffefa;
 }
 
 .live-prf-triptych {
-  min-height: 560px;
-  aspect-ratio: 18 / 9;
+  min-height: 430px;
+  aspect-ratio: 2 / 1;
 }
 
 .live-prf-frame svg {
@@ -469,95 +469,96 @@ input:focus-visible,
 }
 
 .live-prf-bg {
-  fill: #080d13;
+  fill: #fffefa;
 }
 
 .live-prf-panel {
-  fill: #10161e;
-  stroke: #404a56;
+  fill: #fffefa;
+  stroke: #d9cdb8;
   stroke-width: 1;
 }
 
 .live-prf-plot {
-  fill: #070a0f;
-  stroke: #5f7182;
+  fill: #fffefa;
+  stroke: #cfc3ad;
   stroke-width: 1;
 }
 
 .live-prf-grid-line {
-  stroke: #2b3440;
+  stroke: #e4dcca;
   stroke-width: 1;
 }
 
 .live-prf-axis,
 .live-prf-label {
-  fill: #aab4c0;
-  font-size: 13px;
+  fill: #645f56;
+  font-size: 11px;
 }
 
 .live-prf-label {
-  font-weight: 760;
+  font-weight: 800;
 }
 
 .live-prf-title {
-  fill: #f4f7fb;
-  font-size: 19px;
+  fill: #18202a;
+  font-size: 13px;
   font-weight: 850;
 }
 
 .live-prf-subtitle {
-  fill: #aeb9c6;
-  font-size: 12px;
+  fill: #6f6a61;
+  font-size: 10px;
 }
 
 .live-prf-zero {
-  stroke: rgba(238, 244, 250, 0.52);
-  stroke-width: 1.8;
+  stroke: #9a907f;
+  stroke-width: 1.1;
 }
 
 .live-prf-target {
-  stroke: rgba(82, 217, 234, 0.78);
-  stroke-width: 2;
+  stroke: #1f6b70;
+  stroke-width: 1.6;
+  stroke-dasharray: 5 5;
 }
 
 .live-prf-target-fill {
-  fill: rgba(82, 217, 234, 0.16);
+  fill: rgba(31, 107, 112, 0.09);
 }
 
 .live-prf-positive {
   fill: none;
-  stroke: #ffae51;
-  stroke-width: 2.8;
+  stroke: #9b4e2f;
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .live-prf-negative {
   fill: none;
-  stroke: #ff6c5f;
-  stroke-width: 2.8;
+  stroke: #1f6b70;
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .live-prf-clutter {
   fill: none;
-  stroke: #ffe05a;
-  stroke-width: 4;
+  stroke: #9b4e2f;
+  stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .live-prf-marker {
-  fill: #ffe05a;
-  stroke: #080d13;
+  fill: #7a641f;
+  stroke: #fffefa;
   stroke-width: 1.4;
 }
 
 .live-prf-nadir {
   fill: none;
-  stroke: #52d9ea;
-  stroke-width: 2.2;
+  stroke: #315f88;
+  stroke-width: 2;
 }
 
 .v30-group-nav {
