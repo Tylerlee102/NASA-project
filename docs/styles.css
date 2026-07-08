@@ -434,6 +434,15 @@ input:focus-visible,
   gap: 18px;
 }
 
+#folding-charts {
+  grid-template-columns: 1fr;
+}
+
+#folding-charts .chart-frame {
+  aspect-ratio: 2 / 1;
+  min-height: 360px;
+}
+
 .v30-group-nav {
   display: none;
   gap: 0;
@@ -1449,6 +1458,11 @@ tr:last-child td {
 
   .chart-frame {
     min-height: 238px;
+  }
+
+  #folding-charts .chart-frame {
+    aspect-ratio: 4 / 3;
+    min-height: 260px;
   }
 
   .glossary-grid,

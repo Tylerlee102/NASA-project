@@ -663,23 +663,21 @@
   const rowCount = 181;
 
   const defaults = {
-    z0: 400,
-    deltaZEdge: 4,
-    xMin: -60,
-    xMax: 60,
-    xEdge: 60,
-    speed: 4,
+    z0: 25,
+    deltaZEdge: 975,
+    xMin: -500,
+    xMax: 500,
+    xEdge: 500,
+    speed: 4.6,
     iceIndex: 1.78,
     targetDepthM: 6000,
-    pulseLengthUs: 20,
-    maxUsablePrfHz: 5000,
-    prfCapHz: 5000,
+    pulseLengthUs: 200,
+    maxUsablePrfHz: 3000,
+    prfCapHz: 3000,
     wavelengthM: 5,
-    lookAngleDeg: 12,
-    roughnessSpreadDeg: 2,
-    prfUpdateIntervalMs: 50,
-    cpiMs: 80,
-    safetyFactor: 1.15,
+    prfUpdateIntervalMs: 500,
+    cpiMs: 500,
+    safetyFactor: 1.25,
     surfaceScatteringDb: -10,
     dirtyIceClutterBoostDb: 4,
     targetSignalDb: -24,
@@ -689,17 +687,15 @@
 
   const controls = [
     { key: 'z0', label: 'Closest altitude', unit: 'km', min: 25, max: 1000, step: 5 },
-    { key: 'deltaZEdge', label: 'Altitude rise at edge', unit: 'km', min: 0, max: 120, step: 1 },
+    { key: 'deltaZEdge', label: 'Altitude rise at edge', unit: 'km', min: 0, max: 1000, step: 25 },
     { key: 'speed', label: 'Flyby speed', unit: 'km/s', min: 1, max: 12, step: 0.1 },
     { key: 'targetDepthM', label: 'Target depth', unit: 'm', min: 1000, max: 30000, step: 250 },
-    { key: 'pulseLengthUs', label: 'Pulse length', unit: 'us', min: 2, max: 120, step: 2 },
+    { key: 'pulseLengthUs', label: 'Pulse length', unit: 'us', min: 5, max: 200, step: 5 },
     { key: 'maxUsablePrfHz', label: 'Max usable PRF', unit: 'Hz', min: 100, max: 8000, step: 50 },
     { key: 'wavelengthM', label: 'Radar wavelength', unit: 'm', min: 3, max: 35, step: 0.5 },
-    { key: 'lookAngleDeg', label: 'Look angle', unit: 'deg', min: 0, max: 45, step: 0.5 },
     { key: 'prfUpdateIntervalMs', label: 'PRF update interval', unit: 'ms', min: 10, max: 500, step: 10 },
     { key: 'cpiMs', label: 'CPI / dwell time', unit: 'ms', min: 10, max: 500, step: 10 },
     { key: 'safetyFactor', label: 'Safety factor', unit: 'x', min: 1, max: 2, step: 0.05 },
-    { key: 'roughnessSpreadDeg', label: 'Slope clutter spread', unit: 'deg', min: 0, max: 20, step: 0.5 },
     { key: 'surfaceScatteringDb', label: 'Surface scattering', unit: 'dB', min: -35, max: 5, step: 1 },
     { key: 'dirtyIceClutterBoostDb', label: 'Dirty-ice clutter boost', unit: 'dB', min: 0, max: 15, step: 0.5 },
     { key: 'listenGuardUs', label: 'Listen/processing guard', unit: 'us', min: 0, max: 100, step: 1 },
@@ -756,10 +752,37 @@
     return Math.sqrt(Math.max(rangeKm ** 2 - zKm ** 2, 0));
   }
 
+  function targetDelayClutterGeometry(zKm, depthM, p) {
+    const iceIndex = Math.max(p.iceIndex, 0.1);
+    const rangeKm = zKm + iceIndex * Math.max(depthM, 0) / 1000;
+    const offsetKm = Math.sqrt(Math.max(rangeKm ** 2 - zKm ** 2, 0));
+    const sinTheta = rangeKm > 0 ? clamp(offsetKm / rangeKm, 0, 0.999999) : 0;
+    return {
+      rangeKm,
+      offsetKm,
+      angleDeg: Math.asin(sinTheta) * 180 / pi
+    };
+  }
+
+  function dopplerFromAngle(speedKmS, wavelengthM, angleDeg) {
+    const speedMps = Math.max(speedKmS, 0) * 1000;
+    const lambda = Math.max(wavelengthM, 0.01);
+    const losVelocityMps = speedMps * Math.sin(degToRad(angleDeg));
+    return {
+      losVelocityMps,
+      maxDopplerShiftHz: 2 * Math.abs(losVelocityMps) / lambda
+    };
+  }
+
   function surfaceDoppler(offsetKm, zKm, p) {
     const rangeKm = Math.sqrt(zKm ** 2 + offsetKm ** 2);
     const sinTheta = rangeKm > 0 ? offsetKm / rangeKm : 0;
     return 2 * p.speed * 1000 * sinTheta / Math.max(p.wavelengthM, 0.01);
+  }
+
+  function aliasFrequency(frequencyHz, prfHz) {
+    const prf = Math.max(prfHz, 1);
+    return ((frequencyHz + prf / 2) % prf) - prf / 2;
   }
 
   function usablePrfLimit(p) {
@@ -789,7 +812,7 @@
   }
 
   function displayBreakdownSpeed(value) {
-    if (!Number.isFinite(value)) return 'No crossing for current look geometry';
+    if (!Number.isFinite(value)) return 'No crossing for current target-delay geometry';
     return round(value, 2);
   }
 
@@ -799,22 +822,27 @@
     const wavelengthM = Math.max(safeNumber(p.wavelengthM, defaults.wavelengthM, 0.01, 100), 0.01);
     const altitudeKm = safeNumber(p.z0, defaults.z0, 1, 3000);
     const targetDepthM = safeNumber(p.targetDepthM, defaults.targetDepthM, 1, 50000);
-    const lookAngleDeg = safeNumber(p.lookAngleDeg, defaults.lookAngleDeg, 0, 89);
-    const clutterSpreadDeg = safeNumber(p.roughnessSpreadDeg, defaults.roughnessSpreadDeg, 0, 40);
     const safetyFactor = safeNumber(p.safetyFactor, defaults.safetyFactor, 1, 4);
     const cpiMs = safeNumber(p.cpiMs, defaults.cpiMs, 1, 2000);
     const prfUpdateIntervalMs = safeNumber(p.prfUpdateIntervalMs, defaults.prfUpdateIntervalMs, 1, 2000);
-    const clutterEdgeAngleDeg = safeNumber(lookAngleDeg + clutterSpreadDeg, lookAngleDeg, 0, 89.5);
+    const targetDelayGeometry = targetDelayClutterGeometry(altitudeKm, targetDepthM, { ...p, iceIndex: p.iceIndex });
+    const delayClutterAngleDeg = safeNumber(targetDelayGeometry.angleDeg, 0, 0, 89.5);
     const speedMps = speed * 1000;
-    const losVelocityMps = speedMps * Math.sin(degToRad(clutterEdgeAngleDeg));
+    const targetDelayDoppler = dopplerFromAngle(speed, wavelengthM, delayClutterAngleDeg);
 
-    // Monostatic radar Doppler edge: fD = 2 * v_los / lambda.
-    const maxDopplerShiftHz = 2 * Math.abs(losVelocityMps) / wavelengthM;
+    // Main false-layer geometry: surface clutter with the same round-trip
+    // delay as the selected nadir target on a flat surface. At low altitude
+    // this clutter ring can be far off-nadir even when true nadir Doppler is
+    // near zero.
+    const losVelocityMps = targetDelayDoppler.losVelocityMps;
+    const maxDopplerShiftHz = targetDelayDoppler.maxDopplerShiftHz;
     const surfaceDopplerBandwidthHz = 2 * maxDopplerShiftHz;
+    const flatAliasThresholdPrfHz = surfaceDopplerBandwidthHz;
+    const firstZeroFoldPrfHz = maxDopplerShiftHz;
 
     // Nyquist-style stress-test floor: usable PRF should exceed the two-sided
-    // Doppler bandwidth, padded by a user-selected safety factor.
-    const requiredPrfHz = surfaceDopplerBandwidthHz * safetyFactor;
+    // flat-surface Doppler bandwidth, padded by a user-selected safety factor.
+    const requiredPrfHz = flatAliasThresholdPrfHz * safetyFactor;
     const timing = timingBudget(altitudeKm, targetDepthM, { ...p, wavelengthM });
     const pulsePrfHz = timing.prfHz;
     const rawUsablePrfHz = Math.min(usablePrfLimit(p), pulsePrfHz);
@@ -825,9 +853,10 @@
     const scheduleAdaptationFactor = clamp(cpiMs / Math.max(prfUpdateIntervalMs, cpiMs, 1), 0.25, 1);
     const effectivePrfHz = rawUsablePrfHz * scheduleAdaptationFactor;
     const sampledHalfBandHz = effectivePrfHz / 2;
+    const aliasAtEffectivePrfHz = aliasFrequency(maxDopplerShiftHz, effectivePrfHz);
     const prfMargin = effectivePrfHz / Math.max(requiredPrfHz, 1e-6);
+    const aliasMargin = effectivePrfHz / Math.max(flatAliasThresholdPrfHz, 1e-6);
     const centerFrequencyMhz = c / wavelengthM / 1000000;
-    const footprintOffsetKm = altitudeKm * Math.tan(degToRad(lookAngleDeg));
     const cpiDistanceM = speedMps * cpiMs / 1000;
     const surfaceClutterDb = effectiveSurfaceScatteringDb(p);
     const clutterToTargetDb = surfaceClutterDb - safeNumber(p.targetSignalDb, defaults.targetSignalDb, -120, 80);
@@ -837,19 +866,23 @@
       altitudeKm,
       wavelengthM,
       centerFrequencyMhz,
-      lookAngleDeg,
-      clutterEdgeAngleDeg,
-      footprintOffsetKm,
+      delayClutterAngleDeg,
+      targetDelayOffsetKm: targetDelayGeometry.offsetKm,
+      targetDelayRangeKm: targetDelayGeometry.rangeKm,
       losVelocityMps,
       maxDopplerShiftHz,
       surfaceDopplerBandwidthHz,
+      flatAliasThresholdPrfHz,
+      firstZeroFoldPrfHz,
       requiredPrfHz,
       pulsePrfHz,
       rawUsablePrfHz,
       scheduleAdaptationFactor,
       effectivePrfHz,
       sampledHalfBandHz,
+      aliasAtEffectivePrfHz,
       prfMargin,
+      aliasMargin,
       cpiDistanceM,
       pulseUs: timing.pulseUs,
       guardUs: timing.guardUs,
@@ -866,16 +899,6 @@
     const atOneKmS = computeBreakdownPoint(1, p);
     if (atOneKmS.requiredPrfHz <= 1e-6) return Infinity;
     return atOneKmS.effectivePrfHz / atOneKmS.requiredPrfHz;
-  }
-
-  function computeBreakdownRows(p, breakdownSpeedKmS) {
-    const maxSpeed = Math.min(30, Math.max(12, p.speed * 1.8, Number.isFinite(breakdownSpeedKmS) ? breakdownSpeedKmS * 1.35 : 0));
-    const rows = [];
-    for (let i = 0; i <= 120; i += 1) {
-      const speed = 0.5 + (maxSpeed - 0.5) * i / 120;
-      rows.push(computeBreakdownPoint(speed, p));
-    }
-    return rows;
   }
 
   function zeroFoldDepths(zKm, effectivePrf, maxDepthM, p) {
@@ -922,10 +945,17 @@
       const timing = timingBudget(z, p.targetDepthM, p);
       const pulsePrf = timing.prfHz;
       const effectivePrf = Math.max(1, Math.min(usablePrfLimit(p), pulsePrf));
-      const maxOffsetKm = offNadirForDepth(z, p.targetDepthM, p);
-      const maxSurfaceDopplerHz = surfaceDoppler(maxOffsetKm, z, p);
-      const requiredNyquistPrfHz = 2 * maxSurfaceDopplerHz;
+      const delayGeometry = targetDelayClutterGeometry(z, p.targetDepthM, p);
+      const maxOffsetKm = delayGeometry.offsetKm;
+      const delayClutterAngleDeg = delayGeometry.angleDeg;
+      const targetDelayDoppler = dopplerFromAngle(p.speed, p.wavelengthM, delayClutterAngleDeg);
+      const safetyFactor = safeNumber(p.safetyFactor, defaults.safetyFactor, 1, 4);
+      const maxSurfaceDopplerHz = targetDelayDoppler.maxDopplerShiftHz;
+      const aliasThresholdPrfHz = 2 * maxSurfaceDopplerHz;
+      const requiredNyquistPrfHz = aliasThresholdPrfHz * safetyFactor;
       const sampledHalfBandHz = effectivePrf / 2;
+      const firstZeroFoldPrfHz = maxSurfaceDopplerHz;
+      const aliasAtEffectivePrfHz = aliasFrequency(maxSurfaceDopplerHz, effectivePrf);
       const folds = zeroFoldDepths(z, effectivePrf, p.targetDepthM, p);
       let nearest = null;
       folds.forEach((fold) => {
@@ -947,9 +977,16 @@
         pulsePrf,
         effectivePrf,
         requiredNyquistPrfHz,
+        aliasThresholdPrfHz,
         sampledHalfBandHz,
         maxSurfaceDopplerHz,
+        firstZeroFoldPrfHz,
+        aliasAtEffectivePrfHz,
         maxOffsetKm,
+        delayClutterAngleDeg,
+        targetDelayRangeKm: delayGeometry.rangeKm,
+        prfMargin: effectivePrf / Math.max(requiredNyquistPrfHz, 1e-6),
+        aliasMargin: effectivePrf / Math.max(aliasThresholdPrfHz, 1e-6),
         pulseDepthWindowM,
         twoWayTravelUs: timing.twoWayTravelUs,
         totalListenUs: timing.totalListenUs,
@@ -968,74 +1005,62 @@
     return rows;
   }
 
-  function pts(rows, key, digits = 6) {
-    return rows.map((row) => [round(row.x), row[key] == null ? null : round(row[key], digits)]);
+  function prfSweep(mid) {
+    const prfMin = Math.max(100, Math.min(600, mid.firstZeroFoldPrfHz * 0.45));
+    const prfMax = Math.max(4500, mid.requiredNyquistPrfHz * 1.18, mid.effectivePrf * 1.5);
+    const rows = [];
+    for (let i = 0; i <= 160; i += 1) {
+      const prf = prfMin + (prfMax - prfMin) * i / 160;
+      rows.push({
+        prf,
+        sampledHalfBandHz: prf / 2,
+        flatDopplerEdgeHz: mid.maxSurfaceDopplerHz,
+        aliasAtPrfHz: aliasFrequency(mid.maxSurfaceDopplerHz, prf),
+        zeroHz: 0
+      });
+    }
+    const yMax = Math.max(prfMax / 2, mid.maxSurfaceDopplerHz * 1.28);
+    return { rows, yMax };
   }
 
-  function speedPts(rows, key, digits = 6) {
-    return rows.map((row) => [round(row.speedKmS, 3), row[key] == null ? null : round(row[key], digits)]);
+  function prfPts(rows, key, digits = 6) {
+    return rows.map((row) => [round(row.prf, 3), row[key] == null ? null : round(row[key], digits)]);
   }
 
-  function fixedLine(rows, value) {
-    return rows.map((row) => [round(row.x), round(value)]);
+  function verticalPrfLine(prfHz, yMax) {
+    return [[round(prfHz, 3), 0], [round(prfHz, 3), round(yMax, 3)]];
   }
 
-  function fixedSpeedLine(rows, value, digits = 6) {
-    return rows.map((row) => [round(row.speedKmS, 3), round(value, digits)]);
+  function verticalPrfSpan(prfHz, yMin, yMax) {
+    return [[round(prfHz, 3), round(yMin, 3)], [round(prfHz, 3), round(yMax, 3)]];
   }
 
   function buildCharts(rows, p) {
+    const mid = rows[Math.floor(rows.length / 2)];
+    const sweep = prfSweep(mid);
+    const aliasAbsMax = Math.max(
+      mid.maxSurfaceDopplerHz,
+      ...sweep.rows.map((row) => Math.abs(row.aliasAtPrfHz || 0))
+    ) * 1.08;
     return [
-      chart('folding-prf-budget', 'PRF Limit vs Doppler Nyquist Requirement', 'Frequency (Hz)', [
-        { name: 'Required PRF for surface Doppler Nyquist', points: pts(rows, 'requiredNyquistPrfHz') },
-        { name: 'Pulse/listen-time limited PRF', points: pts(rows, 'pulsePrf') },
-        { name: 'Effective PRF after usable cap', points: pts(rows, 'effectivePrf') }
-      ], 'Compares the PRF needed to sample the surface Doppler bandwidth with the PRF allowed by pulse length, round-trip listening time, and the usable cap.'),
-      chart('folding-doppler-band', 'Surface Doppler Bandwidth vs Sampled Half-Band', 'Doppler frequency (Hz)', [
-        { name: 'Surface Doppler edge at target delay', points: pts(rows, 'maxSurfaceDopplerHz') },
-        { name: 'Sampled Nyquist half-band', points: pts(rows, 'sampledHalfBandHz') }
-      ], 'Aliasing begins where the surface Doppler edge rises above the sampled PRF/2 half-band.'),
-      chart('folding-depth', 'Where Zero-Doppler Folded Clutter Appears', 'Depth below surface (m)', [
-        { name: 'Nadir subsurface target depth', points: fixedLine(rows, p.targetDepthM) },
-        { name: 'Nearest folded surface-clutter depth', points: pts(rows, 'nearestFoldDepthM') },
-        { name: 'Pulse window upper edge', points: fixedLine(rows, p.targetDepthM + rows[0].pulseDepthWindowM) },
-        { name: 'Pulse window lower edge', points: fixedLine(rows, Math.max(0, p.targetDepthM - rows[0].pulseDepthWindowM)) }
-      ], 'Shows the apparent depths where surface Doppler aliases back near nadir. Overlap with the target window is the clutter-contamination case.'),
-      chart('folding-risk', 'Aliasing Severity Along Flyby', 'Risk score (%)', [
-        { name: 'Folded clutter overlap risk', points: pts(rows, 'riskScore', 3) },
-        { name: 'Nyquist deficit proxy', points: pts(rows, 'aliasDeficitPercent', 3) }
-      ], 'Risk rises when the effective PRF is below the Nyquist requirement and a zero-Doppler fold lands inside the target depth window.'),
-      chart('folding-clutter-strength', 'Folded Clutter Strength vs Target Signal', 'Relative power (dB)', [
-        { name: 'Folded surface clutter proxy', points: pts(rows, 'foldedClutterDb', 3) },
-        { name: 'Nadir target signal proxy', points: fixedLine(rows, p.targetSignalDb) },
-        { name: 'Surface clutter before folding', points: pts(rows, 'surfaceClutterDb', 3) }
-      ], 'Dirty ice and rough scattering do not create the Doppler aliasing condition, but they can make aliased clutter stronger once folding occurs.')
-    ];
-  }
-
-  function buildBreakdownCharts(rows) {
-    return [
-      chart('folding-speed-required-prf', 'Flyby Speed vs Required PRF', 'PRF (Hz)', [
-        { name: 'Required PRF = 2 x max Doppler x safety factor', points: speedPts(rows, 'requiredPrfHz', 3) },
-        { name: 'Effective usable PRF', points: speedPts(rows, 'effectivePrfHz', 3) }
-      ], 'Shows the speed where the Doppler sampling requirement overtakes the usable PRF window.', 'line', {
-        xLabel: 'Flyby speed (km/s)',
-        formulaNote: 'Simplified stress-test formula: max Doppler = 2 x v_los / wavelength; required PRF = 2 x max Doppler x safety factor.'
+      chart('folding-flat-prf-threshold', 'Flat PRF Alias Threshold Sweep', 'Doppler frequency (Hz)', [
+        { name: 'PRF/2 sampled half-band', points: prfPts(sweep.rows, 'sampledHalfBandHz', 3) },
+        { name: 'Flat same-delay Doppler edge', points: prfPts(sweep.rows, 'flatDopplerEdgeHz', 3) },
+        { name: 'Current effective PRF', role: 'reference', points: verticalPrfLine(mid.effectivePrf, sweep.yMax) },
+        { name: 'Flat alias threshold PRF', role: 'reference', points: verticalPrfLine(mid.aliasThresholdPrfHz, sweep.yMax) },
+        { name: 'Safety-factor PRF target', role: 'reference', points: verticalPrfLine(mid.requiredNyquistPrfHz, sweep.yMax) }
+      ], 'Mid-pass flat-surface sweep: aliasing begins where PRF/2 drops below the same-delay surface Doppler edge.', 'line', {
+        xLabel: 'PRF (Hz)',
+        formulaNote: 'Flat case: R = altitude + n x targetDepth, offset = sqrt(R^2 - altitude^2), fD = 2 x speed x sin(theta) / wavelength, and aliasing starts when PRF < 2 x |fD|.'
       }),
-      chart('folding-speed-margin', 'Flyby Speed vs PRF Margin', 'PRF margin (ratio)', [
-        { name: 'PRF margin = effective / required', points: speedPts(rows, 'prfMargin', 3) },
-        { name: 'SAFE threshold (1.25)', points: fixedSpeedLine(rows, 1.25, 3) },
-        { name: 'Aliasing threshold (1.0)', points: fixedSpeedLine(rows, 1, 3) }
-      ], 'Margin below 1.0 means the required PRF exceeds the effective usable PRF in this simplified model.', 'line', {
-        xLabel: 'Flyby speed (km/s)',
-        formulaNote: 'Risk state uses margin only: above 1.25 is SAFE, 1.00-1.25 is WARNING, and below 1.00 is ALIASING/FOLDING RISK.'
-      }),
-      chart('folding-bandwidth-half-band', 'Doppler Bandwidth vs Sampled Half-Band', 'Doppler frequency (Hz)', [
-        { name: 'Max Doppler edge', points: speedPts(rows, 'maxDopplerShiftHz', 3) },
-        { name: 'Sampled half-band = effective PRF / 2', points: speedPts(rows, 'sampledHalfBandHz', 3) }
-      ], 'Compares the one-sided Doppler edge against the sampled half-band available after PRF and dwell limits.', 'line', {
-        xLabel: 'Flyby speed (km/s)',
-        formulaNote: 'The full simplified surface Doppler bandwidth is 2 x max Doppler edge; the sampled clean half-band is effective PRF / 2.'
+      chart('folding-flat-alias-landing', 'Flat Alias Landing vs PRF', 'Aliased Doppler (Hz)', [
+        { name: 'Aliased +Doppler edge', points: prfPts(sweep.rows, 'aliasAtPrfHz', 3) },
+        { name: 'Zero Doppler reference', points: prfPts(sweep.rows, 'zeroHz', 3) },
+        { name: 'Current effective PRF', role: 'reference', points: verticalPrfSpan(mid.effectivePrf, -aliasAbsMax, aliasAbsMax) },
+        { name: 'First zero-Doppler fold PRF', role: 'reference', points: verticalPrfSpan(mid.firstZeroFoldPrfHz, -aliasAbsMax, aliasAbsMax) }
+      ], 'Shows where the flat-surface Doppler edge appears after PRF aliasing. Exact nadir-bin overlap happens near the first zero-Doppler fold PRF.', 'line', {
+        xLabel: 'PRF (Hz)',
+        formulaNote: 'Aliased Doppler is wrapped into [-PRF/2, +PRF/2] with ((fD + PRF/2) mod PRF) - PRF/2.'
       })
     ];
   }
@@ -1068,9 +1093,7 @@
       : 'No zero-Doppler fold inside the current receive window';
     const currentBreakdown = computeBreakdownPoint(p.speed, p);
     const breakdownSpeedKmS = breakdownSpeedWhereMarginOne(p);
-    const breakdownRows = computeBreakdownRows(p, breakdownSpeedKmS);
-    const breakdownCharts = buildBreakdownCharts(breakdownRows);
-    const originalCharts = buildCharts(rows, p);
+    const displayedCharts = buildCharts(rows, p);
     const scheduleText = currentBreakdown.scheduleAdaptationFactor >= 0.999
       ? 'PRF schedule fits within the current dwell/CPI.'
       : 'PRF schedule interval is longer than the dwell/CPI, so the stress test reduces the usable PRF window.';
@@ -1080,21 +1103,21 @@
     return {
       source: { workbook: 'ClutterFold browser model', generatedFrom: 'simple PRF-Doppler folding formulas' },
       summary: [
-        { label: 'Worst folding risk', value: worst.riskScore, unit: '%', meaning: `${riskLabel(worst.riskScore)} contamination proxy for the current knobs.` },
+        { label: 'Worst zero-fold overlap risk', value: worst.riskScore, unit: '%', meaning: `${riskLabel(worst.riskScore)} nadir-bin overlap proxy for the current knobs.` },
         { label: 'Depth of strongest fold', value: worst.nearestFoldDepthM, unit: 'm', meaning: 'Apparent depth where folded surface clutter is strongest in this simplified pass.' },
         { label: 'Target depth', value: p.targetDepthM, unit: 'm', meaning: 'Depth of the single nadir subsurface target.' },
         { label: 'Closest fold-target gap', value: targetGap, unit: 'm', meaning: 'Small values mean folded surface clutter lands near the target depth.' },
-        { label: 'Required PRF peak', value: requiredMax, unit: 'Hz', meaning: 'Twice the maximum surface Doppler bandwidth at the target delay.' },
+        { label: 'Safety PRF peak', value: requiredMax, unit: 'Hz', meaning: 'Flat same-delay surface Doppler requirement, including the safety factor.' },
         { label: 'Pulse-limited PRF floor', value: pulsePrfMin, unit: 'Hz', meaning: 'Fastest PRF allowed by pulse length plus two-way listening time.' },
         { label: 'Effective PRF minimum', value: effectiveMin, unit: 'Hz', meaning: 'The smaller of max usable PRF and pulse/listen-time PRF.' },
         { label: 'Affected flyby samples', value: targetOverlapPct, unit: '%', meaning: 'Share of along-track samples with moderate or high folded-clutter risk.' }
       ],
       answers: [
-        { question: 'How bad is it?', answer: `${riskLabel(worst.riskScore)} in this run; the peak overlap proxy is ${round(worst.riskScore, 1)}%.` },
+        { question: 'How bad is it?', answer: `${riskLabel(worst.riskScore)} for exact zero-Doppler overlap in this run; the peak overlap proxy is ${round(worst.riskScore, 1)}%.` },
         { question: 'What depth does it occur at?', answer: depthText },
         { question: 'How does pulse length affect it?', answer: `The ${round(p.pulseLengthUs, 1)} us pulse helps set a ${round(mid.pulsePrf, 1)} Hz mid-pass PRF ceiling; longer pulses lower that ceiling and widen the depth window.` },
-        { question: 'How does dirty or rough ice affect it?', answer: `It does not change the Doppler Nyquist requirement directly. It raises severity: base surface scattering ${round(p.surfaceScatteringDb, 1)} dB plus dirty-ice boost ${round(p.dirtyIceClutterBoostDb, 1)} dB gives ${round(effectiveSurfaceDb, 1)} dB before folding.` },
-        { question: 'Under which conditions?', answer: `Closest altitude ${round(p.z0, 1)} km, speed ${round(p.speed, 2)} km/s, target depth ${round(p.targetDepthM, 0)} m, wavelength ${round(p.wavelengthM, 2)} m.` },
+        { question: 'How does surface brightness affect it?', answer: `It does not change the Doppler Nyquist requirement directly. It raises severity: base surface scattering ${round(p.surfaceScatteringDb, 1)} dB plus dirty-ice boost ${round(p.dirtyIceClutterBoostDb, 1)} dB gives ${round(effectiveSurfaceDb, 1)} dB before folding.` },
+        { question: 'Under which conditions?', answer: `Closest altitude ${round(p.z0, 1)} km, speed ${round(p.speed, 2)} km/s, target depth ${round(p.targetDepthM, 0)} m, wavelength ${round(p.wavelengthM, 2)} m. The Doppler angle is the flat same-delay surface angle.` },
         { question: 'Will adding this data improve the prediction?', answer: `Yes for trend accuracy: the model now separates geometry/timing inputs that decide whether aliasing happens from scattering inputs that decide how visible the folded clutter becomes.` },
         { question: 'Can we get around it?', answer: 'This page sets up the effect. Next tests would compare staggered PRFs, shallower receive windows, masking predicted fold depths, or multi-channel angle filtering.' }
       ],
@@ -1106,6 +1129,10 @@
         { label: 'Pulse + guard + dead time', value: timingOverheadUs, unit: 'us' },
         { label: 'Total listen window', value: mid.totalListenUs, unit: 'us' },
         { label: 'Mid-pass sampled half-band', value: mid.sampledHalfBandHz, unit: 'Hz' },
+        { label: 'Mid-pass flat same-delay angle', value: mid.delayClutterAngleDeg, unit: 'deg' },
+        { label: 'Mid-pass flat Doppler edge', value: mid.maxSurfaceDopplerHz, unit: 'Hz' },
+        { label: 'Mid-pass flat alias threshold', value: mid.aliasThresholdPrfHz, unit: 'Hz' },
+        { label: 'Mid-pass alias landing', value: mid.aliasAtEffectivePrfHz, unit: 'Hz' },
         { label: 'Surface offset at target delay', value: mid.maxOffsetKm, unit: 'km' },
         { label: 'Pulse depth window', value: mid.pulseDepthWindowM, unit: 'm' },
         { label: 'Effective surface clutter', value: effectiveSurfaceDb, unit: 'dB' },
@@ -1113,7 +1140,7 @@
         { label: 'Folded clutter-to-target proxy', value: mid.clutterToTargetDb, unit: 'dB' }
       ],
       accuracyDrivers: [
-        { input: 'Flyby trajectory', added: 'altitude, speed, look angle, slope spread', effect: 'Sets LOS velocity and the surface Doppler bandwidth.' },
+        { input: 'Flyby trajectory', added: 'altitude, speed, target depth, flat same-delay clutter angle', effect: 'Sets LOS velocity and the surface Doppler bandwidth for clutter that can land at the same delay as the target.' },
         { input: 'Radar timing', added: 'pulse length, listen guard, receiver dead time, target-depth travel time', effect: 'Sets the pulse/listen PRF ceiling before any max usable PRF cap.' },
         { input: 'Sampling schedule', added: 'max usable PRF, PRF update interval, CPI/dwell time, safety factor', effect: 'Turns ideal PRF into the effective usable PRF margin.' },
         { input: 'Surface strength', added: 'surface scattering plus dirty-ice clutter boost', effect: 'Does not cause aliasing by itself; increases how visible folded clutter becomes.' },
@@ -1122,25 +1149,35 @@
       breakdown: {
         summary: [
           { label: 'Risk state', value: currentBreakdown.riskState, unit: '', meaning: 'SAFE above 1.25, WARNING from 1.00-1.25, and aliasing/folding risk below 1.00.' },
-          { label: 'PRF margin', value: currentBreakdown.prfMargin, unit: 'x', meaning: 'Effective usable PRF divided by required PRF.' },
-          { label: 'Required PRF', value: currentBreakdown.requiredPrfHz, unit: 'Hz', meaning: '2 x max Doppler x safety factor.' },
+          { label: 'Flat PRF margin', value: currentBreakdown.prfMargin, unit: 'x', meaning: 'Effective usable PRF divided by the safety-factor PRF target.' },
+          { label: 'Flat alias margin', value: currentBreakdown.aliasMargin, unit: 'x', meaning: 'Effective usable PRF divided by the flat alias threshold without safety padding.' },
+          { label: 'Flat alias threshold', value: currentBreakdown.flatAliasThresholdPrfHz, unit: 'Hz', meaning: '2 x flat same-delay Doppler edge; aliasing starts below this PRF.' },
+          { label: 'Safety PRF target', value: currentBreakdown.requiredPrfHz, unit: 'Hz', meaning: 'Flat alias threshold multiplied by the selected safety factor.' },
           { label: 'Effective usable PRF', value: currentBreakdown.effectivePrfHz, unit: 'Hz', meaning: 'Usable cap after pulse/listen timing and CPI schedule guard.' },
-          { label: 'Breakdown speed', value: displayBreakdownSpeed(breakdownSpeedKmS), unit: Number.isFinite(breakdownSpeedKmS) ? 'km/s' : '', meaning: 'Speed where margin crosses below 1.0 for the current geometry.' },
-          { label: 'Max Doppler shift', value: currentBreakdown.maxDopplerShiftHz, unit: 'Hz', meaning: 'Monostatic Doppler edge from the current LOS velocity.' },
+          { label: 'Breakdown speed', value: displayBreakdownSpeed(breakdownSpeedKmS), unit: Number.isFinite(breakdownSpeedKmS) ? 'km/s' : '', meaning: 'Speed where target-delay margin crosses below 1.0 for the current altitude and target depth.' },
+          { label: 'Flat same-delay angle', value: currentBreakdown.delayClutterAngleDeg, unit: 'deg', meaning: 'Off-nadir angle of flat surface clutter with the same delay as the selected target depth.' },
+          { label: 'Max Doppler shift', value: currentBreakdown.maxDopplerShiftHz, unit: 'Hz', meaning: 'Monostatic Doppler edge from target-delay clutter LOS velocity.' },
           { label: 'Sampled half-band', value: currentBreakdown.sampledHalfBandHz, unit: 'Hz', meaning: 'Effective usable PRF divided by 2.' },
+          { label: 'Current alias landing', value: currentBreakdown.aliasAtEffectivePrfHz, unit: 'Hz', meaning: 'Where the positive flat Doppler edge wraps inside the sampled PRF band.' },
           { label: 'Total listen window', value: currentBreakdown.totalListenUs, unit: 'us', meaning: 'Pulse length plus receive/guard/dead time and two-way travel time.' },
           { label: 'Schedule factor', value: currentBreakdown.scheduleAdaptationFactor, unit: 'x', meaning: scheduleText }
         ],
         outputs: [
           { label: 'Wavelength', value: currentBreakdown.wavelengthM, unit: 'm', meaning: 'Radar wavelength used for the Doppler calculation.' },
           { label: 'Radar center frequency', value: currentBreakdown.centerFrequencyMhz, unit: 'MHz', meaning: 'Derived from c / wavelength.' },
-          { label: 'Estimated line-of-sight velocity', value: currentBreakdown.losVelocityMps, unit: 'm/s', meaning: 'Flyby speed projected into the look angle plus slope/clutter spread.' },
-          { label: 'Max Doppler shift', value: currentBreakdown.maxDopplerShiftHz, unit: 'Hz', meaning: 'Monostatic Doppler edge: 2 x LOS velocity / wavelength.' },
+          { label: 'Flat same-delay clutter angle', value: currentBreakdown.delayClutterAngleDeg, unit: 'deg', meaning: 'Off-nadir angle for flat surface clutter arriving at the same delay as the nadir target.' },
+          { label: 'Surface offset at target delay', value: currentBreakdown.targetDelayOffsetKm, unit: 'km', meaning: 'Horizontal surface distance from nadir that has the same round-trip delay as the selected subsurface target.' },
+          { label: 'Estimated line-of-sight velocity', value: currentBreakdown.losVelocityMps, unit: 'm/s', meaning: 'Flyby speed projected into the target-delay clutter edge angle.' },
+          { label: 'Flat Doppler edge', value: currentBreakdown.maxDopplerShiftHz, unit: 'Hz', meaning: 'Monostatic target-delay clutter Doppler edge: 2 x LOS velocity / wavelength.' },
           { label: 'Surface Doppler bandwidth', value: currentBreakdown.surfaceDopplerBandwidthHz, unit: 'Hz', meaning: 'Two-sided simplified clutter bandwidth: 2 x max Doppler shift.' },
-          { label: 'Required PRF', value: currentBreakdown.requiredPrfHz, unit: 'Hz', meaning: '2 x max Doppler x safety factor.' },
+          { label: 'Flat alias threshold PRF', value: currentBreakdown.flatAliasThresholdPrfHz, unit: 'Hz', meaning: 'PRF where the sampled half-band equals the flat Doppler edge.' },
+          { label: 'First zero-Doppler fold PRF', value: currentBreakdown.firstZeroFoldPrfHz, unit: 'Hz', meaning: 'PRF where the positive flat Doppler edge aliases exactly to zero Doppler.' },
+          { label: 'Current alias landing', value: currentBreakdown.aliasAtEffectivePrfHz, unit: 'Hz', meaning: 'Aliased Doppler value at the current effective PRF.' },
+          { label: 'Safety-factor PRF target', value: currentBreakdown.requiredPrfHz, unit: 'Hz', meaning: 'Flat alias threshold PRF multiplied by the selected safety factor.' },
           { label: 'Effective/usable PRF', value: currentBreakdown.effectivePrfHz, unit: 'Hz', meaning: 'Minimum of max usable PRF and pulse/listen ceiling, adjusted by the dwell/CPI schedule guard.' },
-          { label: 'PRF margin', value: currentBreakdown.prfMargin, unit: 'x', meaning: 'Effective/usable PRF divided by required PRF.' },
-          { label: 'Breakdown speed', value: displayBreakdownSpeed(breakdownSpeedKmS), unit: Number.isFinite(breakdownSpeedKmS) ? 'km/s' : '', meaning: 'Speed where margin drops below 1.0 under the current settings.' },
+          { label: 'Safety PRF margin', value: currentBreakdown.prfMargin, unit: 'x', meaning: 'Effective/usable PRF divided by the safety-factor PRF target.' },
+          { label: 'Alias threshold margin', value: currentBreakdown.aliasMargin, unit: 'x', meaning: 'Effective/usable PRF divided by the flat alias threshold without safety padding.' },
+          { label: 'Breakdown speed', value: displayBreakdownSpeed(breakdownSpeedKmS), unit: Number.isFinite(breakdownSpeedKmS) ? 'km/s' : '', meaning: 'Speed where target-delay margin drops below 1.0 under the current settings.' },
           { label: 'Risk state', value: currentBreakdown.riskState, unit: '', meaning: 'Margin > 1.25 = SAFE; 1.00 to 1.25 = WARNING; < 1.00 = ALIASING/FOLDING RISK.' },
           { label: 'Pulse length', value: currentBreakdown.pulseUs, unit: 'us', meaning: 'Transmit pulse duration included in the timing window.' },
           { label: 'Two-way travel/listen time', value: currentBreakdown.twoWayTravelUs, unit: 'us', meaning: 'Round-trip time through altitude plus the selected target depth.' },
@@ -1148,10 +1185,9 @@
           { label: 'Total listen window', value: currentBreakdown.totalListenUs, unit: 'us', meaning: 'Pulse plus overhead plus round-trip travel time; its inverse is the pulse/listen PRF ceiling.' },
           { label: 'Effective surface clutter', value: currentBreakdown.surfaceClutterDb, unit: 'dB', meaning: 'Surface scattering plus dirty-ice boost; used only for severity, not the PRF Nyquist requirement.' },
           { label: 'Surface clutter minus target', value: currentBreakdown.clutterToTargetDb, unit: 'dB', meaning: 'How bright the surface clutter proxy is relative to the nadir target before folding loss.' },
-          { label: 'Look-angle footprint offset', value: currentBreakdown.footprintOffsetKm, unit: 'km', meaning: 'Simple altitude x tan(look angle) geometry check.' },
           { label: 'Distance moved during CPI', value: currentBreakdown.cpiDistanceM, unit: 'm', meaning: 'Flyby distance covered inside the current coherent processing / dwell window.' }
         ],
-        charts: breakdownCharts
+        charts: []
       },
       preview: {
         xMin: p.xMin,
@@ -1167,8 +1203,8 @@
           showPoint: index % 3 === 0 || row.riskScore >= 25
         }))
       },
-      charts: originalCharts,
-      allCharts: originalCharts.concat(breakdownCharts)
+      charts: displayedCharts,
+      allCharts: displayedCharts
     };
   }
 
