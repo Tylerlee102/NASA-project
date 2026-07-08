@@ -1215,11 +1215,13 @@
 
   function renderLivePrfFigures() {
     const visual = foldingData.livePointTarget;
-    if (!visual) return;
-    renderLiveZeroOverlap(visual);
-    renderLivePointTargetFolding(visual);
-    renderLivePointTargetProfiles(visual);
-    renderLivePointTargetSummary(visual);
+    if (visual) {
+      renderLiveZeroOverlap(visual);
+      renderLivePointTargetFolding(visual);
+      renderLivePointTargetProfiles(visual);
+      renderLivePointTargetSummary(visual);
+    }
+    renderTraceRemovalUsability(foldingData.traceRemovalUsability);
   }
 
   function livePrfPath(rows, xKey, yKey, sx, sy, maxJumpPx = Infinity) {
@@ -1468,6 +1470,130 @@
       `Alias begins below PRF=${formatValue(visual.aliasStartPrfHz, 2)} Hz. Exact first zero-Doppler overlap is PRF=${formatValue(visual.zeroPrfHz, 2)} Hz.`,
       `Timing-limited current PRF=${formatValue(visual.currentPrfHz, 2)} Hz: surface clutter folds to +/-${formatValue(currentAliasAbs, 2)} Hz, so it aliases but does not land on the nadir point yet.`
     ].map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+  }
+
+  function traceRemovalLabel(row) {
+    if (!row.usable) return 'Already unusable';
+    if (!row.lastUsableKeepEvery) return 'No trace removal';
+    const removed = formatValue(row.maxRemovedPercent, 1);
+    const keep = row.lastUsableKeepEvery === 1 ? 'all traces' : `every ${row.lastUsableKeepEvery}th trace`;
+    return `${removed}% removed; keep ${keep}`;
+  }
+
+  function traceBreakLabel(row) {
+    if (!row.firstUnusableKeepEvery) return 'Not reached';
+    return row.firstUnusableKeepEvery === 1 ? 'keep all' : `keep every ${row.firstUnusableKeepEvery}th`;
+  }
+
+  function renderTraceUsabilitySvg(traceCase) {
+    const width = 1080;
+    const height = 390;
+    const margin = 24;
+    const panelGap = 20;
+    const panelWidth = (width - margin * 2 - panelGap) / 2;
+    const panelHeight = height - margin * 2;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(traceCase.title)} trace removal PRF usability">`;
+    svg += `<rect class="live-prf-bg" x="0" y="0" width="${width}" height="${height}"></rect>`;
+
+    traceCase.bandRows.forEach((bandRow, index) => {
+      const x0 = margin + index * (panelWidth + panelGap);
+      const y0 = margin;
+      const x1 = x0 + panelWidth;
+      const y1 = y0 + panelHeight;
+      const plot = { left: x0 + 58, top: y0 + 52, right: x1 - 20, bottom: y1 - 56 };
+      const plotWidth = plot.right - plot.left;
+      const plotHeight = plot.bottom - plot.top;
+      const rows = bandRow.traceRows || [];
+      const yMax = Math.max(
+        bandRow.maxPrfHz || 1,
+        bandRow.minPrfHz || 1,
+        ...rows.map((row) => row.effectivePrfHz || 0),
+        1
+      ) * 1.12;
+      const sy = (value) => plot.bottom - Math.max(0, value) / yMax * plotHeight;
+      const slot = plotWidth / Math.max(rows.length, 1);
+      const barWidth = Math.max(18, slot * 0.54);
+
+      svg += `<rect class="live-prf-panel" x="${x0}" y="${y0}" width="${panelWidth}" height="${panelHeight}" rx="4"></rect>`;
+      svg += `<text class="live-prf-title" x="${x0 + 14}" y="${y0 + 24}">${escapeHtml(bandRow.band.name)} ${escapeHtml(formatValue(bandRow.band.frequencyMhz, 0))} MHz</text>`;
+      svg += `<text class="live-prf-subtitle" x="${x0 + 14}" y="${y0 + 43}">optimal PRF ${escapeHtml(bandRow.optimalPrfHz ? formatValue(bandRow.optimalPrfHz, 1) : 'none')} Hz</text>`;
+      svg += `<rect class="live-prf-plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+      ticks(0, yMax, 5).forEach((tick) => {
+        const y = sy(tick);
+        svg += `<line class="live-prf-grid-line" x1="${plot.left}" y1="${y}" x2="${plot.right}" y2="${y}"></line>`;
+        svg += `<text class="live-prf-axis" x="${plot.left - 9}" y="${y + 4}" text-anchor="end">${escapeHtml(formatAxisValue(tick))}</text>`;
+      });
+
+      const thresholdY = sy(bandRow.minPrfHz || 0);
+      svg += `<line class="trace-threshold" x1="${plot.left}" y1="${thresholdY}" x2="${plot.right}" y2="${thresholdY}"></line>`;
+      svg += `<text class="live-prf-label" x="${plot.right - 4}" y="${Math.max(plot.top + 14, thresholdY - 7)}" text-anchor="end">min usable PRF</text>`;
+
+      rows.forEach((row, rowIndex) => {
+        const centerX = plot.left + slot * (rowIndex + 0.5);
+        const barTop = sy(row.effectivePrfHz);
+        const barHeight = Math.max(2, plot.bottom - barTop);
+        svg += `<rect class="${row.usable ? 'trace-bar-ok' : 'trace-bar-bad'}" x="${centerX - barWidth / 2}" y="${barTop}" width="${barWidth}" height="${barHeight}" rx="3"></rect>`;
+        svg += `<text class="live-prf-axis" x="${centerX}" y="${plot.bottom + 20}" text-anchor="middle">${escapeHtml(row.keepLabel)}</text>`;
+      });
+
+      svg += `<text class="live-prf-label" x="${plot.left + plotWidth / 2}" y="${height - 12}" text-anchor="middle">keep every N traces</text>`;
+      svg += `<text class="live-prf-label" transform="translate(${x0 + 18} ${plot.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">effective PRF (Hz)</text>`;
+    });
+
+    svg += '</svg>';
+    return svg;
+  }
+
+  function renderTraceUsabilityTable(traceCase) {
+    const body = traceCase.bandRows.map((row) => {
+      const status = row.usable ? 'OK' : 'No window';
+      const statusClassName = row.usable ? 'trace-status-ok' : 'trace-status-bad';
+      return `
+        <tr>
+          <td>${escapeHtml(row.band.name)} ${escapeHtml(formatValue(row.band.frequencyMhz, 0))} MHz</td>
+          <td>${escapeHtml(row.optimalPrfHz ? `${formatValue(row.optimalPrfHz, 1)} Hz` : 'none')}</td>
+          <td>${escapeHtml(formatValue(row.minPrfHz, 1))} Hz</td>
+          <td>${escapeHtml(traceRemovalLabel(row))}</td>
+          <td>${escapeHtml(traceBreakLabel(row))}</td>
+          <td><span class="${statusClassName}">${escapeHtml(status)}</span></td>
+        </tr>
+      `;
+    }).join('');
+    return `
+      <div class="table-wrap trace-usability-table" tabindex="0" role="region" aria-label="${escapeHtml(traceCase.title)} trace removal table">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Band</th>
+              <th scope="col">Optimal PRF</th>
+              <th scope="col">Min PRF</th>
+              <th scope="col">Max removal</th>
+              <th scope="col">Breaks at</th>
+              <th scope="col">Result</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderTraceRemovalUsability(traceData) {
+    const target = document.getElementById('folding-trace-usability');
+    if (!target || !traceData || !traceData.cases) return;
+    target.innerHTML = traceData.cases.map((traceCase) => `
+      <article class="chart-card trace-usability-card">
+        <div class="chart-title-row">
+          <div>
+            <h3>${escapeHtml(traceCase.title)}</h3>
+            <p class="chart-note">${escapeHtml(traceCase.depthLabel)} at ${escapeHtml(formatValue(traceData.altitudeKm, 1))} km altitude, ${escapeHtml(formatValue(traceData.pulseUs, 0))} us pulse</p>
+          </div>
+          <span class="chart-source">Live JS model</span>
+        </div>
+        <div class="trace-usability-frame">${renderTraceUsabilitySvg(traceCase)}</div>
+        ${renderTraceUsabilityTable(traceCase)}
+      </article>
+    `).join('');
   }
 
   function renderFoldingPreview() {
