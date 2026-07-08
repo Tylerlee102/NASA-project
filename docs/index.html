@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=flat-prf-folding-twocharts-20260708">
+    <link rel="stylesheet" href="styles.css?v=flat-prf-static-pngs-20260708">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=flat-prf-folding-twocharts-20260708"></script>
@@ -302,6 +302,54 @@
           <div id="folding-accuracy-table"></div>
         </section>
         <div id="folding-charts" class="chart-grid"></div>
+        <section class="folding-static-section">
+          <div class="v30-section-heading">
+            <p class="section-kicker">Static point-target visual checks</p>
+            <h3>Flat PRF folding graphs</h3>
+            <p class="body-copy">These three PNG outputs are fixed flat-surface checks for the bad-PRF overlap case, the PRF folding threshold geometry, and the trace-removal false-layer case. They use the same simplified point-target assumptions as the folding stress test.</p>
+          </div>
+          <div class="chart-grid static-chart-grid">
+            <article class="chart-card">
+              <div class="chart-title-row">
+                <div>
+                  <h3>Bad PRF Zero-Doppler Clutter Overlap</h3>
+                  <p class="chart-note">Standalone view showing surface clutter peaking at the 6 km nadir target depth when PRF is set to the first zero-overlap value.</p>
+                </div>
+                <span class="chart-source">PNG simulation</span>
+              </div>
+              <figure class="chart-frame static-image-frame">
+                <img src="assets/bad_prf_zero_doppler_clutter_graph.png?v=20260708" alt="Bad PRF graph showing folded surface clutter peaking on the 6 kilometer nadir target depth line.">
+              </figure>
+              <p class="chart-explainer">Read this as the intentionally bad case: surface Doppler folds to zero Doppler, so flat-surface clutter can sit on top of the nadir subsurface echo.</p>
+            </article>
+            <article class="chart-card">
+              <div class="chart-title-row">
+                <div>
+                  <h3>Flat Point-Target Doppler Folding Threshold</h3>
+                  <p class="chart-note">Geometry view comparing high PRF, current PRF, and the first zero-overlap PRF for the flat same-delay surface scatterer.</p>
+                </div>
+                <span class="chart-source">PNG simulation</span>
+              </div>
+              <figure class="chart-frame static-image-frame">
+                <img src="assets/flat_point_target_aliasing.png?v=20260708" alt="Flat point target Doppler folding graph showing no alias, current PRF aliasing, and first zero Doppler overlap panels.">
+              </figure>
+              <p class="chart-explainer">This separates two ideas: aliasing begins once the surface Doppler edge exceeds the sampled half-band, but exact nadir overlap happens at the first zero-fold PRF.</p>
+            </article>
+            <article class="chart-card">
+              <div class="chart-title-row">
+                <div>
+                  <h3>Trace Removal False-Layer Check</h3>
+                  <p class="chart-note">Clean comparison of all traces, every other trace, and every fourth trace with no added noise or cosmetic smoothing.</p>
+                </div>
+                <span class="chart-source">PNG simulation</span>
+              </div>
+              <figure class="chart-frame static-image-frame">
+                <img src="assets/trace_downsampling_false_layer_clean.png?v=20260708" alt="Trace removal simulation showing no false layer at high PRF or every other trace, and a yellow false layer at the bad PRF when every fourth trace is kept.">
+              </figure>
+              <p class="chart-explainer">This shows the professor's trace-removal point directly: lowering effective PRF can fold flat-surface clutter into the zero-Doppler slice where it looks like a subsurface layer.</p>
+            </article>
+          </div>
+        </section>
       </section>
 
       <section id="v30" class="page-section">
