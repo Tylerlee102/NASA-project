@@ -1218,6 +1218,8 @@
     if (!visual) return;
     renderLiveZeroOverlap(visual);
     renderLivePointTargetFolding(visual);
+    renderLivePointTargetProfiles(visual);
+    renderLivePointTargetSummary(visual);
   }
 
   function livePrfPath(rows, xKey, yKey, sx, sy, maxJumpPx = Infinity) {
@@ -1367,6 +1369,105 @@
     });
     svg += '</svg>';
     target.innerHTML = svg;
+  }
+
+  function pointTargetScenarios(visual) {
+    return [
+      {
+        title: `No alias: PRF ${formatValue(visual.highPrfHz, 0)} Hz`,
+        subtitle: 'surface zero-bin stays away from the target',
+        prfHz: visual.highPrfHz,
+        positiveKey: 'highAliasPositiveHz',
+        negativeKey: 'highAliasNegativeHz'
+      },
+      {
+        title: `Current PRF: ${formatValue(visual.currentPrfHz, 0)} Hz`,
+        subtitle: 'aliased clutter misses the nadir bin',
+        prfHz: visual.currentPrfHz,
+        positiveKey: 'currentAliasPositiveHz',
+        negativeKey: 'currentAliasNegativeHz'
+      },
+      {
+        title: `First zero-overlap: PRF ${formatValue(visual.zeroPrfHz, 0)} Hz`,
+        subtitle: 'surface clutter lands on the target depth',
+        prfHz: visual.zeroPrfHz,
+        positiveKey: 'zeroAliasPositiveHz',
+        negativeKey: 'zeroAliasNegativeHz'
+      }
+    ];
+  }
+
+  function zeroDopplerProfileRows(visual, scenario) {
+    const widthHz = Math.max(visual.zeroBinWidthHz || scenario.prfHz / 160 || 8, 8);
+    const rows = visual.rows.map((row) => {
+      const closestZeroHz = Math.min(Math.abs(row[scenario.positiveKey]), Math.abs(row[scenario.negativeKey]));
+      const amplitude = Math.exp(-0.055 * Math.max(row.depthKm, 0));
+      return {
+        depthKm: row.depthKm,
+        power: Math.exp(-0.5 * (closestZeroHz / widthHz) ** 2) * amplitude
+      };
+    });
+    const maxPower = Math.max(...rows.map((row) => row.power), 1e-9);
+    return rows.map((row) => ({ ...row, power: row.power / maxPower }));
+  }
+
+  function renderLivePointTargetProfiles(visual) {
+    const target = document.getElementById('folding-point-target-profiles');
+    if (!target || !visual.rows || !visual.rows.length) return;
+    const scenarios = pointTargetScenarios(visual);
+    target.innerHTML = scenarios.map((scenario) => {
+      const rows = zeroDopplerProfileRows(visual, scenario);
+      const width = 460;
+      const height = 220;
+      const margin = { top: 18, right: 20, bottom: 40, left: 58 };
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+      const sx = (power) => margin.left + Math.max(0, Math.min(1, power)) * plotWidth;
+      const sy = (depth) => margin.top + (Math.max(0, depth) / visual.maxDepthKm) * plotHeight;
+      const targetY = sy(visual.targetDepthKm);
+      const peak = rows.reduce((best, row) => row.power > best.power ? row : best, rows[0]);
+
+      let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(scenario.title)} surface-only zero-Doppler clutter profile">`;
+      svg += `<rect class="live-prf-bg" x="0" y="0" width="${width}" height="${height}"></rect>`;
+      svg += `<rect class="live-prf-plot" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+      [0, 0.5, 1].forEach((tick) => {
+        const x = sx(tick);
+        svg += `<line class="live-prf-grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
+        svg += `<text class="live-prf-axis" x="${x}" y="${height - margin.bottom + 19}" text-anchor="middle">${escapeHtml(formatValue(tick, 1))}</text>`;
+      });
+      ticks(0, visual.maxDepthKm, 4).forEach((tick) => {
+        const y = sy(tick);
+        svg += `<line class="live-prf-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+        svg += `<text class="live-prf-axis" x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${escapeHtml(formatValue(tick, 0))}</text>`;
+      });
+      svg += `<line class="live-prf-target" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}"></line>`;
+      svg += `<path class="live-prf-clutter" d="${livePrfPath(rows, 'power', 'depthKm', sx, sy)}"></path>`;
+      svg += `<circle class="live-prf-marker" cx="${sx(peak.power)}" cy="${sy(peak.depthKm)}" r="5"></circle>`;
+      svg += `<text class="live-prf-label" x="${margin.left + 8}" y="${targetY - 8}">${escapeHtml(formatValue(visual.targetDepthKm, 1))} km target</text>`;
+      svg += `<text class="live-prf-label" x="${margin.left + plotWidth / 2}" y="${height - 8}" text-anchor="middle">relative zero-bin power</text>`;
+      svg += `<text class="live-prf-label" transform="translate(18 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">depth (km)</text>`;
+      svg += '</svg>';
+
+      return `
+        <article class="live-prf-profile-card">
+          <h4>Surface-only zero-Doppler clutter</h4>
+          <p>${escapeHtml(scenario.subtitle)}</p>
+          <div class="live-prf-profile-frame">${svg}</div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function renderLivePointTargetSummary(visual) {
+    const target = document.getElementById('folding-point-target-summary');
+    if (!target) return;
+    const currentAliasAbs = Math.abs(visual.currentSameDelayAliasHz || 0);
+    target.innerHTML = [
+      `Current givens: h=${formatValue(visual.altitudeKm, 1)} km, depth=${formatValue(visual.targetDepthKm, 1)} km, n=${formatValue(visual.iceIndex, 2)}, v=${formatValue(visual.speedKmS, 1)} km/s, lambda=${formatValue(visual.wavelengthM, 3)} m.`,
+      `Same-delay surface clutter: offset=${formatValue(visual.surfaceOffsetKm, 2)} km, look angle=${formatValue(visual.lookAngleDeg, 2)} deg, true Doppler=+/-${formatValue(visual.sameDelayDopplerHz, 2)} Hz.`,
+      `Alias begins below PRF=${formatValue(visual.aliasStartPrfHz, 2)} Hz. Exact first zero-Doppler overlap is PRF=${formatValue(visual.zeroPrfHz, 2)} Hz.`,
+      `Timing-limited current PRF=${formatValue(visual.currentPrfHz, 2)} Hz: surface clutter folds to +/-${formatValue(currentAliasAbs, 2)} Hz, so it aliases but does not land on the nadir point yet.`
+    ].map((line) => `<p>${escapeHtml(line)}</p>`).join('');
   }
 
   function renderFoldingPreview() {
