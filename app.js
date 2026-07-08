@@ -176,29 +176,20 @@
       ]
     },
     {
-      id: 'folding-zero-overlap',
-      kicker: 'Zero-Doppler overlap',
-      title: 'Bad PRF zero-Doppler overlap',
-      description: 'A live depth profile showing whether folded surface clutter lands near the nadir target bin.',
-      kind: 'zero-overlap'
-    },
-    {
-      id: 'folding-point-target',
-      kicker: 'Point-target folding',
-      title: 'Flat point-target folding threshold',
-      description: 'Three live PRF cases show how same-delay surface points fold relative to the nadir subsurface target.',
-      kind: 'point-target'
-    },
-    {
-      id: 'folding-trace-removal',
-      kicker: 'Optimal PRF and trace-removal limit',
-      title: 'Trace removal PRF usability',
-      description: 'The trace-removal graphs and HF/VHF usability cards show how far the effective PRF can be reduced before the window breaks.',
+      id: 'folding-risk-checks',
+      kicker: 'Live folding checks',
+      title: 'Overlap, point-target, and trace-removal checks',
+      description: 'The live overlap, point-target, and trace-removal views are grouped together so the folding behavior reads as one workflow.',
       chartIds: [
         'folding-trace-removal-alias-landing',
         'folding-trace-removal-false-layer-score'
       ],
-      kind: 'trace-usability'
+      kind: 'combined-risk',
+      aliases: [
+        'folding-zero-overlap',
+        'folding-point-target',
+        'folding-trace-removal'
+      ]
     }
   ];
   let activeV30GroupId = null;
@@ -228,11 +219,17 @@
 
   function resolveFoldingGroupId(groups) {
     const ids = new Set(groups.map((group) => group.id));
+    const aliases = new Map();
+    groups.forEach((group) => (group.aliases || []).forEach((alias) => aliases.set(alias, group.id)));
     const url = new URL(window.location.href);
     const requested = url.searchParams.get('section');
     if (ids.has(requested)) {
       activeFoldingGroupId = requested;
       return requested;
+    }
+    if (aliases.has(requested)) {
+      activeFoldingGroupId = aliases.get(requested);
+      return activeFoldingGroupId;
     }
     if (ids.has(activeFoldingGroupId)) return activeFoldingGroupId;
     activeFoldingGroupId = groups[0] ? groups[0].id : null;
@@ -1332,13 +1329,21 @@
     const chartTarget = group.charts && group.charts.length
       ? `<div id="${escapeHtml(group.id)}-charts" class="chart-grid v30-subgrid folding-subgrid"></div>`
       : '';
-    const liveMarkup = group.kind === 'zero-overlap'
-      ? renderFoldingZeroOverlapCard()
-      : group.kind === 'point-target'
-        ? renderFoldingPointTargetCard()
-        : group.kind === 'trace-usability'
-          ? '<div id="folding-trace-usability" class="trace-usability-grid"></div>'
-          : '';
+    let bodyMarkup = chartTarget;
+    if (group.kind === 'zero-overlap') {
+      bodyMarkup += renderFoldingZeroOverlapCard();
+    } else if (group.kind === 'point-target') {
+      bodyMarkup += renderFoldingPointTargetCard();
+    } else if (group.kind === 'trace-usability') {
+      bodyMarkup += '<div id="folding-trace-usability" class="trace-usability-grid"></div>';
+    } else if (group.kind === 'combined-risk') {
+      bodyMarkup = `
+        ${renderFoldingZeroOverlapCard()}
+        ${renderFoldingPointTargetCard()}
+        ${chartTarget}
+        <div id="folding-trace-usability" class="trace-usability-grid"></div>
+      `;
+    }
     return `
       <section class="v30-chart-section folding-chart-section" id="${escapeHtml(group.id)}">
         <div class="v30-section-heading">
@@ -1346,8 +1351,7 @@
           <h3>${escapeHtml(group.title)}</h3>
           <p class="body-copy">${escapeHtml(group.description)}</p>
         </div>
-        ${chartTarget}
-        ${liveMarkup}
+        ${bodyMarkup}
       </section>
     `;
   }
