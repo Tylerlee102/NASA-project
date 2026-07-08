@@ -1193,6 +1193,139 @@
     ];
   }
 
+  function reasonBands() {
+    return [
+      { id: 'hf', name: 'HF', frequencyMhz: 9, wavelengthM: c / (9 * 1000000) },
+      { id: 'vhf', name: 'VHF', frequencyMhz: 60, wavelengthM: c / (60 * 1000000) }
+    ];
+  }
+
+  function prfWindowAtDepth(p, band, depthM) {
+    const altitudeKm = safeNumber(p.z0, defaults.z0, 1, 3000);
+    const targetDepthM = safeNumber(depthM, defaults.targetDepthM, 0, 50000);
+    const safetyFactor = safeNumber(p.safetyFactor, defaults.safetyFactor, 1, 4);
+    const speedMps = safeNumber(p.speed, defaults.speed, 0, 40) * 1000;
+    const timing = timingBudget(altitudeKm, targetDepthM, p);
+    const geometry = targetDelayClutterGeometry(altitudeKm, targetDepthM, p);
+    const sinTheta = Math.sin(degToRad(geometry.angleDeg));
+    const dopplerEdgeHz = 2 * speedMps * sinTheta / Math.max(band.wavelengthM, 0.01);
+    const minPrfHz = 2 * dopplerEdgeHz * safetyFactor;
+    const maxPrfHz = Math.min(usablePrfLimit(p), timing.prfHz);
+    return {
+      altitudeKm: round(altitudeKm, 4),
+      depthM: round(targetDepthM, 4),
+      lookAngleDeg: round(geometry.angleDeg, 4),
+      dopplerEdgeHz: round(dopplerEdgeHz, 4),
+      minPrfHz: round(minPrfHz, 4),
+      maxPrfHz: round(maxPrfHz, 4),
+      twoWayUs: round(timing.twoWayTravelUs, 4),
+      listenWindowUs: round(timing.totalListenUs, 4),
+      usable: minPrfHz <= maxPrfHz
+    };
+  }
+
+  function prfWindowForDepthSweep(p, band, maxDepthM = 30000) {
+    const stepM = 250;
+    const rows = [];
+    for (let depthM = 0; depthM <= maxDepthM; depthM += stepM) {
+      rows.push(prfWindowAtDepth(p, band, depthM));
+    }
+    if (rows[rows.length - 1].depthM !== maxDepthM) rows.push(prfWindowAtDepth(p, band, maxDepthM));
+    const hardest = rows.reduce((best, row) => row.minPrfHz > best.minPrfHz ? row : best, rows[0]);
+    const tightest = rows.reduce((best, row) => row.maxPrfHz < best.maxPrfHz ? row : best, rows[0]);
+    const deepestUsable = rows
+      .filter((row) => row.usable)
+      .reduce((best, row) => Math.max(best, row.depthM), null);
+    return {
+      ...hardest,
+      depthM: round(maxDepthM, 4),
+      minPrfHz: hardest.minPrfHz,
+      maxPrfHz: tightest.maxPrfHz,
+      hardestDepthM: hardest.depthM,
+      tightestDepthM: tightest.depthM,
+      deepestUsableDepthM: deepestUsable,
+      usable: hardest.minPrfHz <= tightest.maxPrfHz
+    };
+  }
+
+  function traceRemovalRowsForWindow(item, maxKeepEvery = 16) {
+    const rows = [];
+    const basePrfHz = Math.max(item.maxPrfHz, 1);
+    const minPrfHz = Math.max(item.minPrfHz, 0);
+    for (let keepEvery = 1; keepEvery <= maxKeepEvery; keepEvery += 1) {
+      const effectivePrfHz = basePrfHz / keepEvery;
+      const usable = item.usable && effectivePrfHz >= minPrfHz;
+      rows.push({
+        keepEvery,
+        keepLabel: keepEvery === 1 ? 'all' : `${keepEvery}`,
+        removedPercent: round(100 * (1 - 1 / keepEvery), 4),
+        effectivePrfHz: round(effectivePrfHz, 4),
+        minPrfHz: round(minPrfHz, 4),
+        margin: minPrfHz > 0 ? round(effectivePrfHz / minPrfHz, 6) : Infinity,
+        usable
+      });
+      if (!usable) break;
+    }
+    return rows;
+  }
+
+  function buildTraceRemovalUsability(p) {
+    const maxSweepDepthM = 30000;
+    const bands = reasonBands();
+    const cases = [
+      {
+        id: 'target-depth',
+        title: 'Selected target depth',
+        depthLabel: `${round(p.targetDepthM / 1000, 2)} km`,
+        windowForBand: (band) => prfWindowAtDepth(p, band, p.targetDepthM)
+      },
+      {
+        id: 'full-depth',
+        title: 'Full 0-30 km depth sweep',
+        depthLabel: '0-30 km',
+        windowForBand: (band) => prfWindowForDepthSweep(p, band, maxSweepDepthM)
+      }
+    ].map((caseSpec) => {
+      const bandRows = bands.map((band) => {
+        const prfWindow = caseSpec.windowForBand(band);
+        const traceRows = traceRemovalRowsForWindow(prfWindow);
+        const usableRows = traceRows.filter((row) => row.usable);
+        const firstUnusable = traceRows.find((row) => !row.usable) || null;
+        const lastUsable = usableRows[usableRows.length - 1] || null;
+        return {
+          band,
+          ...prfWindow,
+          optimalPrfHz: prfWindow.usable ? prfWindow.maxPrfHz : null,
+          lastUsableKeepEvery: lastUsable ? lastUsable.keepEvery : null,
+          maxRemovedPercent: lastUsable ? lastUsable.removedPercent : 0,
+          firstUnusableKeepEvery: firstUnusable ? firstUnusable.keepEvery : null,
+          firstUnusablePrfHz: firstUnusable ? firstUnusable.effectivePrfHz : null,
+          traceRows
+        };
+      });
+      return {
+        id: caseSpec.id,
+        title: caseSpec.title,
+        depthLabel: caseSpec.depthLabel,
+        bandRows
+      };
+    });
+
+    return {
+      altitudeKm: round(safeNumber(p.z0, defaults.z0, 1, 3000), 4),
+      speedKmS: round(safeNumber(p.speed, defaults.speed, 0, 40), 4),
+      iceIndex: round(safeNumber(p.iceIndex, defaults.iceIndex, 0.1, 5), 4),
+      pulseUs: round(safeNumber(p.pulseLengthUs, defaults.pulseLengthUs, 0, 10000), 4),
+      guardDeadUs: round(
+        safeNumber(p.listenGuardUs, defaults.listenGuardUs, 0, 1000) +
+        safeNumber(p.receiverDeadTimeUs, defaults.receiverDeadTimeUs, 0, 1000),
+        4
+      ),
+      safetyFactor: round(safeNumber(p.safetyFactor, defaults.safetyFactor, 1, 4), 4),
+      cases
+    };
+  }
+
   function riskLabel(value) {
     if (value >= 60) return 'High';
     if (value >= 25) return 'Moderate';
@@ -1318,6 +1451,7 @@
         charts: []
       },
       livePointTarget: buildPointTargetVisual(p, currentBreakdown),
+      traceRemovalUsability: buildTraceRemovalUsability(p),
       preview: {
         xMin: p.xMin,
         xMax: p.xMax,

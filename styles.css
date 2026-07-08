@@ -620,6 +620,75 @@ input:focus-visible,
   stroke-width: 2;
 }
 
+.trace-usability-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.trace-usability-card {
+  gap: 14px;
+}
+
+.trace-usability-frame {
+  width: 100%;
+  min-height: 310px;
+  aspect-ratio: 18 / 7;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fffefa;
+  overflow: auto;
+}
+
+.trace-usability-frame svg {
+  display: block;
+  width: 100%;
+  min-width: 760px;
+  height: 100%;
+}
+
+.trace-threshold {
+  stroke: #315f88;
+  stroke-width: 1.8;
+  stroke-dasharray: 7 5;
+}
+
+.trace-bar-ok {
+  fill: #1f6b70;
+}
+
+.trace-bar-bad {
+  fill: #9b3d3f;
+}
+
+.trace-usability-table {
+  margin-top: 0;
+}
+
+.trace-status-ok,
+.trace-status-bad {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.trace-status-ok {
+  color: var(--accent-2);
+  border-color: rgba(31, 107, 112, 0.34);
+  background: rgba(31, 107, 112, 0.08);
+}
+
+.trace-status-bad {
+  color: var(--danger);
+  border-color: rgba(155, 61, 63, 0.34);
+  background: rgba(155, 61, 63, 0.08);
+}
+
 .v30-group-nav {
   display: none;
   gap: 0;
