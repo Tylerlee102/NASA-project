@@ -434,11 +434,11 @@ input:focus-visible,
   gap: 18px;
 }
 
-#folding-charts {
+.folding-subgrid {
   grid-template-columns: 1fr;
 }
 
-#folding-charts .chart-frame {
+.folding-chart-section .chart-frame {
   aspect-ratio: 2 / 1;
   min-height: 360px;
 }
@@ -689,7 +689,7 @@ input:focus-visible,
   background: rgba(155, 61, 63, 0.08);
 }
 
-.v30-group-nav {
+.section-group-nav {
   display: none;
   gap: 0;
   margin: 0;
@@ -698,11 +698,12 @@ input:focus-visible,
   box-shadow: inset 1px 0 0 var(--line-strong);
 }
 
-.tab[data-target="v30"].is-active + .v30-group-nav {
+.tab[data-target="folding"].is-active + .section-group-nav,
+.tab[data-target="v30"].is-active + .section-group-nav {
   display: grid;
 }
 
-.v30-group-nav a {
+.section-group-nav a {
   display: flex;
   align-items: center;
   min-height: 32px;
@@ -714,14 +715,14 @@ input:focus-visible,
   text-decoration: none;
 }
 
-.v30-group-nav a:hover,
-.v30-group-nav a:focus-visible,
-.v30-group-nav a.is-active {
+.section-group-nav a:hover,
+.section-group-nav a:focus-visible,
+.section-group-nav a.is-active {
   color: var(--accent-2);
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
-.v30-group-nav a.is-active {
+.section-group-nav a.is-active {
   font-weight: 850;
 }
 
@@ -1575,7 +1576,7 @@ tr:last-child td {
     box-shadow: none;
   }
 
-  .v30-group-nav {
+  .section-group-nav {
     flex: 0 0 auto;
     gap: 8px;
     padding: 0;
@@ -1583,11 +1584,12 @@ tr:last-child td {
     box-shadow: none;
   }
 
-  .tab[data-target="v30"].is-active + .v30-group-nav {
+  .tab[data-target="folding"].is-active + .section-group-nav,
+  .tab[data-target="v30"].is-active + .section-group-nav {
     display: flex;
   }
 
-  .v30-group-nav a {
+  .section-group-nav a {
     flex: 0 0 auto;
     min-height: 36px;
     padding: 0 10px;
@@ -1597,13 +1599,13 @@ tr:last-child td {
     white-space: nowrap;
   }
 
-  .v30-group-nav a:hover,
-  .v30-group-nav a:focus-visible,
-  .v30-group-nav a.is-active {
+  .section-group-nav a:hover,
+  .section-group-nav a:focus-visible,
+  .section-group-nav a.is-active {
     box-shadow: none;
   }
 
-  .v30-group-nav a.is-active {
+  .section-group-nav a.is-active {
     border-color: var(--accent-2);
     background: var(--accent-2);
     color: var(--panel);
@@ -1710,7 +1712,7 @@ tr:last-child td {
     min-height: 238px;
   }
 
-  #folding-charts .chart-frame {
+  .folding-chart-section .chart-frame {
     aspect-ratio: 4 / 3;
     min-height: 260px;
   }
