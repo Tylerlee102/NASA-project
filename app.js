@@ -1208,25 +1208,6 @@
 
   function renderFolding() {
     if (!foldingData) return;
-    const metricGrid = document.getElementById('folding-metric-grid');
-    if (metricGrid) metricGrid.innerHTML = (foldingData.summary || []).map((row) => makeMetric(row, { showNote: false })).join('');
-    const breakdown = foldingData.breakdown || {};
-    const breakdownMetricGrid = document.getElementById('folding-breakdown-metric-grid');
-    if (breakdownMetricGrid) breakdownMetricGrid.innerHTML = (breakdown.summary || []).map((row) => makeMetric(row, { showNote: false })).join('');
-    renderTable('folding-breakdown-output-table', breakdown.outputs || [], [
-      { key: 'label', label: 'Output' },
-      { key: 'value', label: 'Value' },
-      { key: 'unit', label: 'Unit' }
-    ]);
-    renderTable('folding-answer-table', foldingData.answers || [], [
-      { key: 'question', label: 'Question' },
-      { key: 'answer', label: 'Current model answer' }
-    ]);
-    renderTable('folding-condition-table', foldingData.conditions || [], [
-      { key: 'label', label: 'Condition' },
-      { key: 'value', label: 'Value' },
-      { key: 'unit', label: 'Unit' }
-    ]);
     renderChartSet(foldingData.charts || [], 'folding-charts', null, { compact: true });
     renderAudit();
   }
