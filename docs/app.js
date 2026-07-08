@@ -1245,9 +1245,9 @@
   function renderLiveZeroOverlap(visual) {
     const target = document.getElementById('folding-zero-overlap-live');
     if (!target || !visual.rows || !visual.rows.length) return;
-    const width = 980;
-    const height = 560;
-    const margin = { top: 42, right: 44, bottom: 68, left: 92 };
+    const width = 760;
+    const height = 420;
+    const margin = { top: 24, right: 30, bottom: 58, left: 82 };
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
     const minDepth = Math.max(0, visual.targetDepthKm - 1.5);
@@ -1278,8 +1278,7 @@
     svg += `<text class="live-prf-label" x="${margin.left + 12}" y="${targetY - 13}">${escapeHtml(formatValue(visual.targetDepthKm, 1))} km target depth</text>`;
     svg += `<text class="live-prf-label" x="${sx(peak.zeroOverlapPower) - 12}" y="${Math.max(margin.top + 18, sy(peak.depthKm) - 20)}" text-anchor="end">surface clutter peak</text>`;
     svg += `<text class="live-prf-label" x="${margin.left + plotWidth / 2}" y="${height - 16}" text-anchor="middle">zero-Doppler surface clutter power</text>`;
-    svg += `<text class="live-prf-label" transform="translate(22 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent ice depth (km)</text>`;
-    svg += `<text class="live-prf-subtitle" x="${margin.left}" y="23">Live bad PRF = ${escapeHtml(formatValue(visual.zeroPrfHz, 2))} Hz; same-delay clutter folds onto zero Doppler.</text>`;
+    svg += `<text class="live-prf-label" transform="translate(20 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent ice depth (km)</text>`;
     svg += '</svg>';
     target.innerHTML = svg;
   }
@@ -1287,12 +1286,12 @@
   function renderLivePointTargetFolding(visual) {
     const target = document.getElementById('folding-point-target-live');
     if (!target || !visual.rows || !visual.rows.length) return;
-    const width = 1800;
-    const height = 760;
-    const margin = 44;
-    const gap = 34;
-    const panelTop = 34;
-    const panelHeight = 650;
+    const width = 1140;
+    const height = 570;
+    const margin = 26;
+    const gap = 18;
+    const panelTop = 24;
+    const panelHeight = 490;
     const panelWidth = (width - margin * 2 - gap * 2) / 3;
     const scenarios = [
       {
@@ -1328,7 +1327,7 @@
       const x1 = x0 + panelWidth;
       const y0 = panelTop;
       const y1 = panelTop + panelHeight;
-      const plot = { left: x0 + 62, top: y0 + 72, right: x1 - 24, bottom: y1 - 58 };
+      const plot = { left: x0 + 54, top: y0 + 64, right: x1 - 18, bottom: y1 - 54 };
       const plotWidth = plot.right - plot.left;
       const plotHeight = plot.bottom - plot.top;
       const band = Math.max(scenario.prfHz / 2, 1);
@@ -1337,9 +1336,9 @@
       const targetY = sy(visual.targetDepthKm);
       const maxJump = plotWidth * 0.45;
 
-      svg += `<rect class="live-prf-panel" x="${x0}" y="${y0}" width="${panelWidth}" height="${panelHeight}" rx="7"></rect>`;
-      svg += `<text class="live-prf-title" x="${x0 + 18}" y="${y0 + 28}">${escapeHtml(scenario.title)}</text>`;
-      svg += `<text class="live-prf-subtitle" x="${x0 + 18}" y="${y0 + 50}">${escapeHtml(scenario.subtitle)}</text>`;
+      svg += `<rect class="live-prf-panel" x="${x0}" y="${y0}" width="${panelWidth}" height="${panelHeight}" rx="4"></rect>`;
+      svg += `<text class="live-prf-title" x="${x0 + 14}" y="${y0 + 24}">${escapeHtml(scenario.title)}</text>`;
+      svg += `<text class="live-prf-subtitle" x="${x0 + 14}" y="${y0 + 43}">${escapeHtml(scenario.subtitle)}</text>`;
       svg += `<rect class="live-prf-plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
       [-band, -band / 2, 0, band / 2, band].forEach((tick) => {
         const x = sx(tick);
@@ -1362,9 +1361,9 @@
         svg += `<circle class="live-prf-marker" cx="${sx(frequency)}" cy="${targetY}" r="7"></circle>`;
       });
       svg += `<circle class="live-prf-nadir" cx="${sx(0)}" cy="${targetY}" r="7"></circle>`;
-      svg += `<text class="live-prf-label" x="${sx(0) + 10}" y="${targetY + 4}">nadir</text>`;
-      svg += `<text class="live-prf-label" x="${plot.left + plotWidth / 2}" y="${y1 - 16}" text-anchor="middle">folded Doppler frequency (Hz)</text>`;
-      svg += `<text class="live-prf-label" transform="translate(${x0 + 22} ${plot.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km)</text>`;
+      svg += `<text class="live-prf-label" x="${sx(0) + 8}" y="${targetY + 4}">nadir</text>`;
+      svg += `<text class="live-prf-label" x="${plot.left + plotWidth / 2}" y="${y1 - 15}" text-anchor="middle">folded Doppler frequency (Hz)</text>`;
+      svg += `<text class="live-prf-label" transform="translate(${x0 + 18} ${plot.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km)</text>`;
     });
     svg += '</svg>';
     target.innerHTML = svg;

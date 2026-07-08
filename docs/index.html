@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=live-point-target-prf-20260708">
+    <link rel="stylesheet" href="styles.css?v=live-prf-standard-format-20260708">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
-    <script defer src="model.js?v=live-point-target-prf-20260708"></script>
-    <script defer src="app.js?v=live-point-target-prf-20260708"></script>
+    <script defer src="model.js?v=live-prf-standard-format-20260708"></script>
+    <script defer src="app.js?v=live-prf-standard-format-20260708"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -273,16 +273,28 @@
                 <div>
                   <h3>Bad PRF Zero-Doppler Clutter Overlap</h3>
                 </div>
+                <span class="chart-source">Live JS model</span>
               </div>
               <div id="folding-zero-overlap-live" class="chart-frame live-prf-frame"></div>
+              <div class="legend">
+                <span class="legend-item"><span class="legend-swatch" style="background:#9b4e2f"></span>Zero-Doppler clutter power</span>
+                <span class="legend-item"><span class="legend-swatch" style="background:#1f6b70"></span>Target depth</span>
+              </div>
             </article>
             <article class="chart-card">
               <div class="chart-title-row">
                 <div>
                   <h3>Flat Point-Target Doppler Folding Threshold</h3>
                 </div>
+                <span class="chart-source">Live JS model</span>
               </div>
               <div id="folding-point-target-live" class="chart-frame live-prf-frame live-prf-triptych"></div>
+              <div class="legend">
+                <span class="legend-item"><span class="legend-swatch" style="background:#9b4e2f"></span>+Doppler fold</span>
+                <span class="legend-item"><span class="legend-swatch" style="background:#1f6b70"></span>-Doppler fold</span>
+                <span class="legend-item"><span class="legend-swatch" style="background:#7a641f"></span>Same-delay points</span>
+                <span class="legend-item"><span class="legend-swatch" style="background:#315f88"></span>Nadir target</span>
+              </div>
             </article>
           </div>
         </section>
