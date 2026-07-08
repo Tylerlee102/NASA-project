@@ -468,6 +468,65 @@ input:focus-visible,
   height: 100%;
 }
 
+.live-prf-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.live-prf-profile-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fffefa;
+}
+
+.live-prf-profile-card h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
+.live-prf-profile-card p {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.live-prf-profile-frame {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  min-height: 142px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fffefa;
+  overflow: hidden;
+}
+
+.live-prf-profile-frame svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.live-prf-summary {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-muted);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.live-prf-summary p {
+  margin: 0;
+}
+
 .live-prf-bg {
   fill: #fffefa;
 }
@@ -1363,6 +1422,10 @@ tr:last-child td {
   .metric-grid,
   .control-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .live-prf-profile-grid {
+    grid-template-columns: 1fr;
   }
 }
 
