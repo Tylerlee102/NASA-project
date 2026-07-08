@@ -443,6 +443,27 @@ input:focus-visible,
   min-height: 360px;
 }
 
+.folding-static-section {
+  margin-top: 22px;
+}
+
+.static-chart-grid {
+  grid-template-columns: 1fr;
+}
+
+.static-image-frame {
+  min-height: 0;
+  margin: 0;
+  aspect-ratio: auto;
+  background: #080d13;
+}
+
+.static-image-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .v30-group-nav {
   display: none;
   gap: 0;
