@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=flat-prf-static-pngs-20260708">
+    <link rel="stylesheet" href="styles.css?v=live-point-target-prf-20260708">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
-    <script defer src="model.js?v=live-trace-removal-prf-20260708"></script>
-    <script defer src="app.js?v=prf-graphs-only-20260708"></script>
+    <script defer src="model.js?v=live-point-target-prf-20260708"></script>
+    <script defer src="app.js?v=live-point-target-prf-20260708"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -262,33 +262,27 @@
           <div id="folding-controls" class="control-grid"></div>
         </section>
         <div id="folding-charts" class="chart-grid"></div>
-        <section class="folding-static-section">
+        <section class="folding-live-section">
           <div class="v30-section-heading">
-            <p class="section-kicker">Static point-target visual checks</p>
+            <p class="section-kicker">Live point-target visual checks</p>
             <h3>Flat PRF folding graphs</h3>
           </div>
-          <div class="chart-grid static-chart-grid">
+          <div class="chart-grid live-prf-grid">
             <article class="chart-card">
               <div class="chart-title-row">
                 <div>
                   <h3>Bad PRF Zero-Doppler Clutter Overlap</h3>
                 </div>
-                <span class="chart-source">PNG simulation</span>
               </div>
-              <figure class="chart-frame static-image-frame">
-                <img src="assets/bad_prf_zero_doppler_clutter_graph.png?v=20260708" alt="Bad PRF graph showing folded surface clutter peaking on the 6 kilometer nadir target depth line.">
-              </figure>
+              <div id="folding-zero-overlap-live" class="chart-frame live-prf-frame"></div>
             </article>
             <article class="chart-card">
               <div class="chart-title-row">
                 <div>
                   <h3>Flat Point-Target Doppler Folding Threshold</h3>
                 </div>
-                <span class="chart-source">PNG simulation</span>
               </div>
-              <figure class="chart-frame static-image-frame">
-                <img src="assets/flat_point_target_aliasing.png?v=20260708" alt="Flat point target Doppler folding graph showing no alias, current PRF aliasing, and first zero Doppler overlap panels.">
-              </figure>
+              <div id="folding-point-target-live" class="chart-frame live-prf-frame live-prf-triptych"></div>
             </article>
           </div>
         </section>

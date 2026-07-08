@@ -1061,6 +1061,85 @@
     return rows.map((row) => [row.label, row[key] == null ? null : round(row[key], digits)]);
   }
 
+  function surfaceDopplerForDepth(altitudeKm, depthKm, p) {
+    const iceIndex = Math.max(safeNumber(p.iceIndex, defaults.iceIndex, 0.1, 5), 0.1);
+    const rangeKm = altitudeKm + iceIndex * Math.max(depthKm, 0);
+    const offsetKm = Math.sqrt(Math.max(rangeKm ** 2 - altitudeKm ** 2, 0));
+    const sinTheta = rangeKm > 0 ? offsetKm / rangeKm : 0;
+    const speedMps = Math.max(safeNumber(p.speed, defaults.speed, 0, 40), 0) * 1000;
+    const wavelengthM = Math.max(safeNumber(p.wavelengthM, defaults.wavelengthM, 0.01, 100), 0.01);
+    return 2 * speedMps * sinTheta / wavelengthM;
+  }
+
+  function buildPointTargetVisual(p, currentBreakdown) {
+    const altitudeKm = safeNumber(p.z0, defaults.z0, 1, 3000);
+    const targetDepthKm = safeNumber(p.targetDepthM, defaults.targetDepthM, 1, 50000) / 1000;
+    const iceIndex = Math.max(safeNumber(p.iceIndex, defaults.iceIndex, 0.1, 5), 0.1);
+    const speedKmS = safeNumber(p.speed, defaults.speed, 0, 40);
+    const wavelengthM = Math.max(safeNumber(p.wavelengthM, defaults.wavelengthM, 0.01, 100), 0.01);
+    const maxDepthKm = Math.max(10, targetDepthKm * 1.65);
+    const currentPrfHz = Math.max(currentBreakdown.effectivePrfHz, 1);
+    const zeroPrfHz = Math.max(currentBreakdown.firstZeroFoldPrfHz, 1);
+    const highPrfHz = Math.max(4000, currentBreakdown.flatAliasThresholdPrfHz * 1.35);
+    const zeroBinWidthHz = Math.max(8, zeroPrfHz / 160);
+    const depths = [];
+
+    for (let i = 0; i <= 240; i += 1) {
+      depths.push(maxDepthKm * i / 240);
+    }
+    depths.push(targetDepthKm);
+    depths.sort((a, b) => a - b);
+
+    let lastDepth = null;
+    const uniqueDepths = depths.filter((depth) => {
+      if (lastDepth !== null && Math.abs(depth - lastDepth) < 1e-6) return false;
+      lastDepth = depth;
+      return true;
+    });
+
+    const rows = uniqueDepths.map((depthKm) => {
+      const positiveDopplerHz = surfaceDopplerForDepth(altitudeKm, depthKm, p);
+      const zeroAliasHz = aliasFrequency(positiveDopplerHz, zeroPrfHz);
+      const zeroOverlapPower = Math.exp(-0.5 * (Math.abs(zeroAliasHz) / zeroBinWidthHz) ** 2);
+      return {
+        depthKm: round(depthKm, 4),
+        positiveDopplerHz: round(positiveDopplerHz, 4),
+        negativeDopplerHz: round(-positiveDopplerHz, 4),
+        highAliasPositiveHz: round(aliasFrequency(positiveDopplerHz, highPrfHz), 4),
+        highAliasNegativeHz: round(aliasFrequency(-positiveDopplerHz, highPrfHz), 4),
+        currentAliasPositiveHz: round(aliasFrequency(positiveDopplerHz, currentPrfHz), 4),
+        currentAliasNegativeHz: round(aliasFrequency(-positiveDopplerHz, currentPrfHz), 4),
+        zeroAliasPositiveHz: round(zeroAliasHz, 4),
+        zeroAliasNegativeHz: round(aliasFrequency(-positiveDopplerHz, zeroPrfHz), 4),
+        zeroOverlapPower: round(zeroOverlapPower, 6)
+      };
+    });
+
+    const maxPower = Math.max(...rows.map((row) => row.zeroOverlapPower), 1e-6);
+    rows.forEach((row) => {
+      row.zeroOverlapPower = round(row.zeroOverlapPower / maxPower, 6);
+    });
+
+    return {
+      altitudeKm: round(altitudeKm, 4),
+      targetDepthKm: round(targetDepthKm, 4),
+      iceIndex: round(iceIndex, 4),
+      speedKmS: round(speedKmS, 4),
+      wavelengthM: round(wavelengthM, 4),
+      maxDepthKm: round(maxDepthKm, 4),
+      highPrfHz: round(highPrfHz, 4),
+      currentPrfHz: round(currentPrfHz, 4),
+      zeroPrfHz: round(zeroPrfHz, 4),
+      aliasStartPrfHz: round(currentBreakdown.flatAliasThresholdPrfHz, 4),
+      sameDelayDopplerHz: round(currentBreakdown.maxDopplerShiftHz, 4),
+      currentSameDelayAliasHz: round(currentBreakdown.aliasAtEffectivePrfHz, 4),
+      surfaceOffsetKm: round(currentBreakdown.targetDelayOffsetKm, 4),
+      lookAngleDeg: round(currentBreakdown.delayClutterAngleDeg, 4),
+      zeroBinWidthHz: round(zeroBinWidthHz, 4),
+      rows
+    };
+  }
+
   function verticalPrfLine(prfHz, yMax) {
     return [[round(prfHz, 3), 0], [round(prfHz, 3), round(yMax, 3)]];
   }
@@ -1238,6 +1317,7 @@
         ],
         charts: []
       },
+      livePointTarget: buildPointTargetVisual(p, currentBreakdown),
       preview: {
         xMin: p.xMin,
         xMax: p.xMax,

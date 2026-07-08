@@ -1209,7 +1209,165 @@
   function renderFolding() {
     if (!foldingData) return;
     renderChartSet(foldingData.charts || [], 'folding-charts', null, { compact: true });
+    renderLivePrfFigures();
     renderAudit();
+  }
+
+  function renderLivePrfFigures() {
+    const visual = foldingData.livePointTarget;
+    if (!visual) return;
+    renderLiveZeroOverlap(visual);
+    renderLivePointTargetFolding(visual);
+  }
+
+  function livePrfPath(rows, xKey, yKey, sx, sy, maxJumpPx = Infinity) {
+    let path = '';
+    let active = false;
+    let lastX = null;
+    rows.forEach((row) => {
+      const rawX = row[xKey];
+      const rawY = row[yKey];
+      if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) {
+        active = false;
+        lastX = null;
+        return;
+      }
+      const x = sx(rawX);
+      const y = sy(rawY);
+      if (lastX !== null && Math.abs(x - lastX) > maxJumpPx) active = false;
+      path += `${active ? 'L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)} `;
+      active = true;
+      lastX = x;
+    });
+    return path.trim();
+  }
+
+  function renderLiveZeroOverlap(visual) {
+    const target = document.getElementById('folding-zero-overlap-live');
+    if (!target || !visual.rows || !visual.rows.length) return;
+    const width = 980;
+    const height = 560;
+    const margin = { top: 42, right: 44, bottom: 68, left: 92 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const minDepth = Math.max(0, visual.targetDepthKm - 1.5);
+    const maxDepth = Math.min(visual.maxDepthKm, visual.targetDepthKm + 1.5);
+    const rows = visual.rows.filter((row) => row.depthKm >= minDepth && row.depthKm <= maxDepth);
+    const sx = (power) => margin.left + Math.max(0, Math.min(1.05, power)) / 1.05 * plotWidth;
+    const sy = (depth) => margin.top + ((depth - minDepth) / (maxDepth - minDepth || 1)) * plotHeight;
+    const targetY = sy(visual.targetDepthKm);
+    const peak = rows.reduce((best, row) => row.zeroOverlapPower > best.zeroOverlapPower ? row : best, rows[0]);
+
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Live bad PRF zero-Doppler clutter overlap graph">`;
+    svg += `<rect class="live-prf-bg" x="0" y="0" width="${width}" height="${height}"></rect>`;
+    svg += `<rect class="live-prf-plot" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    ticks(0, 1, 5).forEach((tick) => {
+      const x = sx(tick);
+      svg += `<line class="live-prf-grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
+      svg += `<text class="live-prf-axis" x="${x}" y="${height - margin.bottom + 24}" text-anchor="middle">${escapeHtml(formatValue(tick, 2))}</text>`;
+    });
+    ticks(minDepth, maxDepth, 7).forEach((tick) => {
+      const y = sy(tick);
+      svg += `<line class="live-prf-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+      svg += `<text class="live-prf-axis" x="${margin.left - 12}" y="${y + 4}" text-anchor="end">${escapeHtml(formatValue(tick, 1))}</text>`;
+    });
+    svg += `<rect class="live-prf-target-fill" x="${margin.left}" y="${targetY - 9}" width="${plotWidth}" height="18"></rect>`;
+    svg += `<line class="live-prf-target" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}"></line>`;
+    svg += `<path class="live-prf-clutter" d="${livePrfPath(rows, 'zeroOverlapPower', 'depthKm', sx, sy)}"></path>`;
+    svg += `<circle class="live-prf-marker" cx="${sx(peak.zeroOverlapPower)}" cy="${sy(peak.depthKm)}" r="7"></circle>`;
+    svg += `<text class="live-prf-label" x="${margin.left + 12}" y="${targetY - 13}">${escapeHtml(formatValue(visual.targetDepthKm, 1))} km target depth</text>`;
+    svg += `<text class="live-prf-label" x="${sx(peak.zeroOverlapPower) - 12}" y="${Math.max(margin.top + 18, sy(peak.depthKm) - 20)}" text-anchor="end">surface clutter peak</text>`;
+    svg += `<text class="live-prf-label" x="${margin.left + plotWidth / 2}" y="${height - 16}" text-anchor="middle">zero-Doppler surface clutter power</text>`;
+    svg += `<text class="live-prf-label" transform="translate(22 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent ice depth (km)</text>`;
+    svg += `<text class="live-prf-subtitle" x="${margin.left}" y="23">Live bad PRF = ${escapeHtml(formatValue(visual.zeroPrfHz, 2))} Hz; same-delay clutter folds onto zero Doppler.</text>`;
+    svg += '</svg>';
+    target.innerHTML = svg;
+  }
+
+  function renderLivePointTargetFolding(visual) {
+    const target = document.getElementById('folding-point-target-live');
+    if (!target || !visual.rows || !visual.rows.length) return;
+    const width = 1800;
+    const height = 760;
+    const margin = 44;
+    const gap = 34;
+    const panelTop = 34;
+    const panelHeight = 650;
+    const panelWidth = (width - margin * 2 - gap * 2) / 3;
+    const scenarios = [
+      {
+        title: `No alias: PRF ${formatValue(visual.highPrfHz, 0)} Hz`,
+        subtitle: 'surface curve stays at true Doppler',
+        prfHz: visual.highPrfHz,
+        positiveKey: 'highAliasPositiveHz',
+        negativeKey: 'highAliasNegativeHz'
+      },
+      {
+        title: `Current PRF: ${formatValue(visual.currentPrfHz, 0)} Hz`,
+        subtitle: 'same-delay surface aliases but misses zero',
+        prfHz: visual.currentPrfHz,
+        positiveKey: 'currentAliasPositiveHz',
+        negativeKey: 'currentAliasNegativeHz'
+      },
+      {
+        title: `First zero-overlap: PRF ${formatValue(visual.zeroPrfHz, 0)} Hz`,
+        subtitle: 'same-delay surface lands on the nadir echo',
+        prfHz: visual.zeroPrfHz,
+        positiveKey: 'zeroAliasPositiveHz',
+        negativeKey: 'zeroAliasNegativeHz'
+      }
+    ];
+    const targetRow = visual.rows.reduce((best, row) => (
+      Math.abs(row.depthKm - visual.targetDepthKm) < Math.abs(best.depthKm - visual.targetDepthKm) ? row : best
+    ), visual.rows[0]);
+
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Live flat point-target Doppler folding threshold graph">`;
+    svg += `<rect class="live-prf-bg" x="0" y="0" width="${width}" height="${height}"></rect>`;
+    scenarios.forEach((scenario, index) => {
+      const x0 = margin + index * (panelWidth + gap);
+      const x1 = x0 + panelWidth;
+      const y0 = panelTop;
+      const y1 = panelTop + panelHeight;
+      const plot = { left: x0 + 62, top: y0 + 72, right: x1 - 24, bottom: y1 - 58 };
+      const plotWidth = plot.right - plot.left;
+      const plotHeight = plot.bottom - plot.top;
+      const band = Math.max(scenario.prfHz / 2, 1);
+      const sx = (frequency) => plot.left + ((frequency + band) / (2 * band)) * plotWidth;
+      const sy = (depth) => plot.top + (Math.max(0, depth) / visual.maxDepthKm) * plotHeight;
+      const targetY = sy(visual.targetDepthKm);
+      const maxJump = plotWidth * 0.45;
+
+      svg += `<rect class="live-prf-panel" x="${x0}" y="${y0}" width="${panelWidth}" height="${panelHeight}" rx="7"></rect>`;
+      svg += `<text class="live-prf-title" x="${x0 + 18}" y="${y0 + 28}">${escapeHtml(scenario.title)}</text>`;
+      svg += `<text class="live-prf-subtitle" x="${x0 + 18}" y="${y0 + 50}">${escapeHtml(scenario.subtitle)}</text>`;
+      svg += `<rect class="live-prf-plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+      [-band, -band / 2, 0, band / 2, band].forEach((tick) => {
+        const x = sx(tick);
+        svg += `<line class="live-prf-grid-line" x1="${x}" y1="${plot.top}" x2="${x}" y2="${plot.bottom}"></line>`;
+      });
+      ticks(0, visual.maxDepthKm, 6).forEach((tick) => {
+        const y = sy(tick);
+        svg += `<line class="live-prf-grid-line" x1="${plot.left}" y1="${y}" x2="${plot.right}" y2="${y}"></line>`;
+        svg += `<text class="live-prf-axis" x="${plot.left - 9}" y="${y + 4}" text-anchor="end">${escapeHtml(formatValue(tick, 1))}</text>`;
+      });
+      [-band, 0, band].forEach((tick) => {
+        const x = sx(tick);
+        svg += `<text class="live-prf-axis" x="${x}" y="${plot.bottom + 20}" text-anchor="middle">${escapeHtml(formatAxisValue(tick))}</text>`;
+      });
+      svg += `<line class="live-prf-zero" x1="${sx(0)}" y1="${plot.top}" x2="${sx(0)}" y2="${plot.bottom}"></line>`;
+      svg += `<line class="live-prf-target" x1="${plot.left}" y1="${targetY}" x2="${plot.right}" y2="${targetY}"></line>`;
+      svg += `<path class="live-prf-negative" d="${livePrfPath(visual.rows, scenario.negativeKey, 'depthKm', sx, sy, maxJump)}"></path>`;
+      svg += `<path class="live-prf-positive" d="${livePrfPath(visual.rows, scenario.positiveKey, 'depthKm', sx, sy, maxJump)}"></path>`;
+      [targetRow[scenario.negativeKey], targetRow[scenario.positiveKey]].forEach((frequency) => {
+        svg += `<circle class="live-prf-marker" cx="${sx(frequency)}" cy="${targetY}" r="7"></circle>`;
+      });
+      svg += `<circle class="live-prf-nadir" cx="${sx(0)}" cy="${targetY}" r="7"></circle>`;
+      svg += `<text class="live-prf-label" x="${sx(0) + 10}" y="${targetY + 4}">nadir</text>`;
+      svg += `<text class="live-prf-label" x="${plot.left + plotWidth / 2}" y="${y1 - 16}" text-anchor="middle">folded Doppler frequency (Hz)</text>`;
+      svg += `<text class="live-prf-label" transform="translate(${x0 + 22} ${plot.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km)</text>`;
+    });
+    svg += '</svg>';
+    target.innerHTML = svg;
   }
 
   function renderFoldingPreview() {
