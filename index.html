@@ -8,7 +8,7 @@
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=live-trace-removal-prf-20260708"></script>
-    <script defer src="app.js?v=flat-prf-folding-twocharts-20260708"></script>
+    <script defer src="app.js?v=pages-prf-cleanup-20260708"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -251,44 +251,25 @@
             <h2>Surface clutter folding onto a nadir subsurface target</h2>
           </div>
         </div>
-        <p class="section-intro">This section is trying to show Dustin's question directly for a flat surface: when usable PRF falls below the Doppler Nyquist requirement, same-delay off-nadir surface clutter aliases into the sampled Doppler band. A second check shows when that aliased energy lands near the zero-Doppler/nadir bin.</p>
+        <p class="section-intro">Flat-surface PRF folding test: compare the usable PRF, alias threshold, and zero-Doppler overlap point.</p>
         <section class="panel live-panel">
           <div class="live-panel-heading">
             <div>
-              <h3>ClutterFold and Breakdown Controls</h3>
-              <p class="body-copy">These knobs generate a flat-surface, one-target plus surface-scatterer model and a speed stress test. The PRF test uses the surface ring that arrives at the same delay as the selected nadir subsurface target.</p>
+              <h3>Folding Controls</h3>
             </div>
             <button class="reset-button" type="button" id="reset-folding-model">Reset folding settings</button>
           </div>
           <div id="folding-controls" class="control-grid"></div>
         </section>
-        <section class="panel breakdown-panel">
-          <p class="section-kicker">Target-delay clutter stress test</p>
-          <h3>Flyby Speed PRF Breakdown Test</h3>
-          <p class="body-copy">This stress test increases flyby speed and geometry rate to find where the radar's effective PRF no longer satisfies the flat-surface Doppler Nyquist requirement. Below this margin, surface clutter aliases into the sampled band; near the zero-fold PRF it can overlap the nadir Doppler bin.</p>
-          <p class="body-copy">The main Doppler angle is not the nadir angle. At closest approach the true nadir Doppler can be near zero, but flat surface clutter with the same delay as a deep target can come from far off-nadir.</p>
-          <p class="body-copy">The failure is not only "cannot update PRF fast enough." The required PRF exceeds the usable PRF window, or the PRF schedule cannot adapt within the current dwell/CPI.</p>
-        </section>
         <div id="folding-breakdown-metric-grid" class="metric-grid breakdown-metric-grid"></div>
         <section class="panel">
-          <h3>Computed PRF Breakdown Outputs</h3>
+          <h3>PRF Breakdown Outputs</h3>
           <div id="folding-breakdown-output-table"></div>
-        </section>
-        <section class="panel breakdown-read-panel">
-          <h3>How to read this</h3>
-          <ul class="assumption-list breakdown-read-list">
-            <li>Start with PRF margin: above 1.25 is SAFE, 1.00 to 1.25 is WARNING, and below 1.00 is ALIASING/FOLDING RISK.</li>
-            <li>The speed where the margin crosses 1.0 is the simplified breakdown speed for the current altitude, target depth, wavelength, usable PRF, CPI, and safety factor.</li>
-            <li>The target-delay clutter angle is the flat off-nadir surface angle that has the same range delay as the selected subsurface target; this is the main Doppler geometry.</li>
-            <li>If the Doppler edge rises above the sampled half-band, the model expects surface clutter to alias into the sampled band instead of staying cleanly separated.</li>
-            <li>If the aliased Doppler lands near zero, the folded surface energy overlaps the nadir Doppler bin.</li>
-            <li>Read these outputs as a browser-side stress test only; they are not mission-validated Europa flight rules.</li>
-          </ul>
         </section>
         <div id="folding-metric-grid" class="metric-grid"></div>
         <div class="split-layout compact">
           <section class="panel">
-            <h3>Question Checklist</h3>
+            <h3>Key Answers</h3>
             <div id="folding-answer-table"></div>
           </section>
           <section class="panel">
@@ -296,44 +277,34 @@
             <div id="folding-condition-table"></div>
           </section>
         </div>
-        <section class="panel breakdown-read-panel">
-          <h3>Accuracy Drivers Added</h3>
-          <p class="body-copy">These are the extra data terms that make the model more useful for predicting what should happen. They improve the stress-test logic, but the page is still a simplified educational model rather than a mission radar processor.</p>
-          <div id="folding-accuracy-table"></div>
-        </section>
         <div id="folding-charts" class="chart-grid"></div>
         <section class="folding-static-section">
           <div class="v30-section-heading">
             <p class="section-kicker">Static point-target visual checks</p>
             <h3>Flat PRF folding graphs</h3>
-            <p class="body-copy">These two PNG outputs are fixed flat-surface checks for the bad-PRF overlap case and the PRF folding threshold geometry. The trace-removal false-layer check above is computed live from the current controls.</p>
           </div>
           <div class="chart-grid static-chart-grid">
             <article class="chart-card">
               <div class="chart-title-row">
                 <div>
                   <h3>Bad PRF Zero-Doppler Clutter Overlap</h3>
-                  <p class="chart-note">Standalone view showing surface clutter peaking at the 6 km nadir target depth when PRF is set to the first zero-overlap value.</p>
                 </div>
                 <span class="chart-source">PNG simulation</span>
               </div>
               <figure class="chart-frame static-image-frame">
                 <img src="assets/bad_prf_zero_doppler_clutter_graph.png?v=20260708" alt="Bad PRF graph showing folded surface clutter peaking on the 6 kilometer nadir target depth line.">
               </figure>
-              <p class="chart-explainer">Read this as the intentionally bad case: surface Doppler folds to zero Doppler, so flat-surface clutter can sit on top of the nadir subsurface echo.</p>
             </article>
             <article class="chart-card">
               <div class="chart-title-row">
                 <div>
                   <h3>Flat Point-Target Doppler Folding Threshold</h3>
-                  <p class="chart-note">Geometry view comparing high PRF, current PRF, and the first zero-overlap PRF for the flat same-delay surface scatterer.</p>
                 </div>
                 <span class="chart-source">PNG simulation</span>
               </div>
               <figure class="chart-frame static-image-frame">
                 <img src="assets/flat_point_target_aliasing.png?v=20260708" alt="Flat point target Doppler folding graph showing no alias, current PRF aliasing, and first zero Doppler overlap panels.">
               </figure>
-              <p class="chart-explainer">This separates two ideas: aliasing begins once the surface Doppler edge exceeds the sampled half-band, but exact nadir overlap happens at the first zero-fold PRF.</p>
             </article>
           </div>
         </section>
