@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css?v=flat-prf-static-pngs-20260708">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
-    <script defer src="model.js?v=flat-prf-folding-twocharts-20260708"></script>
+    <script defer src="model.js?v=live-trace-removal-prf-20260708"></script>
     <script defer src="app.js?v=flat-prf-folding-twocharts-20260708"></script>
   </head>
   <body>
@@ -306,7 +306,7 @@
           <div class="v30-section-heading">
             <p class="section-kicker">Static point-target visual checks</p>
             <h3>Flat PRF folding graphs</h3>
-            <p class="body-copy">These three PNG outputs are fixed flat-surface checks for the bad-PRF overlap case, the PRF folding threshold geometry, and the trace-removal false-layer case. They use the same simplified point-target assumptions as the folding stress test.</p>
+            <p class="body-copy">These two PNG outputs are fixed flat-surface checks for the bad-PRF overlap case and the PRF folding threshold geometry. The trace-removal false-layer check above is computed live from the current controls.</p>
           </div>
           <div class="chart-grid static-chart-grid">
             <article class="chart-card">
@@ -334,19 +334,6 @@
                 <img src="assets/flat_point_target_aliasing.png?v=20260708" alt="Flat point target Doppler folding graph showing no alias, current PRF aliasing, and first zero Doppler overlap panels.">
               </figure>
               <p class="chart-explainer">This separates two ideas: aliasing begins once the surface Doppler edge exceeds the sampled half-band, but exact nadir overlap happens at the first zero-fold PRF.</p>
-            </article>
-            <article class="chart-card">
-              <div class="chart-title-row">
-                <div>
-                  <h3>Trace Removal False-Layer Check</h3>
-                  <p class="chart-note">Clean comparison of all traces, every other trace, and every fourth trace with no added noise or cosmetic smoothing.</p>
-                </div>
-                <span class="chart-source">PNG simulation</span>
-              </div>
-              <figure class="chart-frame static-image-frame">
-                <img src="assets/trace_downsampling_false_layer_clean.png?v=20260708" alt="Trace removal simulation showing no false layer at high PRF or every other trace, and a yellow false layer at the bad PRF when every fourth trace is kept.">
-              </figure>
-              <p class="chart-explainer">This shows the professor's trace-removal point directly: lowering effective PRF can fold flat-surface clutter into the zero-Doppler slice where it looks like a subsurface layer.</p>
             </article>
           </div>
         </section>

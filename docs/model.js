@@ -782,7 +782,7 @@
 
   function aliasFrequency(frequencyHz, prfHz) {
     const prf = Math.max(prfHz, 1);
-    return ((frequencyHz + prf / 2) % prf) - prf / 2;
+    return ((((frequencyHz + prf / 2) % prf) + prf) % prf) - prf / 2;
   }
 
   function usablePrfLimit(p) {
@@ -1027,6 +1027,40 @@
     return rows.map((row) => [round(row.prf, 3), row[key] == null ? null : round(row[key], digits)]);
   }
 
+  function traceRemovalRows(mid, p) {
+    const dopplerEdgeHz = Math.max(Math.abs(mid.maxSurfaceDopplerHz || 0), 0);
+    const activeDoppler = dopplerEdgeHz > 1e-6;
+    const cpiSec = Math.max(safeNumber(p.cpiMs, defaults.cpiMs, 1, 2000), 1) / 1000;
+    const zeroBinWidthHz = Math.max(1 / cpiSec, 1e-6);
+    const basePrfHz = Math.max(4 * dopplerEdgeHz, 1);
+    return [
+      { label: 'All traces', keepEvery: 1 },
+      { label: 'Every 2nd trace', keepEvery: 2 },
+      { label: 'Every 4th trace', keepEvery: 4 }
+    ].map((item) => {
+      const prfHz = basePrfHz / item.keepEvery;
+      const aliasPlusHz = activeDoppler ? aliasFrequency(dopplerEdgeHz, prfHz) : 0;
+      const aliasMinusHz = activeDoppler ? aliasFrequency(-dopplerEdgeHz, prfHz) : 0;
+      const closestZeroHz = Math.min(Math.abs(aliasPlusHz), Math.abs(aliasMinusHz));
+      const zeroOverlapScore = activeDoppler ? 100 * Math.exp(-0.5 * (closestZeroHz / zeroBinWidthHz) ** 2) : 0;
+      return {
+        ...item,
+        prfHz,
+        sampledHalfBandHz: prfHz / 2,
+        aliasPlusHz,
+        aliasMinusHz,
+        closestZeroHz,
+        zeroOverlapScore,
+        zeroHz: 0,
+        zeroBinWidthHz
+      };
+    });
+  }
+
+  function tracePts(rows, key, digits = 6) {
+    return rows.map((row) => [row.label, row[key] == null ? null : round(row[key], digits)]);
+  }
+
   function verticalPrfLine(prfHz, yMax) {
     return [[round(prfHz, 3), 0], [round(prfHz, 3), round(yMax, 3)]];
   }
@@ -1042,6 +1076,7 @@
       mid.maxSurfaceDopplerHz,
       ...sweep.rows.map((row) => Math.abs(row.aliasAtPrfHz || 0))
     ) * 1.08;
+    const traceRows = traceRemovalRows(mid, p);
     return [
       chart('folding-flat-prf-threshold', 'Flat PRF Alias Threshold Sweep', 'Doppler frequency (Hz)', [
         { name: 'PRF/2 sampled half-band', points: prfPts(sweep.rows, 'sampledHalfBandHz', 3) },
@@ -1061,6 +1096,20 @@
       ], 'Shows where the flat-surface Doppler edge appears after PRF aliasing. Exact nadir-bin overlap happens near the first zero-Doppler fold PRF.', 'line', {
         xLabel: 'PRF (Hz)',
         formulaNote: 'Aliased Doppler is wrapped into [-PRF/2, +PRF/2] with ((fD + PRF/2) mod PRF) - PRF/2.'
+      }),
+      chart('folding-trace-removal-alias-landing', 'Trace Removal Alias Landing', 'Aliased Doppler (Hz)', [
+        { name: 'Aliased +Doppler edge', points: tracePts(traceRows, 'aliasPlusHz', 3) },
+        { name: 'Aliased -Doppler edge', points: tracePts(traceRows, 'aliasMinusHz', 3) },
+        { name: 'Zero Doppler reference', role: 'reference', points: tracePts(traceRows, 'zeroHz', 3) }
+      ], 'Live trace-removal check: the demonstration stream starts at PRF = 4 x |fD|, then keeping fewer traces lowers the effective PRF.', 'line', {
+        xLabel: 'Trace selection',
+        formulaNote: 'For this live trace-removal check: PRF_all = 4 x |fD|, PRF_keepN = PRF_all / N, and f_alias = ((+/-fD + PRF_keepN/2) mod PRF_keepN) - PRF_keepN/2.'
+      }),
+      chart('folding-trace-removal-false-layer-score', 'Trace Removal False-Layer Score', 'Zero-Doppler overlap (%)', [
+        { name: 'Surface clutter in zero-Doppler bin', points: tracePts(traceRows, 'zeroOverlapScore', 3) }
+      ], 'A high score means the same-delay flat-surface clutter aliases into the zero-Doppler bin where a nadir subsurface target would be read.', 'bar', {
+        xLabel: 'Trace selection',
+        formulaNote: 'Score = exp(-0.5 x (closestZeroHz / deltaF)^2) x 100, where closestZeroHz = min(|alias(+fD)|, |alias(-fD)|) and deltaF = 1 / CPI_seconds.'
       })
     ];
   }
