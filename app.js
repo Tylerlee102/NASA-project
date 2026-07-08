@@ -332,77 +332,23 @@
   }
 
   const CHART_EXPLANATIONS = {
-    'folding-prf-budget': {
-      question: 'Is the allowed PRF high enough to sample the full surface Doppler bandwidth?',
-      xAxis: 'Along-track position (km): location during the synthetic flyby.',
-      yAxis: 'Frequency (Hz): PRF values and Doppler sampling requirements in cycles per second.',
-      series: 'Required PRF is twice the modeled surface Doppler edge. Pulse/listen-time limited PRF is the fastest rate allowed by pulse length plus echo travel time. Effective PRF is the actual rate after the command cap.',
-      notice: (chart) => `${dominanceSentence(chart, 'Required PRF', 'Effective PRF', 'The required PRF', 'the effective PRF')} ${seriesRangeSentence(chart, 'Pulse/listen-time limited PRF')}`,
-      takeaway: 'Where the required PRF rises above the effective PRF, Doppler aliasing is expected.',
-      whyItMatters: 'This is the exact PRF-vs-Nyquist check Dustin described before asking how bad the folding becomes.'
+    'folding-flat-prf-threshold': {
+      question: 'For the current flat-surface midpoint case, what PRF prevents Doppler aliasing?',
+      xAxis: 'PRF (Hz): trial pulse repetition frequency.',
+      yAxis: 'Doppler frequency (Hz): sampled PRF/2 half-band compared with the flat same-delay Doppler edge.',
+      series: 'PRF/2 is the sampled Doppler half-band. The flat same-delay Doppler edge is the clutter edge for the selected target depth. Vertical markers show current effective PRF, the no-padding alias threshold, and the safety-factor target.',
+      notice: (chart) => `${dominanceSentence(chart, 'Flat same-delay Doppler edge', 'PRF/2 sampled half-band', 'The flat Doppler edge', 'the sampled half-band')} ${seriesRangeSentence(chart, 'Current effective PRF')}`,
+      takeaway: 'Aliasing begins when PRF/2 is below the flat same-delay Doppler edge.',
+      whyItMatters: 'This is the clean flat-surface version of the whiteboard PRF threshold question.'
     },
-    'folding-doppler-band': {
-      question: 'Does the surface Doppler bandwidth fit inside the sampled PRF half-band?',
-      xAxis: 'Along-track position (km): location during the synthetic flyby.',
-      yAxis: 'Doppler frequency (Hz): surface Doppler edge compared with PRF/2.',
-      series: 'The surface Doppler edge is the maximum clutter Doppler within the receive window. The sampled half-band is the unaliased Doppler range set by PRF.',
-      notice: (chart) => dominanceSentence(chart, 'Surface Doppler edge', 'Sampled Nyquist half-band', 'The surface Doppler edge', 'the sampled half-band'),
-      takeaway: 'If the surface Doppler edge exceeds PRF/2, some surface clutter folds back into the sampled Doppler band.',
-      whyItMatters: 'Folded clutter can land in a low-Doppler bin that looks like nadir subsurface signal.'
-    },
-    'folding-depth': {
-      question: 'At what apparent depth does zero-Doppler folded surface clutter land?',
-      xAxis: 'Along-track position (km): location during the synthetic flyby.',
-      yAxis: 'Depth below surface (m): range delay converted into a depth-like value.',
-      series: 'The target line is the real nadir subsurface point. The folded clutter line shows the closest surface-clutter fold. The upper/lower lines show a simple pulse-length depth window.',
-      notice: (chart) => `${seriesRangeSentence(chart, 'Nearest folded surface-clutter depth')} ${pairedDifferenceSentence(chart, 'Nearest folded surface-clutter depth', 'Nadir subsurface target depth', 'Folded clutter minus target depth')}`,
-      takeaway: 'Folding is most dangerous when the folded clutter depth sits inside the pulse window around the target.',
-      whyItMatters: 'This turns the aliasing question into a depth-contamination question.'
-    },
-    'folding-risk': {
-      question: 'How severe is the overlap between folded clutter and the target window?',
-      xAxis: 'Along-track position (km): location during the synthetic flyby.',
-      yAxis: 'Risk score (%): a 0-100 proxy from PRF deficit, surface scattering, and depth overlap.',
-      series: 'Folded clutter overlap risk combines whether aliasing exists and whether a fold lands near the target. Nyquist deficit proxy shows how far below the sampling condition the PRF is.',
-      notice: (chart) => `${seriesRangeSentence(chart, 'Folded clutter overlap risk')} ${thresholdSentence(chart, 'Folded clutter overlap risk', 25, 'Moderate-or-higher folding risk')}`,
-      takeaway: 'Higher risk means surface clutter is more likely to contaminate the selected subsurface depth.',
-      whyItMatters: 'This answers the practical "how bad is it?" question for the current knobs.'
-    },
-    'folding-clutter-strength': {
-      question: 'If folding happens, is the folded surface clutter bright enough to compete with the target?',
-      xAxis: 'Along-track position (km): location during the synthetic flyby.',
-      yAxis: 'Relative power (dB): simplified clutter and target power proxies.',
-      series: 'Surface clutter before folding is the base surface scattering plus dirty-ice boost. Folded surface clutter proxy applies the modeled folding/risk loss. Nadir target signal proxy is the single target reference.',
-      notice: (chart) => `${seriesRangeSentence(chart, 'Folded surface clutter proxy')} ${dominanceSentence(chart, 'Folded surface clutter proxy', 'Nadir target signal proxy', 'Folded clutter', 'the nadir target')}`,
-      takeaway: 'Dirty or rough ice does not set the Nyquist limit, but it can make folded clutter more dangerous after aliasing starts.',
-      whyItMatters: 'This connects your original dirty-ice idea to Dustin\'s PRF folding question without making dirty ice the cause of Doppler aliasing.'
-    },
-    'folding-speed-required-prf': {
-      question: 'At what flyby speed does the required PRF overtake the usable PRF?',
-      xAxis: 'Flyby speed (km/s): speed swept through the simplified flyby stress test.',
-      yAxis: 'PRF (Hz): required Doppler sampling PRF compared with effective usable PRF.',
-      series: 'Required PRF rises with speed. Effective usable PRF is limited by the max usable PRF, pulse/listen timing, and a simplified dwell/CPI schedule guard.',
-      notice: (chart) => dominanceSentence(chart, 'Required PRF', 'Effective usable PRF', 'The required PRF', 'the effective usable PRF'),
-      takeaway: 'The breakdown point is where the required PRF crosses above the effective usable PRF.',
-      whyItMatters: 'Above that crossing, the model expects Doppler aliasing or folding risk.'
-    },
-    'folding-speed-margin': {
-      question: 'How much PRF headroom remains as speed increases?',
-      xAxis: 'Flyby speed (km/s): speed swept through the simplified flyby stress test.',
-      yAxis: 'PRF margin (ratio): effective usable PRF divided by required PRF.',
-      series: 'The margin line should stay above the 1.25 safe threshold. The 1.0 line is the aliasing threshold.',
-      notice: (chart) => `${thresholdSentence(chart, 'PRF margin = effective / required', 1, 'Aliasing threshold')} ${thresholdSentence(chart, 'PRF margin = effective / required', 1.25, 'Safe threshold')}`,
-      takeaway: 'Margin below 1.0 means the required PRF exceeds the usable PRF window.',
-      whyItMatters: 'This is the easiest graph for visually testing when the flyby becomes too fast for the current PRF assumptions.'
-    },
-    'folding-bandwidth-half-band': {
-      question: 'Does the Doppler edge fit inside the sampled half-band?',
-      xAxis: 'Flyby speed (km/s): speed swept through the simplified flyby stress test.',
-      yAxis: 'Doppler frequency (Hz): one-sided Doppler edge compared with sampled PRF/2.',
-      series: 'Max Doppler edge grows with speed. Sampled half-band is effective usable PRF divided by 2.',
-      notice: (chart) => dominanceSentence(chart, 'Max Doppler edge', 'Sampled half-band', 'The Doppler edge', 'the sampled half-band'),
-      takeaway: 'When the Doppler edge is above the half-band, clutter cannot be sampled cleanly without aliasing.',
-      whyItMatters: 'This makes the Nyquist failure visible in Doppler units.'
+    'folding-flat-alias-landing': {
+      question: 'After aliasing, where does the flat-surface Doppler edge land?',
+      xAxis: 'PRF (Hz): trial pulse repetition frequency.',
+      yAxis: 'Aliased Doppler (Hz): apparent Doppler after wrapping into the sampled PRF band.',
+      series: 'The aliased +Doppler edge wraps into the sampled band. The zero reference marks the nadir Doppler bin. Vertical markers show the current effective PRF and the first zero-Doppler fold PRF.',
+      notice: (chart) => `${seriesRangeSentence(chart, 'Aliased +Doppler edge')} ${thresholdSentence(chart, 'Aliased +Doppler edge', 0, 'Zero Doppler reference')}`,
+      takeaway: 'Alias does not always mean nadir overlap; exact zero-Doppler overlap happens near the first zero-fold PRF.',
+      whyItMatters: 'This separates "the frequency is aliased" from "the aliased energy lands on the nadir bin."'
     },
     'Surface Height: Off-Nadir Target vs Nadir Reference Terrain': {
       question: 'Do the side-looking target terrain and the nadir reference terrain differ enough to bias the radar range?',
@@ -854,7 +800,7 @@
   }
 
   function controlGroup(key) {
-    if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth', 'lookAngleDeg', 'roughnessSpreadDeg'].includes(key)) return 'Geometry';
+    if (['z0', 'y', 'deltaZEdge', 'topographyOn', 'terrainSeed', 'ridgeHeight', 'craterDepth'].includes(key)) return 'Geometry';
     if (['speed', 'prfCapHz', 'maxUsablePrfHz', 'wavelengthM', 'prfUpdateIntervalMs', 'cpiMs', 'safetyFactor', 'listenGuardUs', 'receiverDeadTimeUs'].includes(key)) return 'PRF / Doppler';
     if (['nominalIceShell', 'targetDepthM', 'lensMeanDepth', 'boundaryUncertainty', 'dirtyIceLevel', 'surfaceClutterLevel', 'targetSignalDb', 'dirtyIceClutterBoostDb'].includes(key)) return 'Subsurface';
     if (['falseLayerEnabled', 'falseLayerCount', 'falseLayerDepthFraction', 'falseLayerStrength', 'receiverAmbiguityDb'].includes(key)) return 'False layer';
@@ -1272,7 +1218,6 @@
       { key: 'unit', label: 'Unit' },
       { key: 'meaning', label: 'Meaning' }
     ]);
-    renderChartSet(breakdown.charts || [], 'folding-breakdown-charts');
     renderTable('folding-answer-table', foldingData.answers || [], [
       { key: 'question', label: 'Question' },
       { key: 'answer', label: 'Current model answer' }
@@ -1287,7 +1232,6 @@
       { key: 'added', label: 'Controls / outputs' },
       { key: 'effect', label: 'Why it improves the prediction' }
     ]);
-    renderFoldingPreview();
     renderChartSet(foldingData.charts || [], 'folding-charts');
     renderAudit();
   }
@@ -1398,12 +1342,7 @@
       const signature = seriesSignature(series);
       if (seenSeries.has(signature)) {
         const duplicateOf = seenSeries.get(signature);
-        const expectedPrfLimitDuplicate = chart.id === 'folding-prf-budget'
-          && /effective prf/i.test(series.name || '')
-          && /pulse\/listen-time limited prf/i.test(duplicateOf || '');
-        if (!expectedPrfLimitDuplicate) {
-          findings.push({ level: 'serious', message: `${series.name || 'Series'} duplicates ${duplicateOf}` });
-        }
+        findings.push({ level: 'serious', message: `${series.name || 'Series'} duplicates ${duplicateOf}` });
       } else {
         seenSeries.set(signature, series.name || 'another series');
       }
@@ -1517,6 +1456,7 @@
     const text = `${chart.title} ${chart.yLabel}`.toLowerCase();
     if (text.includes('decision code')) return 'Decision code: 0 means weak/no lock, 1 means ocean likely, 2 means ambiguous, and 3 means the false layer is selected.';
     if (text.includes('false layer') || text.includes('picked boundary')) return 'Use this to see whether the receiver follows the true ocean boundary or gets pulled to an internal false reflector.';
+    if (text.includes('prf') || text.includes('alias') || text.includes('folding') || text.includes('folded clutter') || text.includes('sampled half-band') || text.includes('same-delay') || text.includes('zero-doppler')) return 'Use this to compare the flat-surface Doppler edge, PRF half-band, alias threshold, and zero-Doppler fold behavior.';
     if (text.includes('delay')) return 'Read as round-trip timing: larger values mean longer extra path or deeper in-ice travel time.';
     if (text.includes('doppler')) return 'Compare angle or depth curves; residual error is expected because the live correction includes a small deterministic angle offset.';
     if (text.includes('margin') || text.includes('threshold')) return 'Values above the zero reference are easier to detect in this simplified threshold model.';
@@ -1705,11 +1645,14 @@
     } else {
       prepared.series.forEach((series, index) => {
         const path = linePath(series.points, sx, sy);
+        const isReference = series.role === 'reference';
         if (path) {
-          svg += `<path d="${path}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>`;
+          const dash = isReference ? ' stroke-dasharray="6 5" opacity="0.78"' : '';
+          const strokeWidth = isReference ? 1.7 : 2.2;
+          svg += `<path d="${path}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"${dash}></path>`;
         }
         const finiteSeriesPoints = series.points.filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
-        const markerSeries = finiteSeriesPoints.length <= 20 || /selected|setting|residual/i.test(series.name);
+        const markerSeries = !isReference && (finiteSeriesPoints.length <= 20 || /selected|setting|residual/i.test(series.name));
         if (markerSeries) {
           finiteSeriesPoints.forEach((point) => {
             svg += `<circle class="series-marker" cx="${sx(point[0])}" cy="${sy(point[1])}" r="4" fill="${colors[index % colors.length]}"></circle>`;
