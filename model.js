@@ -1326,6 +1326,118 @@
     };
   }
 
+  function traceDecimationStatus(effectivePrfHz, minSafePrfHz, rawAliasThresholdHz) {
+    if (effectivePrfHz >= minSafePrfHz) return 'clean';
+    if (effectivePrfHz >= rawAliasThresholdHz) return 'margin gone';
+    return 'folding blur';
+  }
+
+  function traceKeepName(keepEvery) {
+    return keepEvery === 1 ? 'keep all' : `keep every ${keepEvery}${keepEvery === 2 ? 'nd' : keepEvery === 3 ? 'rd' : 'th'}`;
+  }
+
+  function buildTraceDecimationBlurRecreation(p) {
+    const bands = reasonBands();
+    const hf = bands.find((band) => band.id === 'hf');
+    const vhf = bands.find((band) => band.id === 'vhf');
+    const selectedDepthM = safeNumber(p.targetDepthM, defaults.targetDepthM, 1000, 30000);
+    const maxSweepDepthM = 30000;
+    const cases = [
+      {
+        id: 'hf-selected-target',
+        title: 'HF selected target',
+        band: hf,
+        depthLabel: `${round(selectedDepthM / 1000, 2)} km`,
+        keepEveryValues: [1, 2, 3, 4, 5, 6],
+        window: prfWindowAtDepth(p, hf, selectedDepthM)
+      },
+      {
+        id: 'hf-full-depth',
+        title: 'HF full-depth sweep',
+        band: hf,
+        depthLabel: '0-30 km',
+        keepEveryValues: [1, 2, 3, 4],
+        window: prfWindowForDepthSweep(p, hf, maxSweepDepthM)
+      },
+      {
+        id: 'vhf-shallow-edge',
+        title: 'VHF shallow edge',
+        band: vhf,
+        depthLabel: '2.25 km',
+        keepEveryValues: [1, 2, 3, 4],
+        window: prfWindowAtDepth(p, vhf, 2250)
+      },
+      {
+        id: 'vhf-selected-target',
+        title: 'VHF selected target',
+        band: vhf,
+        depthLabel: `${round(selectedDepthM / 1000, 2)} km`,
+        keepEveryValues: [1, 2, 3, 4],
+        window: prfWindowAtDepth(p, vhf, selectedDepthM)
+      }
+    ];
+
+    return {
+      altitudeKm: round(safeNumber(p.z0, defaults.z0, 1, 3000), 4),
+      speedKmS: round(safeNumber(p.speed, defaults.speed, 0, 40), 4),
+      iceIndex: round(safeNumber(p.iceIndex, defaults.iceIndex, 0.1, 5), 4),
+      pulseUs: round(safeNumber(p.pulseLengthUs, defaults.pulseLengthUs, 0, 10000), 4),
+      guardDeadUs: round(
+        safeNumber(p.listenGuardUs, defaults.listenGuardUs, 0, 1000) +
+        safeNumber(p.receiverDeadTimeUs, defaults.receiverDeadTimeUs, 0, 1000),
+        4
+      ),
+      safetyFactor: round(safeNumber(p.safetyFactor, defaults.safetyFactor, 1, 4), 4),
+      cases: cases.map((caseSpec) => {
+        const prfWindow = caseSpec.window;
+        const rawAliasThresholdHz = prfWindow.minPrfHz / Math.max(safeNumber(p.safetyFactor, defaults.safetyFactor, 1, 4), 1);
+        const rows = caseSpec.keepEveryValues.map((keepEvery) => {
+          const effectivePrfHz = prfWindow.maxPrfHz / keepEvery;
+          const status = traceDecimationStatus(effectivePrfHz, prfWindow.minPrfHz, rawAliasThresholdHz);
+          const aliasLandingHz = aliasFrequency(prfWindow.dopplerEdgeHz, effectivePrfHz);
+          return {
+            keepEvery,
+            keepLabel: keepEvery === 1 ? 'all' : `${keepEvery}x`,
+            keepName: traceKeepName(keepEvery),
+            removedPercent: round(100 * (1 - 1 / keepEvery), 4),
+            effectivePrfHz: round(effectivePrfHz, 4),
+            alongTrackSpacingM: round(safeNumber(p.speed, defaults.speed, 0, 40) * 1000 / Math.max(effectivePrfHz, 1), 4),
+            aliasLandingHz: round(aliasLandingHz, 4),
+            zeroFoldGapHz: round(Math.abs(aliasLandingHz), 4),
+            status
+          };
+        });
+        const lastClean = rows.filter((row) => row.status === 'clean').pop() || null;
+        const firstMarginGone = rows.find((row) => row.status === 'margin gone') || null;
+        const firstBlur = rows.find((row) => row.status === 'folding blur') || null;
+        let takeaway = 'All shown trace selections remain clean.';
+        if (firstBlur && firstBlur.keepEvery === 1) {
+          takeaway = 'Already folding with all traces under this timing window.';
+        } else if (firstBlur) {
+          takeaway = `Folding blur starts at ${firstBlur.keepName}.`;
+        } else if (firstMarginGone) {
+          takeaway = `Safety margin first disappears at ${firstMarginGone.keepName}.`;
+        }
+        return {
+          id: caseSpec.id,
+          title: caseSpec.title,
+          band: caseSpec.band,
+          depthLabel: caseSpec.depthLabel,
+          basePrfHz: round(prfWindow.maxPrfHz, 4),
+          minSafePrfHz: round(prfWindow.minPrfHz, 4),
+          rawAliasThresholdHz: round(rawAliasThresholdHz, 4),
+          dopplerEdgeHz: round(prfWindow.dopplerEdgeHz, 4),
+          windowUsableBeforeRemoval: prfWindow.usable,
+          lastCleanKeepEvery: lastClean ? lastClean.keepEvery : null,
+          firstMarginGoneKeepEvery: firstMarginGone ? firstMarginGone.keepEvery : null,
+          firstBlurKeepEvery: firstBlur ? firstBlur.keepEvery : null,
+          takeaway,
+          rows
+        };
+      })
+    };
+  }
+
   function riskLabel(value) {
     if (value >= 60) return 'High';
     if (value >= 25) return 'Moderate';
@@ -1452,6 +1564,7 @@
       },
       livePointTarget: buildPointTargetVisual(p, currentBreakdown),
       traceRemovalUsability: buildTraceRemovalUsability(p),
+      traceDecimationBlur: buildTraceDecimationBlurRecreation(p),
       preview: {
         xMin: p.xMin,
         xMax: p.xMax,

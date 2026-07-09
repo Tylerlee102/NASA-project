@@ -190,6 +190,13 @@
         'folding-point-target',
         'folding-trace-removal'
       ]
+    },
+    {
+      id: 'folding-reason-trace-decimation',
+      kicker: 'NASA/REASON-like trace decimation',
+      title: 'HF/VHF PRF blur recreation',
+      description: 'Recreates the trace-removal failure mode with HF 9 MHz, VHF 60 MHz, and the 0-30 km sounding target as a live browser model.',
+      kind: 'reason-blur'
     }
   ];
   let activeV30GroupId = null;
@@ -1343,6 +1350,8 @@
         ${chartTarget}
         <div id="folding-trace-usability" class="trace-usability-grid"></div>
       `;
+    } else if (group.kind === 'reason-blur') {
+      bodyMarkup = '<div id="folding-reason-blur" class="reason-blur-section"></div>';
     }
     return `
       <section class="v30-chart-section folding-chart-section" id="${escapeHtml(group.id)}">
@@ -1401,6 +1410,7 @@
       renderLivePointTargetSummary(visual);
     }
     renderTraceRemovalUsability(foldingData.traceRemovalUsability);
+    renderTraceDecimationBlur(foldingData.traceDecimationBlur);
   }
 
   function livePrfPath(rows, xKey, yKey, sx, sy, maxJumpPx = Infinity) {
@@ -1649,6 +1659,125 @@
       `Alias begins below PRF=${formatValue(visual.aliasStartPrfHz, 2)} Hz. Exact first zero-Doppler overlap is PRF=${formatValue(visual.zeroPrfHz, 2)} Hz.`,
       `Timing-limited current PRF=${formatValue(visual.currentPrfHz, 2)} Hz: surface clutter folds to +/-${formatValue(currentAliasAbs, 2)} Hz, so it aliases but does not land on the nadir point yet.`
     ].map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+  }
+
+  function reasonBlurStatusClass(status) {
+    if (status === 'clean') return 'clean';
+    if (status === 'margin gone') return 'margin';
+    return 'blur';
+  }
+
+  function reasonBlurStatusLabel(status) {
+    if (status === 'clean') return 'clean';
+    if (status === 'margin gone') return 'margin gone';
+    return 'folding blur';
+  }
+
+  function formatReasonNumber(value, digits = 1) {
+    if (!Number.isFinite(value)) return '';
+    return value.toLocaleString(undefined, { maximumFractionDigits: digits });
+  }
+
+  function renderReasonBlurCaseSvg(traceCase) {
+    const width = 760;
+    const height = 310;
+    const margin = { top: 24, right: 24, bottom: 58, left: 76 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const rows = traceCase.rows || [];
+    const yMax = Math.max(
+      traceCase.basePrfHz || 1,
+      traceCase.minSafePrfHz || 1,
+      traceCase.rawAliasThresholdHz || 1,
+      ...rows.map((row) => row.effectivePrfHz || 0),
+      1
+    ) * 1.16;
+    const sy = (value) => margin.top + plotHeight - Math.max(0, value) / yMax * plotHeight;
+    const slot = plotWidth / Math.max(rows.length, 1);
+    const barWidth = Math.max(22, slot * 0.48);
+    const safeY = sy(traceCase.minSafePrfHz || 0);
+    const rawY = sy(traceCase.rawAliasThresholdHz || 0);
+
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(traceCase.title)} PRF blur recreation">`;
+    svg += `<rect class="reason-blur-bg" x="0" y="0" width="${width}" height="${height}"></rect>`;
+    svg += `<rect class="reason-blur-plot" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    ticks(0, yMax, 5).forEach((tick) => {
+      const y = sy(tick);
+      svg += `<line class="live-prf-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+      svg += `<text class="live-prf-axis" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${escapeHtml(formatAxisValue(tick))}</text>`;
+    });
+    svg += `<line class="reason-safe-line" x1="${margin.left}" y1="${safeY}" x2="${width - margin.right}" y2="${safeY}"></line>`;
+    svg += `<line class="reason-raw-line" x1="${margin.left}" y1="${rawY}" x2="${width - margin.right}" y2="${rawY}"></line>`;
+    svg += `<text class="reason-safe-label" x="${width - margin.right - 6}" y="${Math.max(margin.top + 13, safeY - 7)}" text-anchor="end">safe floor</text>`;
+    svg += `<text class="reason-raw-label" x="${width - margin.right - 6}" y="${Math.min(height - margin.bottom - 7, rawY + 16)}" text-anchor="end">raw fold floor</text>`;
+
+    rows.forEach((row, index) => {
+      const centerX = margin.left + slot * (index + 0.5);
+      const barTop = sy(row.effectivePrfHz || 0);
+      const barHeight = Math.max(2, margin.top + plotHeight - barTop);
+      const statusClass = reasonBlurStatusClass(row.status);
+      svg += `<rect class="reason-bar reason-bar-${statusClass}" x="${centerX - barWidth / 2}" y="${barTop}" width="${barWidth}" height="${barHeight}" rx="4"></rect>`;
+      svg += `<text class="live-prf-axis" x="${centerX}" y="${height - margin.bottom + 21}" text-anchor="middle">${escapeHtml(row.keepLabel)}</text>`;
+    });
+    svg += `<text class="live-prf-label" x="${margin.left + plotWidth / 2}" y="${height - 12}" text-anchor="middle">trace selection</text>`;
+    svg += `<text class="live-prf-label" transform="translate(20 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">effective PRF (Hz)</text>`;
+    svg += '</svg>';
+    return svg;
+  }
+
+  function renderReasonBlurStrips(traceCase) {
+    return `
+      <div class="reason-blur-strips" aria-label="${escapeHtml(traceCase.title)} blur preview">
+        ${(traceCase.rows || []).map((row) => `
+          <div class="reason-blur-strip reason-blur-${escapeHtml(reasonBlurStatusClass(row.status))}">
+            <span>${escapeHtml(row.keepLabel)}</span>
+            <i></i>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderReasonBlurResultList(traceCase) {
+    const rows = traceCase.rows || [];
+    return `
+      <div class="reason-blur-result">
+        <strong>${escapeHtml(traceCase.takeaway)}</strong>
+        ${rows.map((row) => `
+          <span class="reason-result-${escapeHtml(reasonBlurStatusClass(row.status))}">
+            ${escapeHtml(row.keepName)}: ${escapeHtml(formatReasonNumber(row.effectivePrfHz, 1))} Hz, ${escapeHtml(formatReasonNumber(row.alongTrackSpacingM, 1))} m spacing, ${escapeHtml(reasonBlurStatusLabel(row.status))}
+          </span>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderTraceDecimationBlur(traceData) {
+    const target = document.getElementById('folding-reason-blur');
+    if (!target || !traceData || !traceData.cases) return;
+    target.innerHTML = `
+      <div class="reason-blur-note">
+        <strong>REASON-like recreation, not returned Europa data.</strong>
+        <span>HF 9 MHz, VHF 60 MHz, ${escapeHtml(formatValue(traceData.altitudeKm, 1))} km altitude, ${escapeHtml(formatValue(traceData.speedKmS, 1))} km/s, ${escapeHtml(formatValue(traceData.pulseUs, 0))} us pulse.</span>
+        <a href="https://science.nasa.gov/mission/europa-clipper/spacecraft-instruments-reason/" target="_blank" rel="noreferrer">NASA REASON source</a>
+      </div>
+      <div class="reason-blur-grid">
+        ${traceData.cases.map((traceCase) => `
+          <article class="chart-card reason-blur-card">
+            <div class="chart-title-row">
+              <div>
+                <h3>${escapeHtml(traceCase.title)}</h3>
+                <p class="chart-note">${escapeHtml(traceCase.band.name)} ${escapeHtml(formatValue(traceCase.band.frequencyMhz, 0))} MHz, depth ${escapeHtml(traceCase.depthLabel)}</p>
+              </div>
+              <span class="chart-source">Live JS model</span>
+            </div>
+            <div class="reason-blur-frame">${renderReasonBlurCaseSvg(traceCase)}</div>
+            ${renderReasonBlurStrips(traceCase)}
+            ${renderReasonBlurResultList(traceCase)}
+          </article>
+        `).join('')}
+      </div>
+    `;
   }
 
   function traceRemovalLabel(row) {
