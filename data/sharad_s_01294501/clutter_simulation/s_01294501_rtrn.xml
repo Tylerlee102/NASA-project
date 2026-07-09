@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1G00.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1G00_1920.sch" schematypens="http://purl.oclc.org/dsdl/schematron" ?>
+
+<Product_Observational
+    xmlns="http://pds.nasa.gov/pds4/pds/v1"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:geom="http://pds.nasa.gov/pds4/geom/v1"
+    xsi:schemaLocation=
+    "http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1G00.xsd
+    http://pds.nasa.gov/pds4/geom/v1 https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1G00_1920.xsd">
+    
+    <Identification_Area>
+        <logical_identifier>urn:nasa:pds:mro_sharad_simulations:data:s_01294501_rtrn</logical_identifier>
+        <version_id>1.0</version_id>
+        <title>SHARAD surface clutter simulation nadir and first return information</title>
+        <information_model_version>1.16.0.0</information_model_version>
+        <product_class>Product_Observational</product_class>
+        <Citation_Information>
+            <author_list>Christoffersen, M. S.; Holt, J. W.; Kempf, S. D.; O'Connell, J. D.</author_list>
+            <publication_year>2021</publication_year>
+            <description>Surface clutter simulations for SHARAD observations</description>
+        </Citation_Information>
+        <Modification_History>
+            <Modification_Detail>
+                <modification_date>2022-06-01</modification_date>
+                <version_id>1.0</version_id>
+                <description>Initial version.</description>
+            </Modification_Detail>
+        </Modification_History>
+    </Identification_Area>
+    
+    <Observation_Area>
+        <Time_Coordinates>
+            <start_date_time>2009-05-01T04:51:19.135Z</start_date_time>
+            <stop_date_time>2009-05-01T05:02:58.981Z</stop_date_time>
+        </Time_Coordinates>
+
+        <Investigation_Area>
+            <name>MARS RECONNAISSANCE ORBITER</name>
+            <type>Mission</type>
+            <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.mars_reconnaissance_orbiter</lid_reference>
+                <reference_type>data_to_investigation</reference_type>
+            </Internal_Reference>
+        </Investigation_Area>
+
+        <Observing_System>
+            <Observing_System_Component>
+                <name>MARS RECONNAISSANCE ORBITER</name>
+                <type>Host</type>
+                <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:instrument_host:spacecraft.mro</lid_reference>
+                    <reference_type>is_instrument_host</reference_type>
+                </Internal_Reference>
+            </Observing_System_Component>
+            <Observing_System_Component>
+                <name>SHALLOW RADAR for MRO</name>
+                <type>Instrument</type>
+                <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:instrument:sharad.mro</lid_reference>
+                    <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
+            </Observing_System_Component>
+        </Observing_System>
+
+        <Target_Identification>
+            <name>Mars</name>
+            <type>Planet</type>
+            <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:target:planet.mars</lid_reference>
+                <reference_type>data_to_target</reference_type>
+            </Internal_Reference>
+        </Target_Identification>
+
+        <Discipline_Area>
+            <geom:Geometry>
+                <geom:Geometry_Orbiter>
+                    <geom:geometry_start_time_utc>2009-05-01T04:51:19.135Z</geom:geometry_start_time_utc>
+                    <geom:geometry_stop_time_utc>2009-05-01T05:02:58.981Z</geom:geometry_stop_time_utc>
+                    <geom:Surface_Geometry>
+                        <geom:Surface_Geometry_Start_Stop>
+                            <geom:start_subspacecraft_latitude unit="deg">69.886284</geom:start_subspacecraft_latitude>
+                            <geom:stop_subspacecraft_latitude unit="deg">73.015462</geom:stop_subspacecraft_latitude>
+                            <geom:start_subspacecraft_longitude unit="deg">167.11382</geom:start_subspacecraft_longitude>
+                            <geom:stop_subspacecraft_longitude unit="deg">359.88443</geom:stop_subspacecraft_longitude>
+                        </geom:Surface_Geometry_Start_Stop>
+                    </geom:Surface_Geometry>
+                </geom:Geometry_Orbiter>
+            </geom:Geometry>
+        </Discipline_Area>
+    </Observation_Area>
+    
+    <Reference_List>
+        <Internal_Reference>
+            <lid_reference>urn:nasa:pds:mro_sharad_simulations:browse:s_01294501_browse</lid_reference>
+            <reference_type>data_to_browse</reference_type>
+            <comment>Clutter simulation browse images.</comment>
+        </Internal_Reference>
+        <Internal_Reference>
+            <lid_reference>urn:nasa:pds:mro_sharad_simulations:data:s_01294501_sim</lid_reference>
+            <reference_type>data_to_associate</reference_type>
+            <comment>Surface clutter simulation.</comment>
+        </Internal_Reference>
+        <Internal_Reference>
+            <lid_reference>urn:nasa:pds:mro_sharad_simulations:data:s_01294501_emap</lid_reference>
+            <reference_type>data_to_associate</reference_type>
+            <comment>Echo power map.</comment>
+        </Internal_Reference>
+        <External_Reference>
+            <doi>10.1109/LGRS.2016.2581799</doi>
+            <reference_text>P. Choudhary, J. W. Holt and S. D. Kempf, "Surface Clutter and Echo Location Analysis for the Interpretation of SHARAD Data From Mars," in IEEE Geoscience and Remote Sensing Letters, vol. 13, no. 9, pp. 1285-1289, Sept. 2016, doi: 10.1109/LGRS.2016.2581799.</reference_text>
+            <description>Paper describing surface clutter simulation algorithm used to create this archive.</description>
+        </External_Reference>
+        <External_Reference>
+            <doi>10.1016/j.icarus.2017.09.023</doi>
+            <reference_text>N. E. Putzig, I. B. Smith, M. R. Perry, F. J. Foss, B. A. Campbell, R. J. Phillips, and R. Seu, "Three-dimensional radar imaging of structures and craters in the Martian polar caps," in Icarus, vol. 308, pp. 138-147, 2018, Mars Polar Science VI, doi: 10.1016/j.icarus.2017.09.023.</reference_text>
+            <description>Paper descrbing the topographic model of Mars used to create these surface clutter simulations</description>
+        </External_Reference>
+        <External_Reference>
+           <reference_text>MRO-M-SHARAD-5-RADARGRAM-V2.0:S_01294501_RGRAM</reference_text>
+           <description>The clutter simulation product is related to this PDS3 SHARAD radargram product and can be used to aid interpretation of the radargram.</description>
+        </External_Reference>
+        <Source_Product_External>
+            <external_source_product_identifier>MRO-M-SHARAD-5-RADARGRAM-V2.0:S_01294501_GEOM</external_source_product_identifier>
+            <reference_type>data_to_derived_source_product</reference_type> 
+            <curating_facility>PDS GEO</curating_facility>
+            <description>SHARAD radargram geom file</description>
+        </Source_Product_External>
+        <Source_Product_External>
+            <external_source_product_identifier>MGS-M-MOLA-5-MEGDR-L3-V1.0:MEGA90N000EB.IMG</external_source_product_identifier>
+            <reference_type>data_to_derived_source_product</reference_type>
+            <curating_facility>PDS GEO</curating_facility>
+            <description>Model of the Martian areoid used to vertically datum this simulation.</description>
+        </Source_Product_External>
+        <Source_Product_External>
+            <external_source_product_identifier>MRO-M-SPICE-6-V1.0</external_source_product_identifier>
+            <reference_type>data_to_derived_source_product</reference_type> 
+            <curating_facility>PDS NAIF</curating_facility>
+            <description>Mars Reconnaissance Orbiter SPICE data archive</description>
+        </Source_Product_External>
+    </Reference_List>
+    
+    <File_Area_Observational>
+        <File>
+            <file_name>s_01294501_rtrn.csv</file_name>
+            <creation_date_time>2022-07-08T05:51:51.930Z</creation_date_time>
+        </File>
+        <Header>
+            <offset unit="byte">0</offset>
+            <object_length unit="byte">121</object_length>
+            <parsing_standard_id>UTF-8 Text</parsing_standard_id>
+        </Header>
+        <Table_Delimited>
+            <offset unit="byte">139</offset>
+            <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+            <records>4719</records>
+            <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+            <field_delimiter>Comma</field_delimiter>
+            <Record_Delimited>
+                <fields>12</fields>
+                <groups>0</groups>
+                <Field_Delimited>
+                    <name>Column</name>
+                    <data_type>ASCII_Integer</data_type>
+                    <description>Radargram column</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>SpacecraftLon</name>
+                    <data_type>ASCII_Real</data_type>
+                    <unit>degree</unit>
+                    <description>Spacecraft longitude</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>SpacecraftLat</name>
+                    <data_type>ASCII_Real</data_type>
+                    <unit>degree</unit>
+                    <description>Spacecraft geodetic latitude on the Mars IAU2000 ellipsoid</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>SpacecraftHgt</name>
+                    <data_type>ASCII_Real</data_type>
+                    <unit>meter</unit>
+                    <description>Spacecraft height above the Mars IAU2000 ellipsoid</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>NadirHgt</name>
+                    <data_type>ASCII_Integer</data_type>
+                    <unit>meter</unit>
+                    <description>Height of the sub-spacecraft (nadir) point on the MOLA+SHARAD surface above the Mars IAU2000 ellipsoid</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>NadirLine</name>
+                    <data_type>ASCII_Integer</data_type>
+                    <description>Radargram line of the nadir return</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>NadirAreoidRad</name>
+                    <data_type>ASCII_Integer</data_type>
+                    <unit>meter</unit>
+                    <description>Sub-spacecraft radius of the areoid used to vertically datum the clutter simulation from the center of mass of the planet</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>NadirEllipsoidRad</name>
+                    <data_type>ASCII_Real</data_type>
+                    <unit>meter</unit>
+                    <description>Sub-spacecraft radius of the IAU Mars 2000 ellipsoid from the center of mass of the planet</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>FirstLon</name>
+                    <data_type>ASCII_Real</data_type>
+                    <unit>degree</unit>
+                    <description>First return longitude</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>FirstLat</name>
+                    <data_type>ASCII_Real</data_type>
+                    <unit>degree</unit>
+                    <description>First return latitude</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>FirstHgt</name>
+                    <data_type>ASCII_Real</data_type>
+                    <unit>meter</unit>
+                    <description>Height of the first return point on the MOLA+SHARAD surface above the Mars IAU2000 ellipsoid</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>FirstLine</name>
+                    <data_type>ASCII_Integer</data_type>
+                    <description>Radargram line of the first return</description>
+                </Field_Delimited>              
+            </Record_Delimited>
+        </Table_Delimited>
+    </File_Area_Observational>
+
+</Product_Observational>

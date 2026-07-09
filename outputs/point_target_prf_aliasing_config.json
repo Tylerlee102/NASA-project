@@ -1,0 +1,67 @@
+{
+  "inputs": {
+    "output": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\NASA-project-repo\\outputs\\point_target_prf_aliasing_simulation.png",
+    "summary_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\NASA-project-repo\\outputs\\point_target_prf_aliasing_summary.csv",
+    "config_json": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\NASA-project-repo\\outputs\\point_target_prf_aliasing_config.json",
+    "altitude_km": 25.0,
+    "speed_km_s": 4.6,
+    "wavelength_m": 5.0,
+    "frequency_mhz": null,
+    "ice_index": 1.78,
+    "target_depth_km": 6.0,
+    "max_depth_km": 10.0,
+    "surface_points_per_side": 80,
+    "surface_amplitude": 0.34,
+    "subsurface_amplitude": 0.55,
+    "range_sigma_bins": 0.75,
+    "pulse_count": 1024,
+    "depth_bins": 420,
+    "pulse_us": 200.0,
+    "guard_us": 5.0,
+    "dead_time_us": 10.0,
+    "max_usable_prf_hz": 3000.0,
+    "current_prf_hz": null,
+    "high_prf_hz": 6000.0,
+    "noise": 0.006
+  },
+  "summary": {
+    "altitude_km": 25.0,
+    "target_depth_km": 6.0,
+    "ice_index": 1.78,
+    "speed_km_s": 4.6,
+    "wavelength_m": 5.0,
+    "max_usable_prf_hz": 3000.0,
+    "pulse_us": 200.0,
+    "guard_us": 5.0,
+    "dead_time_us": 10.0,
+    "two_way_target_time_us": 238.0313383334013,
+    "listen_window_us": 453.0313383334013,
+    "pulse_limited_prf_hz": 2207.3528151027504,
+    "effective_prf_hz": 2207.3528151027504,
+    "one_way_path_m": 35680.0,
+    "surface_offset_km": 25.457069744964755,
+    "look_angle_deg": 45.51900459501648,
+    "same_delay_doppler_hz": 1312.808529448855,
+    "alias_start_prf_hz": 2625.61705889771,
+    "zero_overlap_prf_hz": 1312.808529448855,
+    "current_prf_hz": 2207.3528151027504,
+    "current_same_delay_alias_hz": -894.5442856538953
+  },
+  "scenarios": [
+    {
+      "name": "High PRF truth",
+      "prf_hz": 6000.0,
+      "note": "wide enough sampled Doppler band; no folding"
+    },
+    {
+      "name": "Current PRF",
+      "prf_hz": 2207.3528151027504,
+      "note": "folding exists, but same-delay clutter misses zero Doppler"
+    },
+    {
+      "name": "Zero-overlap PRF",
+      "prf_hz": 1312.808529448855,
+      "note": "same-delay surface clutter folds onto the nadir target"
+    }
+  ]
+}

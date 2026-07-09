@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1420" width="1800" height="1420" role="img">
+<rect width="1800" height="1420" fill="#f5f1e8"/>
+<text x="54.0" y="62.0" fill="#1f1d19" font-size="34" font-weight="800" font-family="Segoe UI, Arial, sans-serif">NASA/REASON-like trace decimation PRF blur recreation</text>
+<text x="56.0" y="96.0" fill="#6f6a60" font-size="18" font-weight="400" font-family="Segoe UI, Arial, sans-serif">Uses public mission-like parameters, not returned Europa radar data: HF 9 MHz, VHF 60 MHz, 25 km altitude, 4.6 km/s, 0-30 km sounding goal.</text>
+<text x="56.0" y="126.0" fill="#6f6a60" font-size="18" font-weight="400" font-family="Segoe UI, Arial, sans-serif">Green bars keep Doppler margin. Copper loses safety margin. Red means Doppler folding blur can create false subsurface-looking clutter.</text>
+<rect x="54" y="168" width="818" height="590" rx="8" fill="#fbfaf6" stroke="#b8aa95"/>
+<text x="76.0" y="200.0" fill="#1f1d19" font-size="19" font-weight="800" font-family="Segoe UI, Arial, sans-serif">HF selected target</text>
+<text x="76.0" y="225.0" fill="#6f6a60" font-size="14" font-weight="400" font-family="Segoe UI, Arial, sans-serif">HF 9 MHz, depth 6 km</text>
+<text x="76.0" y="247.0" fill="#6f6a60" font-size="13" font-weight="400" font-family="Segoe UI, Arial, sans-serif">safe floor 493 Hz | raw fold floor 394 Hz | timing max 2,207 Hz</text>
+<rect x="130" y="284" width="708" height="200" fill="#fffefa" stroke="#d7ccbb"/>
+<line x1="130.0" y1="434.0" x2="838.0" y2="434.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="130.0" y1="384.0" x2="838.0" y2="384.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="130.0" y1="334.0" x2="838.0" y2="334.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="130.0" y1="284.0" x2="838.0" y2="284.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="130.0" y1="446.2" x2="838.0" y2="446.2" stroke="#315f88" stroke-width="2"/>
+<line x1="130.0" y1="453.7" x2="838.0" y2="453.7" stroke="#a45f3f" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="726.0" y="438.2" fill="#315f88" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">safe floor</text>
+<text x="700.0" y="469.7" fill="#a45f3f" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">raw fold floor</text>
+<rect x="162.0" y="314.5" width="54.0" height="169.5" rx="3" fill="#1f6b70"/>
+<text x="177.0" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">all</text>
+<rect x="280.0" y="399.3" width="54.0" height="84.7" rx="3" fill="#1f6b70"/>
+<text x="295.0" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">2x</text>
+<rect x="398.0" y="427.5" width="54.0" height="56.5" rx="3" fill="#1f6b70"/>
+<text x="413.0" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">3x</text>
+<rect x="516.0" y="441.6" width="54.0" height="42.4" rx="3" fill="#1f6b70"/>
+<text x="531.0" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">4x</text>
+<rect x="634.0" y="450.1" width="54.0" height="33.9" rx="3" fill="#a45f3f"/>
+<text x="649.0" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">5x</text>
+<rect x="752.0" y="455.8" width="54.0" height="28.2" rx="3" fill="#9b3d3f"/>
+<text x="767.0" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">6x</text>
+<text x="75.0" y="289.0" fill="#6f6a60" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">PRF</text>
+<text x="130.0" y="530.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">all = keep all traces; 2x = keep every 2nd trace</text>
+<text x="76.0" y="543.0" fill="#17494d" font-size="15" font-weight="800" font-family="Segoe UI, Arial, sans-serif">Trace removal result</text>
+<text x="76.0" y="569.0" fill="#1f6b70" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep all        2,207 Hz   spacing 2.1 m  clean</text>
+<text x="76.0" y="590.0" fill="#1f6b70" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 2th  1,104 Hz   spacing 4.2 m  clean</text>
+<text x="76.0" y="611.0" fill="#1f6b70" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 3th  736 Hz     spacing 6.3 m  clean</text>
+<text x="76.0" y="632.0" fill="#1f6b70" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 4th  552 Hz     spacing 8.3 m  clean</text>
+<text x="76.0" y="653.0" fill="#a45f3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">next: keep every 5th -&gt; 441 Hz, margin gone</text>
+<rect x="928" y="168" width="818" height="590" rx="8" fill="#fbfaf6" stroke="#b8aa95"/>
+<text x="950.0" y="200.0" fill="#1f1d19" font-size="19" font-weight="800" font-family="Segoe UI, Arial, sans-serif">HF full-depth sweep</text>
+<text x="950.0" y="225.0" fill="#6f6a60" font-size="14" font-weight="400" font-family="Segoe UI, Arial, sans-serif">HF 9 MHz, depth 0-30 km</text>
+<text x="950.0" y="247.0" fill="#6f6a60" font-size="13" font-weight="400" font-family="Segoe UI, Arial, sans-serif">safe floor 654 Hz | raw fold floor 524 Hz | timing max 1,355 Hz</text>
+<rect x="1004" y="284" width="708" height="200" fill="#fffefa" stroke="#d7ccbb"/>
+<line x1="1004.0" y1="434.0" x2="1712.0" y2="434.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="1004.0" y1="384.0" x2="1712.0" y2="384.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="1004.0" y1="334.0" x2="1712.0" y2="334.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="1004.0" y1="284.0" x2="1712.0" y2="284.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="1004.0" y1="402.1" x2="1712.0" y2="402.1" stroke="#315f88" stroke-width="2"/>
+<line x1="1004.0" y1="418.5" x2="1712.0" y2="418.5" stroke="#a45f3f" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="1600.0" y="394.1" fill="#315f88" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">safe floor</text>
+<text x="1574.0" y="434.5" fill="#a45f3f" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">raw fold floor</text>
+<rect x="1065.5" y="314.5" width="54.0" height="169.5" rx="3" fill="#1f6b70"/>
+<text x="1080.5" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">all</text>
+<rect x="1242.5" y="399.3" width="54.0" height="84.7" rx="3" fill="#1f6b70"/>
+<text x="1257.5" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">2x</text>
+<rect x="1419.5" y="427.5" width="54.0" height="56.5" rx="3" fill="#9b3d3f"/>
+<text x="1434.5" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">3x</text>
+<rect x="1596.5" y="441.6" width="54.0" height="42.4" rx="3" fill="#9b3d3f"/>
+<text x="1611.5" y="506.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">4x</text>
+<text x="949.0" y="289.0" fill="#6f6a60" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">PRF</text>
+<text x="1004.0" y="530.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">all = keep all traces; 2x = keep every 2nd trace</text>
+<text x="950.0" y="543.0" fill="#17494d" font-size="15" font-weight="800" font-family="Segoe UI, Arial, sans-serif">Trace removal result</text>
+<text x="950.0" y="569.0" fill="#1f6b70" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep all        1,355 Hz   spacing 3.4 m  clean</text>
+<text x="950.0" y="590.0" fill="#1f6b70" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 2th  677 Hz     spacing 6.8 m  clean</text>
+<text x="950.0" y="611.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 3th  452 Hz     spacing 10.2 m  folding blur</text>
+<text x="950.0" y="632.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 4th  339 Hz     spacing 13.6 m  folding blur</text>
+<rect x="54" y="812" width="818" height="530" rx="8" fill="#fbfaf6" stroke="#b8aa95"/>
+<text x="76.0" y="844.0" fill="#1f1d19" font-size="19" font-weight="800" font-family="Segoe UI, Arial, sans-serif">VHF shallow edge</text>
+<text x="76.0" y="869.0" fill="#6f6a60" font-size="14" font-weight="400" font-family="Segoe UI, Arial, sans-serif">VHF 60 MHz, depth 2.25 km</text>
+<text x="76.0" y="891.0" fill="#6f6a60" font-size="13" font-weight="400" font-family="Segoe UI, Arial, sans-serif">safe floor 2,334 Hz | raw fold floor 1,867 Hz | timing max 2,448 Hz</text>
+<rect x="130" y="928" width="708" height="200" fill="#fffefa" stroke="#d7ccbb"/>
+<line x1="130.0" y1="1078.0" x2="838.0" y2="1078.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="130.0" y1="1028.0" x2="838.0" y2="1028.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="130.0" y1="978.0" x2="838.0" y2="978.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="130.0" y1="928.0" x2="838.0" y2="928.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="130.0" y1="966.4" x2="838.0" y2="966.4" stroke="#315f88" stroke-width="2"/>
+<line x1="130.0" y1="998.7" x2="838.0" y2="998.7" stroke="#a45f3f" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="726.0" y="958.4" fill="#315f88" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">safe floor</text>
+<text x="700.0" y="1014.7" fill="#a45f3f" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">raw fold floor</text>
+<rect x="191.5" y="958.5" width="54.0" height="169.5" rx="3" fill="#1f6b70"/>
+<text x="206.5" y="1150.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">all</text>
+<rect x="368.5" y="1043.3" width="54.0" height="84.7" rx="3" fill="#9b3d3f"/>
+<text x="383.5" y="1150.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">2x</text>
+<rect x="545.5" y="1071.5" width="54.0" height="56.5" rx="3" fill="#9b3d3f"/>
+<text x="560.5" y="1150.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">3x</text>
+<rect x="722.5" y="1085.6" width="54.0" height="42.4" rx="3" fill="#9b3d3f"/>
+<text x="737.5" y="1150.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">4x</text>
+<text x="75.0" y="933.0" fill="#6f6a60" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">PRF</text>
+<text x="130.0" y="1174.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">all = keep all traces; 2x = keep every 2nd trace</text>
+<text x="76.0" y="1187.0" fill="#17494d" font-size="15" font-weight="800" font-family="Segoe UI, Arial, sans-serif">Trace removal result</text>
+<text x="76.0" y="1213.0" fill="#1f6b70" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep all        2,448 Hz   spacing 1.9 m  clean</text>
+<text x="76.0" y="1234.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 2th  1,224 Hz   spacing 3.8 m  folding blur</text>
+<text x="76.0" y="1255.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 3th  816 Hz     spacing 5.6 m  folding blur</text>
+<text x="76.0" y="1276.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 4th  612 Hz     spacing 7.5 m  folding blur</text>
+<rect x="928" y="812" width="818" height="530" rx="8" fill="#fbfaf6" stroke="#b8aa95"/>
+<text x="950.0" y="844.0" fill="#1f1d19" font-size="19" font-weight="800" font-family="Segoe UI, Arial, sans-serif">VHF deep target</text>
+<text x="950.0" y="869.0" fill="#6f6a60" font-size="14" font-weight="400" font-family="Segoe UI, Arial, sans-serif">VHF 60 MHz, depth 6 km</text>
+<text x="950.0" y="891.0" fill="#6f6a60" font-size="13" font-weight="400" font-family="Segoe UI, Arial, sans-serif">safe floor 3,284 Hz | raw fold floor 2,627 Hz | timing max 2,207 Hz</text>
+<rect x="1004" y="928" width="708" height="200" fill="#fffefa" stroke="#d7ccbb"/>
+<line x1="1004.0" y1="1078.0" x2="1712.0" y2="1078.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="1004.0" y1="1028.0" x2="1712.0" y2="1028.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="1004.0" y1="978.0" x2="1712.0" y2="978.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="1004.0" y1="928.0" x2="1712.0" y2="928.0" stroke="#e7ddcc" stroke-width="1"/>
+<line x1="1004.0" y1="958.5" x2="1712.0" y2="958.5" stroke="#315f88" stroke-width="2"/>
+<line x1="1004.0" y1="992.4" x2="1712.0" y2="992.4" stroke="#a45f3f" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="1600.0" y="950.5" fill="#315f88" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">safe floor</text>
+<text x="1574.0" y="1008.4" fill="#a45f3f" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">raw fold floor</text>
+<rect x="1065.5" y="1014.1" width="54.0" height="113.9" rx="3" fill="#9b3d3f"/>
+<text x="1080.5" y="1150.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">all</text>
+<rect x="1242.5" y="1071.0" width="54.0" height="57.0" rx="3" fill="#9b3d3f"/>
+<text x="1257.5" y="1150.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">2x</text>
+<rect x="1419.5" y="1090.0" width="54.0" height="38.0" rx="3" fill="#9b3d3f"/>
+<text x="1434.5" y="1150.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">3x</text>
+<rect x="1596.5" y="1099.5" width="54.0" height="28.5" rx="3" fill="#9b3d3f"/>
+<text x="1611.5" y="1150.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">4x</text>
+<text x="949.0" y="933.0" fill="#6f6a60" font-size="12" font-weight="800" font-family="Segoe UI, Arial, sans-serif">PRF</text>
+<text x="1004.0" y="1174.0" fill="#6f6a60" font-size="12" font-weight="400" font-family="Segoe UI, Arial, sans-serif">all = keep all traces; 2x = keep every 2nd trace</text>
+<text x="950.0" y="1187.0" fill="#17494d" font-size="15" font-weight="800" font-family="Segoe UI, Arial, sans-serif">Trace removal result</text>
+<text x="950.0" y="1213.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep all        2,207 Hz   spacing 2.1 m  folding blur</text>
+<text x="950.0" y="1234.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 2th  1,104 Hz   spacing 4.2 m  folding blur</text>
+<text x="950.0" y="1255.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 3th  736 Hz     spacing 6.3 m  folding blur</text>
+<text x="950.0" y="1276.0" fill="#9b3d3f" font-size="13" font-weight="700" font-family="Segoe UI, Arial, sans-serif">keep every 4th  552 Hz     spacing 8.3 m  folding blur</text>
+</svg>

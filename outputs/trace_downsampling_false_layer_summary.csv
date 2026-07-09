@@ -1,0 +1,19 @@
+metric,value
+altitude_km,25.0
+target_depth_km,6.0
+ice_index,1.78
+speed_km_s,4.6
+wavelength_m,5.0
+noise_amplitude,0.0
+same_delay_surface_offset_km,25.457069744964755
+same_delay_look_angle_deg,45.51900459501648
+same_delay_doppler_hz,1312.808529448855
+base_prf_hz,5251.23411779542
+keep_2_prf_hz,2625.61705889771
+keep_4_prf_hz,1312.808529448855
+Original high PRF_prf_hz,5251.23411779542
+Original high PRF_clutter_at_target_zero_doppler,6.847847779191987e-19
+Remove every other trace_prf_hz,2625.61705889771
+Remove every other trace_clutter_at_target_zero_doppler,5.7619874033180445e-24
+Keep every 4th trace_prf_hz,1312.808529448855
+Keep every 4th trace_clutter_at_target_zero_doppler,1.0

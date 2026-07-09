@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1G00.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Browse
+    xmlns="http://pds.nasa.gov/pds4/pds/v1"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation=
+    "http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1G00.xsd">
+    
+    <Identification_Area>
+        <logical_identifier>urn:nasa:pds:mro_sharad_simulations:browse:s_01294501_browse_sim</logical_identifier>
+        <version_id>1.0</version_id>
+        <title>SHARAD surface clutter browse cluttergram products</title>
+        <information_model_version>1.16.0.0</information_model_version>
+        <product_class>Product_Browse</product_class>
+        <Citation_Information>
+            <author_list>Christoffersen, M. S.; Holt, J. W.; Kempf, S. D.; O'Connell, J. D.</author_list>
+            <publication_year>2021</publication_year>
+            <description>Surface clutter simulations for SHARAD observations</description>
+        </Citation_Information>
+        <Modification_History>
+            <Modification_Detail>
+                <modification_date>2022-06-01</modification_date>
+                <version_id>1.0</version_id>
+                <description>Initial version.</description>
+            </Modification_Detail>
+        </Modification_History>
+    </Identification_Area>
+    
+    <Context_Area>
+        <Time_Coordinates>
+            <start_date_time>2009-05-01T04:51:19.135Z</start_date_time>
+            <stop_date_time>2009-05-01T05:02:58.981Z</stop_date_time>
+        </Time_Coordinates>
+        <Investigation_Area>
+            <name>MARS RECONNAISSANCE ORBITER</name>
+            <type>Mission</type>
+            <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:investigation:mission.mars_reconnaissance_orbiter</lid_reference>
+                <reference_type>data_to_investigation</reference_type>
+            </Internal_Reference>
+        </Investigation_Area>
+        <Observing_System>
+            <Observing_System_Component>
+                <name>MARS RECONNAISSANCE ORBITER</name>
+                <type>Host</type>
+                <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:instrument_host:spacecraft.mro</lid_reference>
+                    <reference_type>is_instrument_host</reference_type>
+                </Internal_Reference>
+            </Observing_System_Component>
+            <Observing_System_Component>
+                <name>SHALLOW RADAR for MRO</name>
+                <type>Instrument</type>
+                <Internal_Reference>
+                    <lid_reference>urn:nasa:pds:context:instrument:sharad.mro</lid_reference>
+                    <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
+            </Observing_System_Component>
+        </Observing_System>
+        <Target_Identification>
+            <name>Mars</name>
+            <type>Planet</type>
+            <Internal_Reference>
+                <lid_reference>urn:nasa:pds:context:target:planet.mars</lid_reference>
+                <reference_type>data_to_target</reference_type>
+            </Internal_Reference>
+        </Target_Identification>
+    </Context_Area>
+    
+    <Reference_List>
+        <Internal_Reference>
+            <lid_reference>urn:nasa:pds:mro_sharad_simulations:data:s_01294501_sim</lid_reference>
+            <reference_type>browse_to_data</reference_type>
+            <comment>Surface clutter simulation.</comment>
+        </Internal_Reference>
+        <Internal_Reference>
+            <lid_reference>urn:nasa:pds:mro_sharad_simulations:data:s_01294501_rtrn</lid_reference>
+            <reference_type>browse_to_data</reference_type>
+            <comment>Surface clutter simulation geometric information table.</comment>
+        </Internal_Reference>
+        <Internal_Reference>
+            <lid_reference>urn:nasa:pds:mro_sharad_simulations:data:s_01294501_emap</lid_reference>
+            <reference_type>browse_to_data</reference_type>
+            <comment>Surface clutter simulation echo power map.</comment>
+        </Internal_Reference>
+        <External_Reference>
+            <doi>10.1109/LGRS.2016.2581799</doi>
+            <reference_text>P. Choudhary, J. W. Holt and S. D. Kempf, "Surface Clutter and Echo Location Analysis for the Interpretation of SHARAD Data From Mars," in IEEE Geoscience and Remote Sensing Letters, vol. 13, no. 9, pp. 1285-1289, Sept. 2016, doi: 10.1109/LGRS.2016.2581799.</reference_text>
+            <description>Paper describing surface clutter simulation algorithm used to create this archive.</description>
+        </External_Reference>
+    </Reference_List>
+    
+    <File_Area_Browse>
+        <File>
+            <file_name>s_01294501_browse_combined.tif</file_name>
+            <creation_date_time>2022-07-08T05:51:51.930Z</creation_date_time>
+        </File>
+        <Encoded_Image>
+            <name>Combined sim browse</name>
+            <offset unit="byte">0</offset>
+            <encoding_standard_id>TIFF</encoding_standard_id>
+        </Encoded_Image>
+    </File_Area_Browse>
+    
+    <File_Area_Browse>
+        <File>
+            <file_name>s_01294501_browse_left.tif</file_name>
+            <creation_date_time>2022-07-08T05:51:51.930Z</creation_date_time>
+        </File>
+        <Encoded_Image>
+            <name>Left sim browse</name>
+            <offset unit="byte">0</offset>
+            <encoding_standard_id>TIFF</encoding_standard_id>
+        </Encoded_Image>
+    </File_Area_Browse>
+    
+    <File_Area_Browse>
+        <File>
+            <file_name>s_01294501_browse_right.tif</file_name>
+            <creation_date_time>2022-07-08T05:51:51.930Z</creation_date_time>
+        </File>
+        <Encoded_Image>
+            <name>Right sim browse</name>
+            <offset unit="byte">0</offset>
+            <encoding_standard_id>TIFF</encoding_standard_id>
+        </Encoded_Image>
+    </File_Area_Browse>
+</Product_Browse>
