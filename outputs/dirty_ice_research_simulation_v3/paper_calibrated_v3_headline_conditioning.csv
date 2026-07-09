@@ -1,0 +1,8 @@
+conditioning,denominator,rows,high_confidence_ocean_pct,moderate_or_high_ocean_pct,ambiguous_false_or_clutter_pct,not_interpretable_or_no_deep_call_pct
+all_point_band_cases,"All shell modes, scenarios, bands, and along-track points. This is broad, not band-specific.",19521,26.97,29.06,43.97,22.1
+band_HF_9MHz_full_depth,"All shell modes, scenarios, and along-track points for HF_9MHz_full_depth.",6507,39.93,44.78,50.16,5.06
+band_VHF_60MHz_full_depth_lowDR,"All shell modes, scenarios, and along-track points for VHF_60MHz_full_depth_lowDR.",6507,27.17,27.17,50.99,21.84
+band_VHF_60MHz_shallow,"All shell modes, scenarios, and along-track points for VHF_60MHz_shallow.",6507,13.82,15.21,30.75,39.4
+shell_thick_30km_reason_mode,"All scenarios, bands, and along-track points for thick_30km_reason_mode.",6507,11.16,11.16,41.76,39.77
+shell_thin_3km_reason_mode,"All scenarios, bands, and along-track points for thin_3km_reason_mode.",6507,46.67,48.07,49.84,2.09
+shell_workbook_mid_shell,"All scenarios, bands, and along-track points for workbook_mid_shell.",6507,23.08,27.94,40.31,24.44

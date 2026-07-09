@@ -1,0 +1,28 @@
+{
+  "correction": "The old power plot only used distance spreading. This version adds an illustrative antenna beam loss and an illustrative surface-backscatter penalty.",
+  "geometry": {
+    "closest_altitude_km": 400.0,
+    "altitude_rise_at_plus_minus_60_km": 4.0,
+    "cross_track_offset_km": 25.0,
+    "ice_index": 1.78,
+    "closest_apparent_depth_m": 438.47671181736564
+  },
+  "power_model_assumptions": {
+    "spreading": "(nadir range / off-nadir slant range)^4",
+    "antenna": "Gaussian two-way pattern, -3 dB one-way at 5 degrees, so -6 dB two-way at 5 degrees",
+    "surface_backscatter": "-0.6 dB per degree squared, illustrative only"
+  },
+  "range_sidelobe_model": {
+    "vhf_resolution_m": 30.0,
+    "ideal_sinc_candidate_sidelobe_db": -33.82836664327507,
+    "note": "Real sidelobe level depends on chirp weighting/windowing and processing."
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\corrected_power_sidelobe_graphs\\01_power_model_components_vs_motion.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\corrected_power_sidelobe_graphs\\02_power_model_components_bar.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\corrected_power_sidelobe_graphs\\03_geometry_still_correct_bar.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\corrected_power_sidelobe_graphs\\04_range_sidelobe_response_from_nadir_surface.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\corrected_power_sidelobe_graphs\\05_false_layer_source_comparison.png"
+  ],
+  "data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\corrected_power_sidelobe_graphs\\corrected_power_values.csv"
+}

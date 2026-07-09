@@ -1,0 +1,4 @@
+position_label,distance_from_closest_km,parabolic_altitude_km,look_angle_deg,apparent_depth_m,extra_delay_us,spreading_loss_db,antenna_two_way_loss_db,surface_backscatter_loss_db,corrected_total_power_db
+closest 0 km,0.0,400.000,3.576,438.477,5.207,-0.033863,-3.069640,-7.674101,-10.777604
+30 km away,30.0,401.000,5.562,1065.735,12.655,-0.081987,-7.425112,-18.562779,-26.069878
+60 km away,60.0,404.000,9.140,2918.850,34.661,-0.221982,-20.049729,-50.124322,-70.396032

@@ -1,0 +1,113 @@
+{
+  "source": {
+    "mission": "Mars Reconnaissance Orbiter",
+    "instrument": "SHARAD",
+    "target": "Mars",
+    "product_id": "S_01294501",
+    "start_time_utc": "2009-05-01T04:51:19.135Z",
+    "stop_time_utc": "2009-05-01T05:02:58.981Z",
+    "observed_source": "data\\sharad_s_01294501\\radargram\\s_01294501_rgram.img",
+    "observed_source_type": "PDS float IMG",
+    "radargram_generated_from": "numeric float IMG",
+    "return_table_source": "data\\sharad_s_01294501\\clutter_simulation\\s_01294501_rtrn.csv"
+  },
+  "array_shape": {
+    "lines": 3600,
+    "samples": 4719
+  },
+  "track": {
+    "rows": 4719,
+    "spacecraft_latitude_deg_min": 70.085493,
+    "spacecraft_latitude_deg_max": 87.438806,
+    "spacecraft_longitude_deg_min": -0.115719,
+    "spacecraft_longitude_deg_max": 167.113769,
+    "spacecraft_height_m_min": 313243.232,
+    "spacecraft_height_m_max": 317808.031
+  },
+  "observed_radargram": {
+    "min": 1.3210768656790606e-06,
+    "max": 0.9432560205459595,
+    "display_transform": "log-power contrast",
+    "display_min": 0.0,
+    "display_max": 1.0,
+    "diagnostic_columns": 4719,
+    "median_observed_peak_minus_nadir_line": 4.0
+  },
+  "filtered_radargram": {
+    "min": 0.0,
+    "max": 1.0,
+    "diagnostic_columns": 4719,
+    "median_filtered_peak_minus_nadir_line": 10.0,
+    "method": "along-track zero-Doppler attenuation",
+    "input": "observed radargram only",
+    "doppler_cutoff_cycles_per_trace": 0.012,
+    "doppler_transition_cycles_per_trace": 0.01,
+    "filter_strength": 0.9,
+    "cutoff_equivalent_trace_period": 83.33333333333333,
+    "transition_end_cycles_per_trace": 0.022,
+    "limitation": "This is a display-domain clutter suppression filter on detected radargram power, not complex radar echoes. It can reduce slow along-track clutter but cannot recover a real reflector that perfectly overlaps clutter in both delay and Doppler."
+  },
+  "doppler_spectrum": {
+    "method": "FFT along radargram columns after row-median removal",
+    "axis": "image-domain along-track frequency from processed detected-power radargram",
+    "radargram_trace_rate_hz": 6.742912012071227,
+    "nyquist_hz": 3.3714560060356136,
+    "limitation": "This is not raw complex-echo Doppler processing; it is a diagnostic FFT of the processed radargram image."
+  },
+  "point_target_alias_model": {
+    "duration_s": 699.846,
+    "track_distance_m": 2354638.891047094,
+    "spacecraft_speed_m_s": 3364.5100365610347,
+    "radargram_trace_rate_hz": 6.742912012071227,
+    "mean_spacecraft_height_m": 316577.78619093023,
+    "mean_nadir_line": 2505.8520873066327,
+    "wavelength_m": 14.9896229,
+    "center_frequency_hz": 20000000.0,
+    "model_prf_hz": 87.535,
+    "range_bin_m": 15.0,
+    "product_doppler_bandwidth_hz": 0.4,
+    "risk_half_band_hz": 0.2,
+    "max_modeled_offset_line": 1093,
+    "risk_band_count": 1,
+    "model_note": "Flat-surface point-target diagnostic: surface points farther from nadir get larger Doppler shifts; the shifts are folded by the assumed PRF to find where surface energy can land back near zero Doppler.",
+    "raw_prf_hz": 700.28,
+    "presum_factor": 8.0,
+    "alias_model_prf_source": "raw PRF divided by assumed presumming factor",
+    "alias_risk_bands": 1,
+    "first_alias_risk_bands": [
+      {
+        "offset_line_start": 412,
+        "offset_line_end": 414,
+        "approx_free_space_range_start_m": 6180.0,
+        "approx_free_space_range_end_m": 6210.0,
+        "surface_along_track_offset_km_center": 62.934688568115234,
+        "surface_doppler_hz_center": 87.52946472167969,
+        "folded_doppler_hz_center": -0.0055389404296875
+      }
+    ]
+  },
+  "limitations": [
+    "The preview is contrast-normalized for display.",
+    "No synthetic clutter or modeled clutter image is generated or plotted.",
+    "The clutter-suppressed radargram is a filter of the observed radargram, not a synthetic correction.",
+    "The Doppler spectrum is computed from the processed detected-power radargram, not raw complex radar echoes.",
+    "The alias-risk overlay is a flat-geometry point-target diagnostic; orange bands flag risk zones and are not recovered measurements."
+  ],
+  "derived_outputs": {
+    "track_geometry_csv": "outputs\\mars_sharad_s_01294501\\track_geometry.csv",
+    "radargram_column_diagnostics_csv": "outputs\\mars_sharad_s_01294501\\radargram_column_diagnostics.csv",
+    "filtered_radargram_column_diagnostics_csv": "outputs\\mars_sharad_s_01294501\\filtered_radargram_column_diagnostics.csv",
+    "alias_risk_bands_csv": "outputs\\mars_sharad_s_01294501\\alias_risk_bands.csv",
+    "point_target_alias_model_csv": "outputs\\mars_sharad_s_01294501\\point_target_alias_model.csv",
+    "custom_radargram_numeric_img_fullres_png": "outputs\\mars_sharad_s_01294501\\custom_radargram_numeric_img_fullres.png",
+    "downsample_npz": "outputs\\mars_sharad_s_01294501\\radargram_downsample.npz",
+    "filtered_downsample_npz": "outputs\\mars_sharad_s_01294501\\filtered_radargram_downsample.npz",
+    "observed_radargram_preview_png": "outputs\\mars_sharad_s_01294501\\observed_radargram_preview.png",
+    "filtered_radargram_preview_png": "outputs\\mars_sharad_s_01294501\\filtered_radargram_preview.png",
+    "radargram_filter_comparison_png": "outputs\\mars_sharad_s_01294501\\radargram_filter_comparison.png",
+    "doppler_spectrum_preview_png": "outputs\\mars_sharad_s_01294501\\doppler_spectrum_preview.png",
+    "point_target_alias_model_png": "outputs\\mars_sharad_s_01294501\\point_target_alias_model.png",
+    "alias_risk_overlay_png": "outputs\\mars_sharad_s_01294501\\alias_risk_overlay.png",
+    "track_geometry_plot_png": "outputs\\mars_sharad_s_01294501\\track_geometry_plot.png"
+  }
+}

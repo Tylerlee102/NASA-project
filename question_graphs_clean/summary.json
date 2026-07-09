@@ -1,0 +1,23 @@
+{
+  "meaning": "These are cleaned normal line graphs. The data-supported result is that the 440 m candidate maps to about +/-25 km off nadir, and the candidate-band power is much stronger for terrain clutter than for the flat baseline.",
+  "candidate_depth_m": 440.0,
+  "candidate_along_km": [
+    10.0,
+    110.0
+  ],
+  "required_left_right_offset_km": 25.043430320944868,
+  "mean_interferometry_offset_km": 25.088704251517896,
+  "median_terrain_over_flat_db": 23.16529466226068,
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\01_depth_vs_left_right_offset.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\02_candidate_band_power_along_track_db.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\03_power_vs_apparent_depth_db.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\04_interferometry_offset_along_track.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\05_terrain_excess_over_flat_baseline_db.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\06_crossover_apparent_depths.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\07_pulse_length_vs_range_blur.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\08_prf_vs_unambiguous_range.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\09_number_of_pulses_vs_snr_gain.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs_clean\\10_pulse_compression_sidelobes.png"
+  ]
+}

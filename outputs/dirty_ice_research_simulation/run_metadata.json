@@ -1,0 +1,27 @@
+{
+  "workbook_used": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\europa_ice_subsurface_simulation\\v19.xlsx",
+  "outputs": {
+    "report_html": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\dirty_ice_research_report.html",
+    "results_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\dirty_ice_results.csv",
+    "summary_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\scenario_summary.csv",
+    "sensitivity_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\attenuation_sensitivity_grid.csv",
+    "cross_reference_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\paper_cross_reference.csv",
+    "charts": {
+      "outcomes": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\charts\\scenario_outcome_risk.png",
+      "echo_track": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\charts\\complex_dirty_ice_hf_echo_track.png",
+      "depth_error": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\charts\\hf_depth_error_distribution.png",
+      "sensitivity": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\charts\\dirty_layer_sensitivity_heatmap.png",
+      "frequency_margin": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\charts\\frequency_ocean_margin.png"
+    }
+  },
+  "key_assumptions": {
+    "frequencies_mhz": {
+      "HF_9MHz": 9.0,
+      "VHF_60MHz": 60.0
+    },
+    "detection_threshold_db": -45.0,
+    "ice_eps": 3.15,
+    "ocean_eps": 80.0,
+    "system_offset_db": -10.0
+  }
+}

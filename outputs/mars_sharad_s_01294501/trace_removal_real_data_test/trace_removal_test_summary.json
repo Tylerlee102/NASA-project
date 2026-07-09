@@ -1,0 +1,91 @@
+{
+  "question": "Does filling missing traces remove Doppler aliasing, or only hide missing-column appearance?",
+  "dataset": "Mars SHARAD orbit 12945, same-orbit RDR complex-derived radargram crop",
+  "baseline": {
+    "source_npz": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\rdr_complex_reprocessed_radargrams.npz",
+    "baseline_shape": [
+      667,
+      4719
+    ],
+    "crop_shape": [
+      278,
+      4719
+    ],
+    "surface_row": 144,
+    "crop_start_row": 116,
+    "crop_end_row": 394,
+    "duration_s": 700.02,
+    "output_trace_rate_hz": 6.741235964686723,
+    "rdr_processed_trace_rate_hz": 174.48787177509215
+  },
+  "method": [
+    "Kept every 2nd and every 4th along-track trace to simulate lower trace sampling.",
+    "Filled missing traces back to the original grid with linear interpolation.",
+    "Compared original, trace-removed, and gap-filled radargrams.",
+    "Compared average along-track FFT power spectra using frequency in cycles per original trace."
+  ],
+  "results": [
+    {
+      "factor": 2,
+      "kept_trace_count": 2360,
+      "original_trace_count": 4719,
+      "kept_trace_fraction": 0.5001059546514092,
+      "new_nyquist_cycles_per_original_trace": 0.25,
+      "original_energy_above_new_nyquist_pct": 12.805029944149355,
+      "filled_highfreq_energy_pct": 2.1623312521083506,
+      "filled_highfreq_recovery_pct": 15.311521108549426,
+      "original_lowband_energy": 165205310.5078125,
+      "decimated_lowband_energy": 42922788.8515625,
+      "filled_lowband_energy": 170525318.2109375,
+      "decimated_lowband_vs_original_ratio": 0.2598148250781121,
+      "filled_lowband_vs_original_ratio": 1.0322024012834226,
+      "filled_vs_original_rmse_db": 2.4299681186676025,
+      "filled_vs_original_mae_db": 1.3504822254180908,
+      "filled_vs_original_corr": 0.9153003096580505,
+      "decimated_interpolated_vs_original_corr": 0.9153003096580505,
+      "interpretation": "Interpolation smooths the missing columns but cannot restore energy above the lower Nyquist limit; any aliased low-frequency energy created by trace removal remains in-band after filling.",
+      "radargram_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\factor2_radargram_trace_removal_comparison.png",
+      "fft_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\factor2_fft_doppler_comparison.png"
+    },
+    {
+      "factor": 4,
+      "kept_trace_count": 1180,
+      "original_trace_count": 4719,
+      "kept_trace_fraction": 0.2500529773257046,
+      "new_nyquist_cycles_per_original_trace": 0.125,
+      "original_energy_above_new_nyquist_pct": 23.227491337549587,
+      "filled_highfreq_energy_pct": 1.9208707859220435,
+      "filled_highfreq_recovery_pct": 7.090734574991981,
+      "original_lowband_energy": 141474383.90625,
+      "decimated_lowband_energy": 9585870.6640625,
+      "filled_lowband_energy": 151910655.46875,
+      "decimated_lowband_vs_original_ratio": 0.06775693520895425,
+      "filled_lowband_vs_original_ratio": 1.0737679237353368,
+      "filled_vs_original_rmse_db": 3.35213565826416,
+      "filled_vs_original_mae_db": 2.284097909927368,
+      "filled_vs_original_corr": 0.8358231782913208,
+      "decimated_interpolated_vs_original_corr": 0.8358231782913208,
+      "interpretation": "Interpolation smooths the missing columns but cannot restore energy above the lower Nyquist limit; any aliased low-frequency energy created by trace removal remains in-band after filling.",
+      "radargram_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\factor4_radargram_trace_removal_comparison.png",
+      "fft_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\factor4_fft_doppler_comparison.png"
+    }
+  ],
+  "answer": "Filling missing traces makes the radargram look smoother, but it does not restore the high-frequency Doppler information that becomes unobservable after trace removal. Aliased energy remains in the lower-frequency band after filling.",
+  "outputs": {
+    "factor2": {
+      "radargram_comparison_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\factor2_radargram_trace_removal_comparison.png",
+      "fft_comparison_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\factor2_fft_doppler_comparison.png"
+    },
+    "factor4": {
+      "radargram_comparison_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\factor4_radargram_trace_removal_comparison.png",
+      "fft_comparison_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\factor4_fft_doppler_comparison.png"
+    },
+    "summary_sheet_png": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\trace_removal_summary_sheet.png",
+    "metrics_csv": "outputs\\mars_sharad_s_01294501\\trace_removal_real_data_test\\trace_removal_metrics.csv"
+  },
+  "limitations": [
+    "This test uses a complex-derived radargram crop rather than unfocused raw chirp data.",
+    "The trace removal is artificial and regular; real missing traces can be irregular.",
+    "Interpolation is linear; better interpolation may look cleaner but still cannot recover information beyond the reduced Nyquist limit."
+  ]
+}

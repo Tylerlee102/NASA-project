@@ -1,0 +1,23 @@
+{
+  "source_data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_data\\reason_instrument_parameters.json",
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_graphs\\01_bandwidth_vs_resolution_from_paper.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_graphs\\02_prf_vs_unambiguous_range_from_paper.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_graphs\\03_receive_presummed_pulses_snr_gain_from_paper.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_graphs\\04_vhf_bfpq_data_rate_reduction_from_paper.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_graphs\\05_hf_vhf_center_frequency_from_paper.png"
+  ],
+  "paper_values_used": {
+    "hf_center_frequency_mhz": 9,
+    "vhf_center_frequency_mhz": 60,
+    "hf_bandwidth_mhz": 1,
+    "vhf_bandwidth_mhz": 10,
+    "hf_resolution_in_ice_m": 300.0,
+    "vhf_resolution_in_ice_m": 30.0,
+    "prf_min_hz": 50,
+    "prf_max_hz": 3000,
+    "receive_echoes_summed_max": 40,
+    "vhf_bfpq_input_mbps": 576,
+    "vhf_bfpq_output_mbps": 99
+  }
+}

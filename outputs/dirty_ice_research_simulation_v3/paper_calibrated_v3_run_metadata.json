@@ -1,0 +1,123 @@
+{
+  "model_name": "paper_calibrated_dirty_ice_v3_confidence_layer",
+  "created_utc": "2026-06-25T05:48:24.452745+00:00",
+  "based_on_v2_results": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibrated_v2_results.csv",
+  "based_on_v2_summary": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibrated_v2_summary.csv",
+  "based_on_v2_calibration": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibration_parameters.csv",
+  "outputs": {
+    "point_confidence_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v3\\paper_calibrated_v3_point_confidence.csv",
+    "confidence_summary_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v3\\paper_calibrated_v3_confidence_summary.csv",
+    "uncertainty_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v3\\paper_calibrated_v3_uncertainty_ranges.csv",
+    "cross_instrument_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v3\\paper_calibrated_v3_cross_instrument_evidence.csv",
+    "case_studies_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v3\\paper_calibrated_v3_false_ocean_case_studies.csv",
+    "headline_conditioning_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v3\\paper_calibrated_v3_headline_conditioning.csv",
+    "headline_conditioning_json": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v3\\paper_calibrated_v3_headline_conditioning.json",
+    "readme": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v3\\README.md"
+  },
+  "headline_conditioning": [
+    {
+      "conditioning": "all_point_band_cases",
+      "denominator": "All shell modes, scenarios, bands, and along-track points. This is broad, not band-specific.",
+      "rows": 19521,
+      "high_confidence_ocean_pct": 26.97,
+      "moderate_or_high_ocean_pct": 29.06,
+      "ambiguous_false_or_clutter_pct": 43.97,
+      "not_interpretable_or_no_deep_call_pct": 22.1
+    },
+    {
+      "conditioning": "band_HF_9MHz_full_depth",
+      "denominator": "All shell modes, scenarios, and along-track points for HF_9MHz_full_depth.",
+      "rows": 6507,
+      "high_confidence_ocean_pct": 39.93,
+      "moderate_or_high_ocean_pct": 44.78,
+      "ambiguous_false_or_clutter_pct": 50.16,
+      "not_interpretable_or_no_deep_call_pct": 5.06
+    },
+    {
+      "conditioning": "band_VHF_60MHz_full_depth_lowDR",
+      "denominator": "All shell modes, scenarios, and along-track points for VHF_60MHz_full_depth_lowDR.",
+      "rows": 6507,
+      "high_confidence_ocean_pct": 27.17,
+      "moderate_or_high_ocean_pct": 27.17,
+      "ambiguous_false_or_clutter_pct": 50.99,
+      "not_interpretable_or_no_deep_call_pct": 21.84
+    },
+    {
+      "conditioning": "band_VHF_60MHz_shallow",
+      "denominator": "All shell modes, scenarios, and along-track points for VHF_60MHz_shallow.",
+      "rows": 6507,
+      "high_confidence_ocean_pct": 13.82,
+      "moderate_or_high_ocean_pct": 15.21,
+      "ambiguous_false_or_clutter_pct": 30.75,
+      "not_interpretable_or_no_deep_call_pct": 39.4
+    },
+    {
+      "conditioning": "shell_thick_30km_reason_mode",
+      "denominator": "All scenarios, bands, and along-track points for thick_30km_reason_mode.",
+      "rows": 6507,
+      "high_confidence_ocean_pct": 11.16,
+      "moderate_or_high_ocean_pct": 11.16,
+      "ambiguous_false_or_clutter_pct": 41.76,
+      "not_interpretable_or_no_deep_call_pct": 39.77
+    },
+    {
+      "conditioning": "shell_thin_3km_reason_mode",
+      "denominator": "All scenarios, bands, and along-track points for thin_3km_reason_mode.",
+      "rows": 6507,
+      "high_confidence_ocean_pct": 46.67,
+      "moderate_or_high_ocean_pct": 48.07,
+      "ambiguous_false_or_clutter_pct": 49.84,
+      "not_interpretable_or_no_deep_call_pct": 2.09
+    },
+    {
+      "conditioning": "shell_workbook_mid_shell",
+      "denominator": "All scenarios, bands, and along-track points for workbook_mid_shell.",
+      "rows": 6507,
+      "high_confidence_ocean_pct": 23.08,
+      "moderate_or_high_ocean_pct": 27.94,
+      "ambiguous_false_or_clutter_pct": 40.31,
+      "not_interpretable_or_no_deep_call_pct": 24.44
+    }
+  ],
+  "scoring_inputs": [
+    "ocean_snr_margin_db",
+    "false_minus_ocean_db",
+    "surface_clutter_snr_margin_db",
+    "surface_roughness_index",
+    "layer_count",
+    "scenario material ambiguity risk",
+    "band depth window",
+    "cross-band support"
+  ],
+  "confidence_profiles": [
+    {
+      "name": "optimistic_processing",
+      "ocean_margin_shift_db": 3.0,
+      "false_margin_shift_db": -2.0,
+      "clutter_margin_shift_db": -2.0,
+      "material_risk_shift": -10.0,
+      "note": "Assumes better processing, lower false-layer gain, and less severe dirty-ice loss."
+    },
+    {
+      "name": "nominal_v3",
+      "ocean_margin_shift_db": 0.0,
+      "false_margin_shift_db": 0.0,
+      "clutter_margin_shift_db": 0.0,
+      "material_risk_shift": 0.0,
+      "note": "Uses the v2 signal outputs directly."
+    },
+    {
+      "name": "pessimistic_dirty_ice",
+      "ocean_margin_shift_db": -6.0,
+      "false_margin_shift_db": 4.0,
+      "clutter_margin_shift_db": 4.0,
+      "material_risk_shift": 12.0,
+      "note": "Assumes warmer/impurer ice, stronger internal false boundaries, and stronger rough-surface clutter."
+    }
+  ],
+  "caveat": "V3 is an interpretation-confidence layer for a sensitivity simulation, not a probability calibrated to real Europa REASON data.",
+  "source_urls": [
+    "https://science.nasa.gov/mission/europa-clipper/spacecraft-instruments/",
+    "https://link.springer.com/article/10.1007/s11214-024-01072-3"
+  ]
+}

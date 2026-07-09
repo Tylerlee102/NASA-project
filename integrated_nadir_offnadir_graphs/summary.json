@@ -1,0 +1,31 @@
+{
+  "plain_answer": "This set integrates nadir and off-nadir into each graph. Nadir remains flat/near-zero in apparent depth, extra delay, and interferometric phase. Off-nadir curves downward in apparent depth, arrives later, has nonzero VHF phase, and its pulse-compressed resolution band and sidelobes move with the curved echo.",
+  "model": {
+    "closest_altitude_km": 400.0,
+    "altitude_rise_at_plus_minus_60_km": 4.0,
+    "offnadir_cross_track_offset_km": 25.0,
+    "ice_index": 1.78,
+    "vhf_resolution_m": 30.0,
+    "hf_resolution_m": 300.0,
+    "vhf_wavelength_m": 5.0,
+    "baseline_m": 5.0
+  },
+  "closest_approach": {
+    "offnadir_apparent_depth_m": 438.47671181736564,
+    "offnadir_extra_delay_us": 5.2068591200842285,
+    "offnadir_vhf_phase_deg": 22.456183015864994
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\00_parabolic_flyby_path.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\01_apparent_depth_nadir_vs_offnadir.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\02_echo_return_time_nadir_vs_offnadir.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\03_extra_delay_nadir_vs_offnadir.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\04_relative_power_nadir_vs_offnadir.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\05_vhf_phase_nadir_vs_offnadir.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\06_vhf_resolution_band_nadir_vs_offnadir.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\07_hf_resolution_band_nadir_vs_offnadir.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\08_pulse_compression_sidelobes_nadir_vs_offnadir.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\09_radargram_style_nadir_vs_offnadir.png"
+  ],
+  "data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\integrated_nadir_offnadir_graphs\\integrated_nadir_offnadir_data.csv"
+}

@@ -1,0 +1,6 @@
+**/node_modules/
+**/__pycache__/
+*.pyc
+.codex_scratch/gh_pages_deploy/
+.codex_scratch/gh_pages_deploy_fresh/
+**/chrome_profile*/

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dirty Ice Radar Simulation for Europa</title>
+  <style>
+    body { margin: 0; background: #FCFCFD; color: #1F2430; font-family: Aptos, Inter, Segoe UI, Arial, sans-serif; line-height: 1.5; }
+    main { max-width: 1120px; margin: 0 auto; padding: 36px 28px 56px; }
+    h1 { font-size: 30px; margin: 0 0 12px; }
+    h2 { font-size: 21px; margin: 34px 0 10px; border-top: 1px solid #E6E8F0; padding-top: 24px; }
+    h3 { font-size: 16px; margin: 22px 0 8px; }
+    p, li { font-size: 15px; }
+    .summary { background: #EAF1FE; border-left: 5px solid #5477C4; padding: 14px 18px; border-radius: 6px; }
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 8px; }
+    .metric { background: #FFFFFF; border: 1px solid #E6E8F0; border-radius: 6px; padding: 14px; }
+    .metric strong { display: block; font-size: 24px; color: #2E4780; }
+    .metric span { color: #6F768A; font-size: 13px; }
+    figure { margin: 22px 0 26px; background: #FFFFFF; border: 1px solid #E6E8F0; border-radius: 6px; padding: 14px; }
+    figure img { max-width: 100%; height: auto; display: block; }
+    figcaption { color: #6F768A; font-size: 13px; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 16px 0 22px; background: #FFFFFF; }
+    th, td { border: 1px solid #E6E8F0; padding: 8px 9px; vertical-align: top; }
+    th { background: #F4F5F7; text-align: left; }
+    code { font-family: Consolas, monospace; background: #F4F5F7; padding: 2px 4px; border-radius: 4px; }
+    .note { color: #464C55; background: #FFF4C2; border-left: 5px solid #B8A037; padding: 12px 16px; border-radius: 6px; }
+    @media (max-width: 800px) { .metric-grid { grid-template-columns: 1fr 1fr; } main { padding: 24px 16px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Dirty Ice Radar Simulation for Europa</h1>
+  <section class="summary">
+    <strong>Technical summary.</strong>
+    The simulation supports the research gap you picked: meter-scale salt layers alone are not the most interesting missing piece, but patchy mixed dirty ice and briny lenses can make the deep radar interpretation less reliable. In the HF 9 MHz model, the complex dirty-ice case creates 2.5% deep false-boundary risk and 57.7% weak/no deep-ocean detection, while the clean-ice and simple salt-reference cases keep the HF ocean boundary clear.
+  </section>
+
+  <div class="metric-grid">
+    <div class="metric"><strong>2.5%</strong><span>HF complex dirty-ice deep false-boundary risk</span></div>
+    <div class="metric"><strong>57.7%</strong><span>HF complex dirty-ice weak/no deep detection</span></div>
+    <div class="metric"><strong>12.68 km</strong><span>Max false-depth error if strongest echo is trusted</span></div>
+    <div class="metric"><strong>15.1 km</strong><span>Mean simulated ice-ocean boundary depth</span></div>
+  </div>
+
+  <h2>Key findings with visual evidence</h2>
+  <p><strong>The best problem case is combined dirty ice, not simple salt alone.</strong> The REASON paper already treats salt layers as possible target interfaces, including meter-scale layers with permittivity around 5. This simulation matches that reference case, then adds the under-studied part: multiple dirty material types and stacked thin interfaces below radar resolution.</p>
+  <figure><img src="charts/scenario_outcome_risk.png" alt="Scenario outcome risk chart" /><figcaption>Chart 1. Outcome risk is the share of points where deep false or ambiguous returns compete with the real ocean boundary, or where the ocean is hidden while a deep false layer remains visible.</figcaption></figure>
+
+  <p><strong>False dirty-layer echoes can compete with the ocean return in the complex case.</strong> The track plot compares the true ocean-boundary echo with the strongest false dirty-layer echo. Areas where the false echo approaches or exceeds the ocean echo are where interpretation becomes risky.</p>
+  <figure><img src="charts/complex_dirty_ice_hf_echo_track.png" alt="Complex dirty ice HF echo track" /><figcaption>Chart 2. HF 9 MHz deep-sounding case. The threshold is the simplified detection cutoff; shaded bands mark deep false-boundary risk, not every shallow internal reflector.</figcaption></figure>
+
+  <p><strong>When a false reflector wins, the depth mistake can become kilometer-scale.</strong> This does not prove that Europa will produce those exact false layers; it shows why realistic dirty-mixture distributions are a strong student simulation target.</p>
+  <figure><img src="charts/hf_depth_error_distribution.png" alt="Depth error distribution" /><figcaption>Chart 3. Error is computed only from this simplified strongest-return interpretation rule.</figcaption></figure>
+
+  <p><strong>Dirty-layer thickness and loss both matter.</strong> Thin or weakly lossy layers are less dangerous; thick and high-loss layers can hide the ocean or make false interfaces dominate. This is the simulation space worth exploring next.</p>
+  <figure><img src="charts/dirty_layer_sensitivity_heatmap.png" alt="Dirty layer sensitivity heatmap" /><figcaption>Chart 4. The sensitivity grid uses one deep dirty layer near 70% of the modeled ocean depth and shows the share of sampled points with ambiguity or false-boundary risk.</figcaption></figure>
+
+  <p><strong>HF and VHF should not be interpreted the same way.</strong> The VHF band is higher-resolution but loses deep ocean detectability first; the HF band is the relevant deep-sounding band for the ice-ocean boundary.</p>
+  <figure><img src="charts/frequency_ocean_margin.png" alt="Frequency ocean margin comparison" /><figcaption>Chart 5. Positive margin means the ocean boundary is above the model detection threshold.</figcaption></figure>
+
+  <h2>Scope, data, and metric definitions</h2>
+  <p>The baseline geometry comes from your current workbook model, reimplemented in Python because the latest workbook formulas do not store reliable cached values for direct reading. The track has 241 points from -60 km to 60 km and keeps your generated topography, shallow layer, briny lens, and ice-ocean boundary logic.</p>
+  <ul>
+    <li><strong>Ocean echo dB:</strong> relative radar power from the true ice-ocean boundary after two-way attenuation.</li>
+    <li><strong>False echo dB:</strong> strongest simulated non-ocean return from dirty layers, including coherent summing of interfaces inside a radar-resolution window.</li>
+    <li><strong>Ambiguous / false-risk:</strong> a false echo deep enough to confuse the bottom/ocean boundary is within 3 dB of the ocean echo, stronger than it, or visible while the ocean is hidden.</li>
+    <li><strong>Detection threshold:</strong> -45 dB, matching the simplified threshold style already used in the workbook.</li>
+  </ul>
+
+  <h2>Model specification and assumptions</h2>
+  <p>The model is a first-order radar interpretation stress test, not a full REASON processing pipeline. It combines interface reflectivity from dielectric contrast, one-way attenuation by material path length, and a simple coherent thin-layer interference approximation. It uses the REASON bands of 9 MHz and 60 MHz.</p>
+  <table>
+    <thead><tr><th>Scenario</th><th>Frequency</th><th>Clear ocean</th><th>Ambiguous / false risk</th><th>Weak/no deep detection</th><th>Median ocean margin (dB)</th><th>Max inferred depth error (km)</th></tr></thead>
+    <tbody><tr><td>briny_lens_masking</td><td>HF_9MHz</td><td>63.5%</td><td>0.0%</td><td>36.5%</td><td>4.6</td><td>11.13</td></tr>
+<tr><td>briny_lens_masking</td><td>VHF_60MHz</td><td>0.0%</td><td>0.0%</td><td>100.0%</td><td>-38.0</td><td>11.13</td></tr>
+<tr><td>clean_ice_control</td><td>HF_9MHz</td><td>100.0%</td><td>0.0%</td><td>0.0%</td><td>15.2</td><td>0.00</td></tr>
+<tr><td>clean_ice_control</td><td>VHF_60MHz</td><td>0.0%</td><td>0.0%</td><td>100.0%</td><td>-10.5</td><td>0.00</td></tr>
+<tr><td>complex_dirty_ice</td><td>HF_9MHz</td><td>39.8%</td><td>2.5%</td><td>57.7%</td><td>-1.5</td><td>12.68</td></tr>
+<tr><td>complex_dirty_ice</td><td>VHF_60MHz</td><td>0.0%</td><td>0.0%</td><td>100.0%</td><td>-53.7</td><td>12.68</td></tr>
+<tr><td>mixed_dirty_thin_layers</td><td>HF_9MHz</td><td>31.1%</td><td>68.9%</td><td>0.0%</td><td>7.9</td><td>4.73</td></tr>
+<tr><td>mixed_dirty_thin_layers</td><td>VHF_60MHz</td><td>0.0%</td><td>0.0%</td><td>100.0%</td><td>-29.4</td><td>4.74</td></tr>
+<tr><td>non_salt_impurity_mix</td><td>HF_9MHz</td><td>89.6%</td><td>10.4%</td><td>0.0%</td><td>4.0</td><td>12.68</td></tr>
+<tr><td>non_salt_impurity_mix</td><td>VHF_60MHz</td><td>0.0%</td><td>0.0%</td><td>100.0%</td><td>-39.5</td><td>12.68</td></tr>
+<tr><td>salt_reference</td><td>HF_9MHz</td><td>100.0%</td><td>0.0%</td><td>0.0%</td><td>12.3</td><td>0.00</td></tr>
+<tr><td>salt_reference</td><td>VHF_60MHz</td><td>0.0%</td><td>0.0%</td><td>100.0%</td><td>-18.2</td><td>8.03</td></tr></tbody>
+  </table>
+
+  <h2>Cross-reference against research papers</h2>
+  <p>The simulation is intentionally conservative about claims. It uses paper-backed anchors for frequencies, salt-layer permittivity, thin-layer interference, and briny/mushy high-loss behavior, then marks non-salt dirty materials as an uncertainty bracket.</p>
+  <table>
+    <thead><tr><th>Source</th><th>What the source supports</th><th>How the simulation uses it</th><th>Status</th><th>Link</th></tr></thead>
+    <tbody><tr><td>Blankenship et al. 2024, REASON</td><td>REASON is a dual-frequency 9/60 MHz radar and is designed to characterize brines/salts, search for an ice-ocean interface, and handle uncertainty in key Europa properties.</td><td>Model uses HF_9MHz and VHF_60MHz; dirty layers alter reflectivity/attenuation; outputs include ocean-vs-false-layer ambiguity.</td><td>Directly aligned</td><td><a href="https://link.springer.com/article/10.1007/s11214-024-01072-3">link</a></td></tr>
+<tr><td>Blankenship et al. 2024, thin layers</td><td>Thin layers can cause constructive/destructive interference depending on thickness and permittivity; REASON considers 0.5 m and 200 m near-surface modes.</td><td>False reflector calculation coherently sums interfaces inside the radar vertical-resolution window.</td><td>Simplified forward model</td><td><a href="https://link.springer.com/article/10.1007/s11214-024-01072-3">link</a></td></tr>
+<tr><td>Blankenship et al. 2024, salt layers</td><td>Salt layers are modeled as potential target interfaces; paper adopts epsilon=5 and meter-scale salt layers.</td><td>Salt_reference scenario uses epsilon=5, 1.0 m and 0.2 m salt layers.</td><td>Directly aligned</td><td><a href="https://link.springer.com/article/10.1007/s11214-024-01072-3">link</a></td></tr>
+<tr><td>Blankenship et al. 2024, mushy layer</td><td>REASON is not designed to penetrate an increasingly mushy brine layer because it is highly conductive and attenuating, but the top interface becomes more reflective.</td><td>Briny_lens_masking scenario makes the lens both reflective and high-loss, then checks whether it hides the ocean echo.</td><td>Qualitatively aligned</td><td><a href="https://link.springer.com/article/10.1007/s11214-024-01072-3">link</a></td></tr>
+<tr><td>Lalich et al. 2021 / Mars analog</td><td>Bright radar reflections under Mars polar ice can be explained by interference between multiple layer boundaries without liquid water.</td><td>Mixed_dirty_thin_layers tests whether stacked interfaces can outshine the ocean boundary in a Europa-like setup.</td><td>Analog support, not Europa proof</td><td><a href="https://arxiv.org/abs/2107.03497">link</a></td></tr>
+<tr><td>Pettinelli et al. 2015 review</td><td>Dielectric properties of Jovian satellite ice analogs are central to radar interpretation and remain measurement/model dependent.</td><td>Non_salt_impurity_mix varies epsilon and attenuation for less-constrained acid/dust/organic/radiolytic families.</td><td>Uncertainty bracket</td><td><a href="https://doi.org/10.1002/2014RG000463">link</a></td></tr></tbody>
+  </table>
+
+  <h2>Limitations, uncertainty, and robustness checks</h2>
+  <p class="note"><strong>Main limitation:</strong> non-salt dirty ice is not well constrained at Europa temperatures and REASON frequencies. The model should be treated as a sensitivity tool: it tells you which combinations of layer thickness, dielectric contrast, and attenuation become dangerous, not that those exact layers exist.</p>
+  <ul>
+    <li>The attenuation values are scenario ranges chosen to bracket paper-backed behavior; they are not lab-measured constants for every material.</li>
+    <li>The thin-layer interference model is simplified and does not replace full-wave electromagnetic modeling.</li>
+    <li>The simulation assumes nadir-style sounding and does not include full spacecraft SAR focusing, clutter migration, plasma distortion, or thermal gradient physics.</li>
+    <li>The strongest-return interpretation rule is deliberately simple; real mission interpretation will use multi-instrument and multi-pass context.</li>
+  </ul>
+
+  <h2>Recommended next steps</h2>
+  <ol>
+    <li>Turn the complex dirty-ice scenario into a parameter sweep: layer count, layer spacing, dielectric constant, and attenuation.</li>
+    <li>Add a material library for specific candidates: NaCl-rich ice, MgSO4 hydrates, sulfuric acid hydrate, dust/organics, and briny/mushy inclusions.</li>
+    <li>Compare HF and VHF separately: HF for deep ocean detection, VHF for shallow false-reflector discrimination.</li>
+    <li>Use the claim: <em>mixed dirty ice could create ambiguous radar signatures that hide or mimic the true ice-ocean boundary under some layer configurations.</em></li>
+  </ol>
+
+  <h2>Further questions</h2>
+  <p>The next research question should be: which realistic material mixture produces the highest false-reflector risk while still being plausible for Europa? That will need more lab-property values than the public mission summary gives.</p>
+</main>
+</body>
+</html>

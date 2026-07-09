@@ -1,0 +1,27 @@
+{
+  "why_25_km": "25 km was chosen as the cross-track offset because, at the 400 km closest-approach altitude and ice index 1.78, it creates about 438 m apparent depth, matching the 440 m candidate-depth idea.",
+  "why_400_km": "400 km is the closest-approach altitude; the updated graphs sample a parabolic flyby altitude at each satellite position.",
+  "important_distinction": "25 km is horizontal side offset; altitude is vertical and changes slightly along the parabola.",
+  "parabolic_flyby": {
+    "closest_altitude_km": 400.0,
+    "altitude_rise_at_plus_minus_60_km": 4.0
+  },
+  "closest_approach": {
+    "offnadir_apparent_depth_m": 438.47671181736564,
+    "offnadir_extra_delay_us": 5.206859120084408,
+    "offnadir_look_angle_deg": 3.576334374997351,
+    "offnadir_power_loss_db": -0.033863160388898056,
+    "offnadir_vhf_phase_deg": 22.456183015864994
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\00_geometry_why_25km_vs_400km.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\01_apparent_depth_bar_comparison.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\02_extra_delay_bar_comparison.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\03_look_angle_bar_comparison.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\04_power_loss_bar_comparison.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\05_vhf_phase_bar_comparison.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\06_resolution_bar_comparison.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\07_pulse_compression_sidelobe_bar_comparison.png"
+  ],
+  "data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_bar_charts\\bar_chart_values.csv"
+}

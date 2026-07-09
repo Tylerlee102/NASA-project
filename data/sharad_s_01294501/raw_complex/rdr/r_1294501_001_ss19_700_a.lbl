@@ -1,0 +1,117 @@
+PDS_VERSION_ID                     = PDS3
+
+
+/* Identification data elements that apply to all referenced data files */
+
+DATA_SET_ID                        = "MRO-M-SHARAD-4-RDR-V1.0"
+PRODUCT_ID                         = "R_1294501_001_SS19_700_A"
+RELEASE_ID                         = "0011"
+PRODUCT_TYPE                       = RDR
+INSTRUMENT_HOST_ID                 = MRO
+INSTRUMENT_HOST_NAME               = "MARS RECONNAISSANCE ORBITER"
+INSTRUMENT_ID                      = SHARAD
+INSTRUMENT_NAME                    = "SHALLOW RADAR"
+INSTRUMENT_TYPE                    = RADAR
+TARGET_NAME                        = MARS
+MISSION_PHASE_NAME                 = "EXTENDED SCIENCE PHASE"
+ORBIT_NUMBER                       = 12945
+MRO:START_SUB_SPACECRAFT_LONGITUDE = 167.099959 <DEGREES>
+MRO:START_SUB_SPACECRAFT_LATITUDE  = 69.897714 <DEGREES>
+MRO:STOP_SUB_SPACECRAFT_LONGITUDE  = 359.860511 <DEGREES>
+MRO:STOP_SUB_SPACECRAFT_LATITUDE   = 72.960543 <DEGREES>
+START_TIME                         = 2009-121T04:51:41.336
+STOP_TIME                          = 2009-121T05:03:21.356
+SPACECRAFT_CLOCK_START_COUNT       = "2/925620701.22029"
+SPACECRAFT_CLOCK_STOP_COUNT        = "2/925621401.23373"
+PRODUCT_CREATION_TIME              = 2009-169T13:03:16.000
+PRODUCT_VERSION_ID                 = "A"
+PRODUCT_VERSION_TYPE               = RECONSTRUCTED
+
+
+OBJECT                             = FILE
+
+
+/* File characteristic data elements */
+
+  RECORD_TYPE                      = FIXED_LENGTH
+  RECORD_BYTES                     = 5822
+  FILE_RECORDS                     = 122145
+
+
+/* Data object pointers */
+
+  ^PROCESSED_ECHO_TABLE            = "R_1294501_001_SS19_700_A.DAT"
+
+
+/* Identification data elements */
+
+  SOURCE_PRODUCT_ID                = "E_1294501_001_SS19_700_A.LBL"
+
+
+/* Descriptive data elements */
+
+  INSTRUMENT_MODE_ID               = SS19
+  INSTRUMENT_MODE_DESC             = "In this mode the instrument performs
+                                   scientific measurements by transmitting
+                                   radar pulses and collecting, processing
+                                   and formatting received echoes. Data
+                                   processing performed on-board consists
+                                   in summing 04 sequential echoes, and
+                                   converting the result from 32-bit
+                                   precision to 08-bit precision."
+  MRO:PULSE_REPETITION_INTERVAL    = 1428 <MICROSECONDS>
+  MRO:PHASE_COMPENSATION_TYPE      = "NO COMPENSATION"
+  MRO:MANUAL_GAIN_CONTROL          = 10
+  MRO:COMPRESSION_SELECTION_FLAG   = "STATIC"
+  MRO:CLOSED_LOOP_TRACKING_FLAG    = "DISABLED"
+  DATA_QUALITY_ID                  = "0"
+  DATA_QUALITY_DESC                = "0: no corrupted data
+                                      1: less than  2% corrupted data
+                                      2: less than  5% corrupted data
+                                      3: less than 10% corrupted data
+                                      4: more than 10% corrupted data"
+  MRO:WEIGHTING_FUNCTION_NAME      = "HANNING"
+  MRO:NUMERICAL_FILTER_TYPE        = "INVERSE"
+  MRO:PHASE_CORRECTION_TYPE        = "PHASE GRADIENT AUTOFOCUS"
+  MRO:REFERENCE_FUNCTION_FILE_NAME   = "AUTO"
+  MRO:NOMINAL_ALONG_TRACK_RESOLUTION = 300 <METERS>
+  MRO:AZIMUTH_SPACING_TYPE           = "UNIFORM"
+  MRO:RADARGRAM_RETURN_INTERVAL    = 311451
+
+
+
+/* Data object definitions */
+
+  OBJECT                           = PROCESSED_ECHO_TABLE
+
+    INTERCHANGE_FORMAT             = BINARY
+    COLUMNS                        = 102
+    ROW_BYTES                      = 5822
+    ROWS                           = 122145
+    DESCRIPTION                    = "Binary table containing SHARAD processed
+                                      scientific data, that is the result of
+                                      the Doppler filtering and range
+                                      compressing of a variable number of raw
+                                      echoes, and is expressed as a time
+                                      series of complex voltages. Each record
+                                      contains also a number of parameters
+                                      describing the operation of the
+                                      instrument during data acquisition,
+                                      together with engineering and spacecraft
+                                      information. Specifically, each record
+                                      is subdivided into five parts, each of
+                                      which contains a different type of
+                                      information: ancillary data, scientific
+                                      data, processing parameters, geometric
+                                      parameters and instrument engineering
+                                      parameters."
+    ^STRUCTURE                     = "RDR.FMT"
+    PRIMARY_KEY                    = ("SCET_BLOCK_WHOLE","SCET_BLOCK_FRAC")
+    START_PRIMARY_KEY              = (925620701,22029)
+    STOP_PRIMARY_KEY               = (925621401,23373)
+
+  END_OBJECT                       = PROCESSED_ECHO_TABLE
+
+END_OBJECT                         = FILE
+
+END

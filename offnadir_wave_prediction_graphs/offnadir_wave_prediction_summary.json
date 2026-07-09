@@ -1,0 +1,25 @@
+{
+  "source_paper_values": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_data\\reason_instrument_parameters.json",
+  "model_assumptions": {
+    "offnadir_cross_track_offset_km": 25.0,
+    "ice_refractive_index": 1.78,
+    "vhf_wavelength_m_from_paper": 5.0,
+    "interferometry_baseline_m": 5.0,
+    "altitudes_km_shown": [
+      25.0,
+      400.0,
+      1000.0
+    ],
+    "representative_interferometry_altitude_km": 400
+  },
+  "plain_answer": "If the reflecting feature is off nadir, the radar wave travels a longer slant path than a nadir echo. As the spacecraft moves left-to-right, the off-nadir echo appears as a curved/U-shaped false subsurface reflector, arrives late, has nonzero VHF interferometric phase, and is strongest near closest approach.",
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\offnadir_wave_prediction_graphs\\00_representative_400km_offnadir_apparent_depth.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\offnadir_wave_prediction_graphs\\01_offnadir_apparent_depth_vs_along_track.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\offnadir_wave_prediction_graphs\\02_offnadir_extra_echo_delay_vs_along_track.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\offnadir_wave_prediction_graphs\\03_offnadir_return_power_vs_along_track.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\offnadir_wave_prediction_graphs\\04_vhf_interferometric_phase_vs_along_track.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\offnadir_wave_prediction_graphs\\05_predicted_offnadir_radargram_trace_400km.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\offnadir_wave_prediction_graphs\\06_prf_vs_400km_echo_time_context.png"
+  ]
+}

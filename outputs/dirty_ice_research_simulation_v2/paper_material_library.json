@@ -1,0 +1,79 @@
+[
+  {
+    "key": "clean_ice",
+    "label": "Clean compact water ice",
+    "eps_real": 3.15,
+    "attenuation_db_km_hf_min": 0.2,
+    "attenuation_db_km_hf_max": 0.7,
+    "source": "Blankenship et al. 2024, REASON",
+    "source_status": "Directly paper anchored epsilon; attenuation profile modeled",
+    "link": "https://link.springer.com/article/10.1007/s11214-024-01072-3",
+    "note": "REASON uses compact hexagonal ice epsilon near 3.15; low-loss cold ice is represented by the conductive background profile."
+  },
+  {
+    "key": "pore_close_ice",
+    "label": "Pore close-off / porous ice endmember",
+    "eps_real": 2.8,
+    "attenuation_db_km_hf_min": 0.2,
+    "attenuation_db_km_hf_max": 1.2,
+    "source": "Blankenship et al. 2024, REASON",
+    "source_status": "Directly paper anchored epsilon; attenuation bracketed",
+    "link": "https://link.springer.com/article/10.1007/s11214-024-01072-3",
+    "note": "Used as the low-permittivity endmember for porous or void-rich contrasts."
+  },
+  {
+    "key": "brine_filled_ice",
+    "label": "Brine-filled ice",
+    "eps_real": 9.0,
+    "attenuation_db_km_hf_min": 5.0,
+    "attenuation_db_km_hf_max": 18.0,
+    "source": "Blankenship et al. 2024, REASON",
+    "source_status": "Directly paper anchored epsilon; high-loss bracket modeled",
+    "link": "https://link.springer.com/article/10.1007/s11214-024-01072-3",
+    "note": "REASON adopts epsilon 9 for brine-filled ice; conductivity and loss depend on brine geometry and temperature."
+  },
+  {
+    "key": "hydrated_salt",
+    "label": "Hydrated salt layer",
+    "eps_real": 5.0,
+    "attenuation_db_km_hf_min": 0.7,
+    "attenuation_db_km_hf_max": 2.0,
+    "source": "Blankenship et al. 2024, REASON",
+    "source_status": "Directly paper anchored epsilon and layer thicknesses",
+    "link": "https://link.springer.com/article/10.1007/s11214-024-01072-3",
+    "note": "REASON uses epsilon 5 for hydrated salt layers and discusses 1 m and 0.2 m salt-layer cases."
+  },
+  {
+    "key": "dirty_mixed_ice",
+    "label": "Mixed dirty ice bracket",
+    "eps_real": 6.2,
+    "attenuation_db_km_hf_min": 1.4,
+    "attenuation_db_km_hf_max": 7.8,
+    "source": "Blankenship et al. 2024, REASON; Pettinelli et al. 2015 review",
+    "source_status": "Sensitivity bracket from paper-supported material families",
+    "link": "https://link.springer.com/article/10.1007/s11214-024-01072-3",
+    "note": "Represents salts, acid hydrates, clathrates, radiolytic products, and mixed inclusions whose lab values remain uncertain."
+  },
+  {
+    "key": "void_porous_fracture",
+    "label": "Void/porous fracture contrast",
+    "eps_real": 2.2,
+    "attenuation_db_km_hf_min": 0.2,
+    "attenuation_db_km_hf_max": 1.2,
+    "source": "Pettinelli et al. 2015 review",
+    "source_status": "Sensitivity bracket",
+    "link": "https://doi.org/10.1002/2014RG000463",
+    "note": "Void space lowers effective permittivity; exact response depends on geometry and volume fraction."
+  },
+  {
+    "key": "liquid_ocean",
+    "label": "Liquid water/ocean endmember",
+    "eps_real": 80.0,
+    "attenuation_db_km_hf_min": 0.0,
+    "attenuation_db_km_hf_max": 0.0,
+    "source": "v2 sensitivity model",
+    "source_status": "Model endmember",
+    "link": "",
+    "note": "Used only as a high-permittivity ocean boundary endmember; ocean salinity and loss are not modeled internally."
+  }
+]

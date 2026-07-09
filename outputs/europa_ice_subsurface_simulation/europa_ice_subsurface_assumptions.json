@@ -1,0 +1,10 @@
+{
+  "model_type": "Synthetic Europa-like icy subsurface truth model plus radar response preview",
+  "surface": "Generated topography is treated as icy surface terrain, not rock.",
+  "upper_ice_layer_mean_depth_m": 1150.0,
+  "possible_briny_warm_lens_depth_m": "approximately 4.4 to 5.7 km where lens strength is high",
+  "nominal_ice_ocean_boundary_depth_m": 15000.0,
+  "ice_refractive_index": 1.78,
+  "attenuation_db_per_km_one_way": 0.9,
+  "note": "Synthetic data for model testing; not a real Europa DEM or measured radar product."
+}

@@ -1,0 +1,11 @@
+{
+  "metrics": {
+    "candidate_mean_offset_km": 25.165841480214233,
+    "candidate_mean_phase_deg": 12.549508478505363,
+    "candidate_mean_phase_rad": 0.21903024245686262,
+    "expected_offset_km": 25.0
+  },
+  "rationale": "Candidate-bin phase is nonzero and maps to the expected off-nadir surface offset.",
+  "result": "clutter",
+  "test": "2_interferometry"
+}

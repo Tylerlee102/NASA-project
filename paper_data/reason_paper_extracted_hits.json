@@ -1,0 +1,464 @@
+{
+  "source_pdf": "C:\\Users\\tyboy\\Downloads\\s11214-024-01072-3.pdf",
+  "page_count": 91,
+  "title": "SpaceScienceReviews (2024) 220:51 https://doi.org/10.1007/s11214-024-01072-3 RadarforEuropaAssessmentandSounding:Oceanto Near-Surface(REASON) DonaldD.Blankenship \u00b7AlinaMoussessian \u00b7ElaineChapin \u00b7DuncanA.Young \u00b7 G.WesleyPatterson \u00b7JeffreyJ.Plautetal. [fullauthordetailsattheendofthearticle] Received:1August2023/Accepted:29April2024 \u00a9TheAuthor(s)2024",
+  "pattern_hits": {
+    "frequencies_mhz": [
+      {
+        "page": 1,
+        "match": "60 MHz",
+        "snippet": "son \u00b7JeffreyJ.Plautetal. [fullauthordetailsattheendofthearticle] Received:1August2023/Accepted:29April2024 \u00a9TheAuthor(s)2024 Abstract The Radar for Europa Assessment and Sounding: Ocean to Near-surface (REASON) is a dual-frequency ice-penetrating radar (9 and 60 MHz) onboard the Europa Clipper mission. REASON is designed to probe Europa from exosphere to subsurface ocean, contributing the third dimension to observations of this enigmatic world. The hypotheses REASON will test are that (1) the ice shell of Europa hosts li"
+      },
+      {
+        "page": 10,
+        "match": "60 MHz",
+        "snippet": "51 Page10of91 D.D.Blankenshipetal. Fig.7 Comparison between radargrams generated from ice-penetrating radar data collected over ice on Earth at 60 MHz center frequency, 15 MHz bandwidth (top) and Mars at\u223c 1 MHz center frequency and bandwidth (bottom), modi\ufb01ed from Picardi et al. (2005) cryosphere (Evans 1963; Gudmandsen 1969;D r e w r y1983). However, these early systems were incoherent and thus limited to"
+      },
+      {
+        "page": 10,
+        "match": "60 MHz",
+        "snippet": "paceborne radar sounders. This sounder could operate at frequencies of 35, 50, 60, 75, and 150 MHz with a 15 MHz bandwidth. Initial \ufb01eld testing was done at 150 MHz with a University of Kansas antenna system (Chuah 1996). The system was subsequently tested at 60 MHz in Antarctic operations by the University of Texas Institute for Geophysics, the success of which led to the development of derivative designs used in polar aerogeophysics to the present day (Peters et al. 2005a). These radar sounders represent the predecesso"
+      },
+      {
+        "page": 11,
+        "match": "9 MHz",
+        "snippet": "Polar Layered Deposits (top) by SHARAD (middle) and MARSIS (bottom), illustrating the scienti\ufb01c value of complementary sounding frequencies, modi\ufb01ed from material provided by Ali Safaeinili 1.6 REASONHigh-LevelInstrumentDescription REASON is a dual-frequency (9 MHz and 60 MHz) radar designed to penetrate deep into Europa\u2019s ice crust, operating over a wide range of altitudes (35 km \u2013 1000 km) across a \ufb02yby while simultaneously characterizing Europa\u2019s surface/near-surface and exosphere. REASON uses a 1 MHz bandwidth at a"
+      },
+      {
+        "page": 11,
+        "match": "60 MHz",
+        "snippet": "red Deposits (top) by SHARAD (middle) and MARSIS (bottom), illustrating the scienti\ufb01c value of complementary sounding frequencies, modi\ufb01ed from material provided by Ali Safaeinili 1.6 REASONHigh-LevelInstrumentDescription REASON is a dual-frequency (9 MHz and 60 MHz) radar designed to penetrate deep into Europa\u2019s ice crust, operating over a wide range of altitudes (35 km \u2013 1000 km) across a \ufb02yby while simultaneously characterizing Europa\u2019s surface/near-surface and exosphere. REASON uses a 1 MHz bandwidth at a 9 MHz (33.3"
+      },
+      {
+        "page": 11,
+        "match": "9 MHz",
+        "snippet": "and 60 MHz) radar designed to penetrate deep into Europa\u2019s ice crust, operating over a wide range of altitudes (35 km \u2013 1000 km) across a \ufb02yby while simultaneously characterizing Europa\u2019s surface/near-surface and exosphere. REASON uses a 1 MHz bandwidth at a 9 MHz (33.3 m wavelength) High Frequency (HF) center frequency and a 10 MHz bandwidth at a 60 MHz (5 m wavelength) Very High Fre- quency (VHF) center frequency to achieve low-resolution (300 m in ice) full-depth sounding and high-resolution (30 m in ice) shallow so"
+      },
+      {
+        "page": 11,
+        "match": "60 MHz",
+        "snippet": "e range of altitudes (35 km \u2013 1000 km) across a \ufb02yby while simultaneously characterizing Europa\u2019s surface/near-surface and exosphere. REASON uses a 1 MHz bandwidth at a 9 MHz (33.3 m wavelength) High Frequency (HF) center frequency and a 10 MHz bandwidth at a 60 MHz (5 m wavelength) Very High Fre- quency (VHF) center frequency to achieve low-resolution (300 m in ice) full-depth sounding and high-resolution (30 m in ice) shallow sounding simultaneously. The HF center frequency of 9 MHz was selected because it enables robu"
+      },
+      {
+        "page": 11,
+        "match": "9 MHz",
+        "snippet": "equency and a 10 MHz bandwidth at a 60 MHz (5 m wavelength) Very High Fre- quency (VHF) center frequency to achieve low-resolution (300 m in ice) full-depth sounding and high-resolution (30 m in ice) shallow sounding simultaneously. The HF center frequency of 9 MHz was selected because it enables robust performance in areas of high surface rough- ness while avoiding prohibitive Faraday losses below 8 MHz. Although surface and volume scattering tend to decrease with increasing wavelength (i.e., VHF is more susceptible to"
+      },
+      {
+        "page": 42,
+        "match": "9 MHz",
+        "snippet": "51 Page42of91 D.D.Blankenshipetal. Table 7 REASON radar system parameters (actuals) HF VHF Peak Transmit Power at input to the antennas, per antenna assembly 11.75 W 5.5 W Center Frequency 9 MHz 60 MHz Bandwidth (Fractional Bandwidth) 1 MHz (11%) 10 MHz (17%) Operational Altitudes 25 km to 1000 km from Europa Pulse Repetition Frequency (PRF) 50 Hz\u20133 kHz Approximate On-time per Orbit 20 min warm-up and 16 min science collection Dynamic Range 40 dB* 35"
+      },
+      {
+        "page": 42,
+        "match": "60 MHz",
+        "snippet": "51 Page42of91 D.D.Blankenshipetal. Table 7 REASON radar system parameters (actuals) HF VHF Peak Transmit Power at input to the antennas, per antenna assembly 11.75 W 5.5 W Center Frequency 9 MHz 60 MHz Bandwidth (Fractional Bandwidth) 1 MHz (11%) 10 MHz (17%) Operational Altitudes 25 km to 1000 km from Europa Pulse Repetition Frequency (PRF) 50 Hz\u20133 kHz Approximate On-time per Orbit 20 min warm-up and 16 min science collection Dynamic Range 40 dB* 35 dB* An"
+      },
+      {
+        "page": 44,
+        "match": "9 MHz",
+        "snippet": "51 Page44of91 D.D.Blankenshipetal. Table 8 DES parameters Parameter HF VHF ADC sampling rate 48 MHz Complex-valued baseband sampling rate 1.2 MHz 12 MHz Downconverter center frequency 9 MHz 12 MHz ADC bit resolution 9-10 bits (effective) the primary purpose of the REASON digital subsystem is to coherently transmit chirps, re- ceive the echoes, and reduce the receive data rate and data volume, while preserving the SNR necessary for science. The r"
+      },
+      {
+        "page": 48,
+        "match": "9 MHz",
+        "snippet": "51 Page48of91 D.D.Blankenshipetal. Table 9 Key RFES requirements Requirement HF VHF Operating Center Frequency 9 MHz 60 MHz Bandwidth 1 MHz 10 MHz Peak Transmit Power 7.5 W (min) at each antenna 3.75 W (min) at each antenna Pulse Droop <0.005 dB/\u03bcs <0.005 dB/\u03bcs Pulse Ripple Over Bandwidth <1d B <1d B Harmonic Rejection >80 dBc >80 dBc Noise Figure <13.5 dB* <13.5 dB* Receiv"
+      },
+      {
+        "page": 48,
+        "match": "60 MHz",
+        "snippet": "51 Page48of91 D.D.Blankenshipetal. Table 9 Key RFES requirements Requirement HF VHF Operating Center Frequency 9 MHz 60 MHz Bandwidth 1 MHz 10 MHz Peak Transmit Power 7.5 W (min) at each antenna 3.75 W (min) at each antenna Pulse Droop <0.005 dB/\u03bcs <0.005 dB/\u03bcs Pulse Ripple Over Bandwidth <1d B <1d B Harmonic Rejection >80 dBc >80 dBc Noise Figure <13.5 dB* <13.5 dB* Receive Path"
+      },
+      {
+        "page": 57,
+        "match": "60 MHz",
+        "snippet": "t health checks using both internal and external sources. The instrument will operate the HF- and VHF-band electronics with the antenna staring at regions of the sky with known galactic background emission levels that are also free from point sources at 9 and 60 MHz (\u201ccold sky\u201d). These tests consist of digitizing the HF-and VHF-band channels in the receive- only mode, stepping through the receive attenuator settings, and evaluating the change in value that digitized signals exhibit during ground processing. 7.1.2 OwensVa"
+      },
+      {
+        "page": 59,
+        "match": "9 MHz",
+        "snippet": "r knowledge of a few dominant point sources, it may be possible to deconvolve the HF or VHF antenna patterns from a collection of noise measurements over a set of spacecraft orientations. This activity requires maps of galactic background emissions at or near 9 MHz and 60 MHz with suf- \ufb01cient resolution for comparison to REASON measurements. Many partial maps of Milky Way radio emissions have been created at VHF frequencies (de Oliveira-Costa et al. 2008; Dowell et al. 2017). These maps vary in resolution and coverage."
+      },
+      {
+        "page": 59,
+        "match": "60 MHz",
+        "snippet": "e of a few dominant point sources, it may be possible to deconvolve the HF or VHF antenna patterns from a collection of noise measurements over a set of spacecraft orientations. This activity requires maps of galactic background emissions at or near 9 MHz and 60 MHz with suf- \ufb01cient resolution for comparison to REASON measurements. Many partial maps of Milky Way radio emissions have been created at VHF frequencies (de Oliveira-Costa et al. 2008; Dowell et al. 2017). These maps vary in resolution and coverage. However, th"
+      },
+      {
+        "page": 59,
+        "match": "9 MHz",
+        "snippet": "racterized in HF. A model describing galactic emissions from approximately 10\u2013100 MHz, along with Fortran code to implement it, is presented in de Oliveira-Costa (2008). The REASON team has used this model to generate galactic back- ground temperature maps at 9 MHz and 60 MHz. 7.1.5 TheSunVHFPassiveCharacterization The Sun is a natural source of weak radio emissions, with the intensity of normal solar emis- sions at 60 MHz falling below that of galactic radio emissions at Earth, and the intensity at 9 MHz even lower. Hi"
+      },
+      {
+        "page": 59,
+        "match": "60 MHz",
+        "snippet": "in HF. A model describing galactic emissions from approximately 10\u2013100 MHz, along with Fortran code to implement it, is presented in de Oliveira-Costa (2008). The REASON team has used this model to generate galactic back- ground temperature maps at 9 MHz and 60 MHz. 7.1.5 TheSunVHFPassiveCharacterization The Sun is a natural source of weak radio emissions, with the intensity of normal solar emis- sions at 60 MHz falling below that of galactic radio emissions at Earth, and the intensity at 9 MHz even lower. Higher intens"
+      },
+      {
+        "page": 59,
+        "match": "60 MHz",
+        "snippet": "a (2008). The REASON team has used this model to generate galactic back- ground temperature maps at 9 MHz and 60 MHz. 7.1.5 TheSunVHFPassiveCharacterization The Sun is a natural source of weak radio emissions, with the intensity of normal solar emis- sions at 60 MHz falling below that of galactic radio emissions at Earth, and the intensity at 9 MHz even lower. Higher intensity, but unpredictable, solar bursts and storms may provide strong emissions that could be used to characterize the REASON antennas. For these solar r"
+      },
+      {
+        "page": 59,
+        "match": "9 MHz",
+        "snippet": "rature maps at 9 MHz and 60 MHz. 7.1.5 TheSunVHFPassiveCharacterization The Sun is a natural source of weak radio emissions, with the intensity of normal solar emis- sions at 60 MHz falling below that of galactic radio emissions at Earth, and the intensity at 9 MHz even lower. Higher intensity, but unpredictable, solar bursts and storms may provide strong emissions that could be used to characterize the REASON antennas. For these solar radio outbursts to be useful, REASON measurements of bursts and storms would need to"
+      },
+      {
+        "page": 60,
+        "match": "9 MHz",
+        "snippet": "will allow REASON to take advantage of data collected by the Eu- ropean Space Agency\u2019s JUICE spacecraft, which will be touring the Jovian system con- currently with REASON. RIME\u2019s CBE arrival date is 2032. The JUICE RIME instrument operates at a frequency of 9 MHz radar and is very close in design to REASON\u2019s HF system. JUICE will conduct \ufb02ybys of Callisto, Europa, and Ganymede, and will orbit Ganymede. This provides unprecedented calibration and science opportunities for the REASON team to compare surface backscatter"
+      },
+      {
+        "page": 67,
+        "match": "9 MHz",
+        "snippet": "ace structures encountered across the Jovian icy moons. RIME can also set its transmitted bandwidth to either 1 MHz (same as REASON) or 3 MHz. Be- cause surface roughness is wavelength-dependent, observations with REASON and RIME at the same center frequency (9 MHz) but different bandwidths could help to isolate the ef- fects of surface roughness in order to better characterize bulk near-surface properties (e.g., layering) over various types of terrains (Chan et al. 2023a). Assuming the effects of rough- ness are either"
+      },
+      {
+        "page": 68,
+        "match": "9 MHz",
+        "snippet": "o probe the exosphere, the surface/near-surface, the shallow subsurface to three kilometers and the full depth of Eu- ropa\u2019s ice shell to an ice\u2013ocean interface at depths as great as thirty kilometers with nadir- directed active radar signals centered at both 9 MHz and 60 MHz. This pair of frequencies provides both robustness (with the 9 MHz band less sensitive to surface roughness and vol- ume scattering and the 60 MHz band less sensitive to Jovian radio noise) and richness (cap- turing cross-frequency signatures of io"
+      },
+      {
+        "page": 68,
+        "match": "60 MHz",
+        "snippet": "e exosphere, the surface/near-surface, the shallow subsurface to three kilometers and the full depth of Eu- ropa\u2019s ice shell to an ice\u2013ocean interface at depths as great as thirty kilometers with nadir- directed active radar signals centered at both 9 MHz and 60 MHz. This pair of frequencies provides both robustness (with the 9 MHz band less sensitive to surface roughness and vol- ume scattering and the 60 MHz band less sensitive to Jovian radio noise) and richness (cap- turing cross-frequency signatures of ionosphere an"
+      },
+      {
+        "page": 68,
+        "match": "9 MHz",
+        "snippet": "ee kilometers and the full depth of Eu- ropa\u2019s ice shell to an ice\u2013ocean interface at depths as great as thirty kilometers with nadir- directed active radar signals centered at both 9 MHz and 60 MHz. This pair of frequencies provides both robustness (with the 9 MHz band less sensitive to surface roughness and vol- ume scattering and the 60 MHz band less sensitive to Jovian radio noise) and richness (cap- turing cross-frequency signatures of ionosphere and ice-shell properties and processes) to the full suite of Europa C"
+      },
+      {
+        "page": 68,
+        "match": "60 MHz",
+        "snippet": "ace at depths as great as thirty kilometers with nadir- directed active radar signals centered at both 9 MHz and 60 MHz. This pair of frequencies provides both robustness (with the 9 MHz band less sensitive to surface roughness and vol- ume scattering and the 60 MHz band less sensitive to Jovian radio noise) and richness (cap- turing cross-frequency signatures of ionosphere and ice-shell properties and processes) to the full suite of Europa Clipper radar assessment and sounding investigations. Similarly, the unique dual-"
+      }
+    ],
+    "bandwidth": [
+      {
+        "page": 9,
+        "match": "bandwidth of 10 MHz",
+        "snippet": "9.1.2). MARSIS was closely followed by the SHAllow RADar (SHARAD), a radar sounder \ufb02own on NASA\u2019s Mars Reconnaissance Orbiter (MRO) designed to detect shallow subsurface interfaces (Seu et al. 2004). SHARAD operates at a center frequency of 20 MHz and with a bandwidth of 10 MHz. Major scienti\ufb01c \ufb01ndings derived from the \ufb01rst nine years of SHARAD are s u m m a r i z e di nC r o c ie ta l .(2011), including the discovery that many mid-latitude lobate features are ice-rich, debris-covered glaciers (Holt et al.2008). At the poles, SHARAD"
+      },
+      {
+        "page": 10,
+        "match": "15 MHz bandwidth",
+        "snippet": "51 Page10of91 D.D.Blankenshipetal. Fig.7 Comparison between radargrams generated from ice-penetrating radar data collected over ice on Earth at 60 MHz center frequency, 15 MHz bandwidth (top) and Mars at\u223c 1 MHz center frequency and bandwidth (bottom), modi\ufb01ed from Picardi et al. (2005) cryosphere (Evans 1963; Gudmandsen 1969;D r e w r y1983). However, these early systems were incoherent and thus limited to recording the radar signal amplitud"
+      },
+      {
+        "page": 10,
+        "match": "15 MHz bandwidth",
+        "snippet": "developed by Moussessian et al. ( 2000) demonstrated the feasibility of collecting high altitude radar sounding data and served as a testbed for future spaceborne radar sounders. This sounder could operate at frequencies of 35, 50, 60, 75, and 150 MHz with a 15 MHz bandwidth. Initial \ufb01eld testing was done at 150 MHz with a University of Kansas antenna system (Chuah 1996). The system was subsequently tested at 60 MHz in Antarctic operations by the University of Texas Institute for Geophysics, the success of which led to the develo"
+      },
+      {
+        "page": 11,
+        "match": "1 MHz bandwidth",
+        "snippet": "dual-frequency (9 MHz and 60 MHz) radar designed to penetrate deep into Europa\u2019s ice crust, operating over a wide range of altitudes (35 km \u2013 1000 km) across a \ufb02yby while simultaneously characterizing Europa\u2019s surface/near-surface and exosphere. REASON uses a 1 MHz bandwidth at a 9 MHz (33.3 m wavelength) High Frequency (HF) center frequency and a 10 MHz bandwidth at a 60 MHz (5 m wavelength) Very High Fre- quency (VHF) center frequency to achieve low-resolution (300 m in ice) full-depth sounding and high-resolution (30 m in ice)"
+      },
+      {
+        "page": 11,
+        "match": "10 MHz bandwidth",
+        "snippet": ", operating over a wide range of altitudes (35 km \u2013 1000 km) across a \ufb02yby while simultaneously characterizing Europa\u2019s surface/near-surface and exosphere. REASON uses a 1 MHz bandwidth at a 9 MHz (33.3 m wavelength) High Frequency (HF) center frequency and a 10 MHz bandwidth at a 60 MHz (5 m wavelength) Very High Fre- quency (VHF) center frequency to achieve low-resolution (300 m in ice) full-depth sounding and high-resolution (30 m in ice) shallow sounding simultaneously. The HF center frequency of 9 MHz was selected because it"
+      },
+      {
+        "page": 42,
+        "match": "60 MHz Bandwidth",
+        "snippet": "51 Page42of91 D.D.Blankenshipetal. Table 7 REASON radar system parameters (actuals) HF VHF Peak Transmit Power at input to the antennas, per antenna assembly 11.75 W 5.5 W Center Frequency 9 MHz 60 MHz Bandwidth (Fractional Bandwidth) 1 MHz (11%) 10 MHz (17%) Operational Altitudes 25 km to 1000 km from Europa Pulse Repetition Frequency (PRF) 50 Hz\u20133 kHz Approximate On-time per Orbit 20 min warm-up and 16 min science collection Dynamic Range 40 dB* 35 dB* Antenna Gain"
+      },
+      {
+        "page": 48,
+        "match": "60 MHz Bandwidth",
+        "snippet": "51 Page48of91 D.D.Blankenshipetal. Table 9 Key RFES requirements Requirement HF VHF Operating Center Frequency 9 MHz 60 MHz Bandwidth 1 MHz 10 MHz Peak Transmit Power 7.5 W (min) at each antenna 3.75 W (min) at each antenna Pulse Droop <0.005 dB/\u03bcs <0.005 dB/\u03bcs Pulse Ripple Over Bandwidth <1d B <1d B Harmonic Rejection >80 dBc >80 dBc Noise Figure <13.5 dB* <13.5 dB* Receive Path Gain 49 .5"
+      }
+    ],
+    "prf": [
+      {
+        "page": 42,
+        "match": "Pulse Repetition Frequency",
+        "snippet": "adar system parameters (actuals) HF VHF Peak Transmit Power at input to the antennas, per antenna assembly 11.75 W 5.5 W Center Frequency 9 MHz 60 MHz Bandwidth (Fractional Bandwidth) 1 MHz (11%) 10 MHz (17%) Operational Altitudes 25 km to 1000 km from Europa Pulse Repetition Frequency (PRF) 50 Hz\u20133 kHz Approximate On-time per Orbit 20 min warm-up and 16 min science collection Dynamic Range 40 dB* 35 dB* Antenna Gain at Nadir 4 dBi* 7.3 dBi Mass 65.7 kg AveragePower 61 W *Requirement or CBE at time of publication. every few-second dwell int"
+      },
+      {
+        "page": 42,
+        "match": "PRF",
+        "snippet": "als) HF VHF Peak Transmit Power at input to the antennas, per antenna assembly 11.75 W 5.5 W Center Frequency 9 MHz 60 MHz Bandwidth (Fractional Bandwidth) 1 MHz (11%) 10 MHz (17%) Operational Altitudes 25 km to 1000 km from Europa Pulse Repetition Frequency (PRF) 50 Hz\u20133 kHz Approximate On-time per Orbit 20 min warm-up and 16 min science collection Dynamic Range 40 dB* 35 dB* Antenna Gain at Nadir 4 dBi* 7.3 dBi Mass 65.7 kg AveragePower 61 W *Requirement or CBE at time of publication. every few-second dwell interval"
+      },
+      {
+        "page": 55,
+        "match": "Pulse Repetition Frequency",
+        "snippet": "RadarforEuropaAssessmentandSounding: OceantoNear-Surface... Page55of91 51 Fig.23 The sequence of events and timing for a typical REASON \ufb02yby Table 10 Radar Parameters Adjustable Over a Flyby Radar Parameter Description Pulse Repetition Frequency (PRF) Used to collect the desired along-track density of measurements and to optimize usage of the round-trip echo travel times (more than one pulse may be in the air at one time). In the OP, this is also referred to as the Cycle Repetition Frequency (CRF), a"
+      },
+      {
+        "page": 55,
+        "match": "PRF",
+        "snippet": "RadarforEuropaAssessmentandSounding: OceantoNear-Surface... Page55of91 51 Fig.23 The sequence of events and timing for a typical REASON \ufb02yby Table 10 Radar Parameters Adjustable Over a Flyby Radar Parameter Description Pulse Repetition Frequency (PRF) Used to collect the desired along-track density of measurements and to optimize usage of the round-trip echo travel times (more than one pulse may be in the air at one time). In the OP, this is also referred to as the Cycle Repetition Frequency (CRF), as the"
+      },
+      {
+        "page": 55,
+        "match": "PRF",
+        "snippet": "t the desired along-track density of measurements and to optimize usage of the round-trip echo travel times (more than one pulse may be in the air at one time). In the OP, this is also referred to as the Cycle Repetition Frequency (CRF), as the dual-frequency PRF may be more complex than in a single frequency radar. Chirp (transmit pulse) Used to optimize SNR given round-trip echo time and the PRF Receive window duration and position Used to collect surface and subsurface echoes Receiver gain Used to correct for echo"
+      },
+      {
+        "page": 55,
+        "match": "PRF",
+        "snippet": "n the air at one time). In the OP, this is also referred to as the Cycle Repetition Frequency (CRF), as the dual-frequency PRF may be more complex than in a single frequency radar. Chirp (transmit pulse) Used to optimize SNR given round-trip echo time and the PRF Receive window duration and position Used to collect surface and subsurface echoes Receiver gain Used to correct for echo power variations with altitude and environment Number of on-board pre-summed pulses Used to limit data volume Number of bits in digitized"
+      },
+      {
+        "page": 73,
+        "match": "PRF",
+        "snippet": "ribution Assembly PCU Power Converter Unit PDS Planetary Data System PEEK Polyetheretherketone PI Principal Investigator PIMS Plasma Instrument for Magnetic Sounding PLL Phase Locked Loop PME Propulsion Module Electronics PPDP Partially Processed Data Product PRF Pulse Repetition Frequency Prop Propulsion PRT Platinum Resistance Thermometer PSS Power Switch Slice PSU Power Supply Unit PWM Pulse-Width Modulation PWR Power PX +X PX/MX +X/-X PXI +X Inner PXO +X Outer RAMBo Radar Acquisition & Management Board RAP Referen"
+      },
+      {
+        "page": 73,
+        "match": "Pulse Repetition Frequency",
+        "snippet": "tion Assembly PCU Power Converter Unit PDS Planetary Data System PEEK Polyetheretherketone PI Principal Investigator PIMS Plasma Instrument for Magnetic Sounding PLL Phase Locked Loop PME Propulsion Module Electronics PPDP Partially Processed Data Product PRF Pulse Repetition Frequency Prop Propulsion PRT Platinum Resistance Thermometer PSS Power Switch Slice PSU Power Supply Unit PWM Pulse-Width Modulation PWR Power PX +X PX/MX +X/-X PXI +X Inner PXO +X Outer RAMBo Radar Acquisition & Management Board RAP Reference Activity Plan"
+      }
+    ],
+    "altitude": [
+      {
+        "page": 15,
+        "match": "400 km altitude",
+        "snippet": "two cross-track VHF receive channels will depend on the cross-track look-angle to the feature generating the re\ufb02ection. A channel-to-channel phase measurement accuracy of 9\u00b0 allows discrimination of clutter from the shallowest nadir sounding targets (150 m at 400 km altitude). For lower altitudes Fig. 11 Illustration of the geometry involved in interferometry, including two representations of off-nadir surface features that could generate clutter, where \u201cribbons\u201d represent rough, \ufb02at terrain and \u201ccurbs\u201d represent smooth, angled t"
+      },
+      {
+        "page": 19,
+        "match": "800 km in length, below an altitude",
+        "snippet": "ic interpretation over the mission. Global coverage is considered achieved when \u226511 of the 14 panels are sampled by groundtrack segments. For all REASON Guiding Science datasets except for the Ice\u2013Ocean Interface dataset, groundtrack segments must be at least 800 km in length, below an altitude of 400 km, and intersect multiple times (2 anti-Jovian and 1 sub-Jovian) to count toward global coverage. Note that global coverage is skewed towards the anti-Jovian hemisphere where both frequencies can operate (i.e., where the HF is shielded from Jovian dec"
+      },
+      {
+        "page": 19,
+        "match": "1600 km in length, below an altitude",
+        "snippet": "rage is skewed towards the anti-Jovian hemisphere where both frequencies can operate (i.e., where the HF is shielded from Jovian decametric noise). For the Ice\u2013Ocean Interface dataset, groundtrack segments are not required to inter- sect, but must be at least 1600 km in length, below an altitude of 1000 km. To search for an ice\u2013ocean interface, correlated gradients in ice thickness and surface elevation must be tracked at the panel scale (\u223c 1600 km per side). This coverage supports a detailed characterization of the following ice shell domains (Fig."
+      },
+      {
+        "page": 20,
+        "match": "100 km altitude",
+        "snippet": "during the E4, E6, E19 and E24 \ufb02ybys (Kliore et al.1997; McGrath et al.2009) reveal a mostly surface-bound ionosphere (i.e., with the highest density layer at or near the surface) except for one pro\ufb01le exhibiting a maximum electron density of \u223c 10 4 cm\u22123 at \u223c 100 km altitude. The plasma scale height is reported to be 240 \u00b1 40 km near the surface and 440 \u00b1 60 km above 300 km, and the TEC can reach up to \u223c 4 \u00d7 1015 m\u22122. However, three occultation detections were negative (i.e., weak to non-detection) near the downstream wake region"
+      },
+      {
+        "page": 27,
+        "match": "27.5 km at spacecraft altitude",
+        "snippet": "ins measured at Europa (Steinbr\u00fcgge et al. 2020b). This minimum spacing is suf\ufb01cient to re- cover robust statistics from 1000 empirical echoes spaced by 1 m at a 5-m wavelength for airborne observations (Grima et al.2016). The VHF along-track resolution\u226410 km/27.5 km at spacecraft altitude \u2264400 km is required to constrain surface statistical echo properties to discern porous or impermeable ice and liquid or frozen brines or brine-soaked ice. The 10 km/27.5 km comes from the requirement that a patch must be at least \ufb01ve times the along-track res"
+      },
+      {
+        "page": 30,
+        "match": "altitude (400 km",
+        "snippet": "Description Relevant Regimes Reference Performance, Operations, Geometry Radar Potential SNR of a \ufb02at, perfect, in\ufb01nite re\ufb02ector at a range of 400 km, assuming SAR processing \u2013 Sect. 4.4.1 Reference SAR Gain Gain resulting from SAR processing at the reference altitude (400 km) \u2013 Sect. 4.4.4 Reference SAR Gain is subtracted from Radar Potential so that SAR Gain can be recalculated for the altitude of interest Geometric Spreading Loss due to spreading of the wavefront, calculated with respect to the reference altitude (400 km) \u2013 Sch"
+      },
+      {
+        "page": 30,
+        "match": "altitude (400 km",
+        "snippet": "erence altitude (400 km) \u2013 Sect. 4.4.4 Reference SAR Gain is subtracted from Radar Potential so that SAR Gain can be recalculated for the altitude of interest Geometric Spreading Loss due to spreading of the wavefront, calculated with respect to the reference altitude (400 km) \u2013 Schroeder et al. (2014) Haynes et al. (2018b) Flat Europa Assumption Loss to account for a spherical (as opposed to \ufb02at) Fresnel zone area \u2013 Haynes et al. ( 2018b) Short Chirp Loss associated with a chirp length (RF pulse width) below the 200 \u00b5s assumed in"
+      },
+      {
+        "page": 60,
+        "match": "altitude (10,000 km",
+        "snippet": "51 Page60of91 D.D.Blankenshipetal. as well as to characterize HF/VHF band transmitted RF power levels, nadir beam realized gains, and beam patterns at Europan \ufb02yby temperatures. During a Ganymede \ufb02yby, REASON turns on at a high altitude (10,000 km). This con- trasts with a Europan \ufb02yby during which REASON turns on at approximately 1000 km in altitude (Fig. 23). Two approaches will be taken to REASON\u2019s high-altitude operation: slewing and non-slewing. The slewing approach requires slewing the spacecraft"
+      },
+      {
+        "page": 60,
+        "match": "1000 km in altitude",
+        "snippet": "transmitted RF power levels, nadir beam realized gains, and beam patterns at Europan \ufb02yby temperatures. During a Ganymede \ufb02yby, REASON turns on at a high altitude (10,000 km). This con- trasts with a Europan \ufb02yby during which REASON turns on at approximately 1000 km in altitude (Fig. 23). Two approaches will be taken to REASON\u2019s high-altitude operation: slewing and non-slewing. The slewing approach requires slewing the spacecraft cross-track in order to provide active beam characterization data for the antenna beams. This approach w"
+      },
+      {
+        "page": 60,
+        "match": "1000 km the spacecraft will transition to a steady state with nadir pointed toward the satellite surface for a low-altitude",
+        "snippet": "ude \ufb02yby will be used to collect average backscatter values to increase the science return of the mission, and possibly for comparison with data from the Radar for Icy Moon Exploration (RIME) on ESA\u2019s JUICE mission (Sect. 7.2.3). For one of these \ufb02ybys, below 1000 km the spacecraft will transition to a steady state with nadir pointed toward the satellite surface for a low-altitude (below 400 km) pass. During this low-altitude pass, data collected will be used to validate the REASON command parameter design and to \ufb01ne-tune key radar parameters, as well as to characterize HF/VHF band transmitted RF power levels and nadir beam realized ga"
+      },
+      {
+        "page": 63,
+        "match": "1000 km altitude and closest approach",
+        "snippet": "ments and the Europa Clipper mission design give rise to these unique idiosyncrasies is provided in Scanlan et al. (2021). 8.3.3 AltimetryModule The altimetry processor has the objective to create height pro\ufb01les along the groundtrack of the spacecraft between 1000 km altitude and closest approach. The pro\ufb01les might be"
+      }
+    ],
+    "pulse_compression": [
+      {
+        "page": 13,
+        "match": "compressed",
+        "snippet": "ived from ocean altimetry to identify the surface return most likely originating from nadir. The method is based on the idea that from a rough surface the altimetric return can be described by a Brown model (Brown 1977). A subsequent parameter \ufb01t on the pulse compressed data then allows matching the surface return to the leading edge of the waveform. Despite being derived from ocean altimetry, the method has been applied with great success to SHARAD data on Mars (Steinbr\u00fcgge et al. 2021). 1.7.2 Re\ufb02ectometry(HF,VHF) The limit"
+      },
+      {
+        "page": 26,
+        "match": "pulse compression",
+        "snippet": "of 10 km allows any ice\u2013water interface as well as associated thermophysical structures to be resolved up to altitudes of 1000 km. 10In radar sounding data, side lobes are peaks (lobes) that appear adjacent to the main peak in a re\ufb02ected signal resulting from pulse compression of the transmitted chirp waveform."
+      },
+      {
+        "page": 44,
+        "match": "compressed",
+        "snippet": "ntly summed echoes is commandable up to 255 for transmit loopback or up to 40 for receive echoes. Coherent summing is enabled by round-trip delay tracking logic that aligns receive echoes to within a fraction of a sample. The coherently summed echoes are then compressed us- ing Block Floating-Point Quantization (BFPQ), which is similar to quantization algorithms used in previous planetary missions (Kwok and Johnson 1989). It is a vector quantizer that generates an 8-bit exponent code (power estimate) for a block of samples,"
+      },
+      {
+        "page": 63,
+        "match": "compressed",
+        "snippet": "ct for phase delays caused by ionospheric effects across the HF and VHF signal bandwidths (Grima et al. 2015; Scanlan et al. 2019). The REASON range compression and ionospheric correction processor operates on a dwell-by-dwell basis pro- ducing a set of range compressed and ionosphere corrected fast time records as well as an estimate of the average TEC of the ionosphere between Europa Clipper and Europa during the dwell. 8.3.2 SoundingModule SAR focusing is a key step in the processing of space-borne radar sounding data. Ma"
+      },
+      {
+        "page": 64,
+        "match": "compressed",
+        "snippet": "51 Page64of91 D.D.Blankenshipetal. biased by residual ionospheric effects and are only designed for relative accuracy (not as an absolute geodetic reference). The input data for the processor are pulse compressed and ionospherically corrected radargrams. In order to retrieve the altimetric return, classical altimetry processing techniques rely on leading edge detection, tracking the radar echo centroid, or maximum likelihood estimations as applied for instance to the"
+      }
+    ],
+    "interferometry": [
+      {
+        "page": 2,
+        "match": "interferometry",
+        "snippet": "dar altimetry to determine surface topography, radar re\ufb02ectometry to study surface roughness and near-surface 3 structure and composition as well as radar sounding to probe both the shallow and full depth subsurface domains of the ice shell coupled with radar interferometry to discriminate nadir subsurface features from radar returns of cross-track surface features. Two additional measurement techniques, radarplasma characterization (to 1Habitability in this context refers to the conditions necessary to support life as we know i"
+      },
+      {
+        "page": 11,
+        "match": "interferometry",
+        "snippet": "ces from radargrams requires discriminating nadir subsurface signals from off-nadir surface returns, referred to as clutter. Along-track clutter will be discriminated by SAR processing, whereas across-track clutter will be discriminated using dual-channel VHF interferometry. REASON includes two VHF receive channels (separated by an across-track baseline) that will independently receive returns from both nadir subsurface sounding targets and off-nadir across-track sur- face clutter. 1.7 REASONMeasurementTechniques REASON employs"
+      },
+      {
+        "page": 15,
+        "match": "Interferometry",
+        "snippet": "he possibility of local or regional heterogeneities in attenuation rate through the ice shell. Sounding will allow us to search for subsurface interfaces but to characterize the resultant echoes will require additional information provided by altimetry. 1.7.4 Interferometry(VHF) Interferometry is a radar technique which involves comparing the phase of echoes recorded by separate receivers to establish whether the echo is from a subsurface nadir target or an off-nadir cross-track surface/subsurface feature (Castelletti et al. 201"
+      },
+      {
+        "page": 15,
+        "match": "Interferometry",
+        "snippet": "cal or regional heterogeneities in attenuation rate through the ice shell. Sounding will allow us to search for subsurface interfaces but to characterize the resultant echoes will require additional information provided by altimetry. 1.7.4 Interferometry(VHF) Interferometry is a radar technique which involves comparing the phase of echoes recorded by separate receivers to establish whether the echo is from a subsurface nadir target or an off-nadir cross-track surface/subsurface feature (Castelletti et al. 2017; Haynes et al. 201"
+      },
+      {
+        "page": 15,
+        "match": "interferometric",
+        "snippet": "or each pair of VHF antennas on either side of the spacecraft). Because the path lengths traveled by radar waves re\ufb02ected from \ufb02at surface and subsurface targets at nadir are equivalent between the two cross-track antenna pairs, the measured phase difference (interferometric phase) between the echoes will be generally close to zero. However, due to small differences in traveled path lengths, echoes from cross-track surface features will exhibit slightly different phases (Haynes et al.2018a). Assuming that both the sub-surface nad"
+      },
+      {
+        "page": 15,
+        "match": "interferometric",
+        "snippet": "exhibit slightly different phases (Haynes et al.2018a). Assuming that both the sub-surface nadir target and the surface off-nadir clutter will have similar phase measurement errors, the phase measurement accuracy should not be larger than half of the minimum interferometric phase of clutter minus any unknown interferomet- ric phase bias. The actual phase measurement accuracy is taken as one standard deviation of the interferometric phase which depends on SNR and number of independent samples. By quantifying the interferometric p"
+      },
+      {
+        "page": 15,
+        "match": "interferometric",
+        "snippet": "e measurement errors, the phase measurement accuracy should not be larger than half of the minimum interferometric phase of clutter minus any unknown interferomet- ric phase bias. The actual phase measurement accuracy is taken as one standard deviation of the interferometric phase which depends on SNR and number of independent samples. By quantifying the interferometric phase between echoes recorded on the two cross- track VHF receive channels, we will discriminate whether the echoes are likely due to a subsurface nadir target or"
+      },
+      {
+        "page": 15,
+        "match": "interferometric",
+        "snippet": "m interferometric phase of clutter minus any unknown interferomet- ric phase bias. The actual phase measurement accuracy is taken as one standard deviation of the interferometric phase which depends on SNR and number of independent samples. By quantifying the interferometric phase between echoes recorded on the two cross- track VHF receive channels, we will discriminate whether the echoes are likely due to a subsurface nadir target or a cross-track off-nadir surface feature (Fig.11). The magnitude of the interferometric phase bet"
+      },
+      {
+        "page": 15,
+        "match": "interferometric",
+        "snippet": "fying the interferometric phase between echoes recorded on the two cross- track VHF receive channels, we will discriminate whether the echoes are likely due to a subsurface nadir target or a cross-track off-nadir surface feature (Fig.11). The magnitude of the interferometric phase between the echoes recorded by the two cross-track VHF receive channels will depend on the cross-track look-angle to the feature generating the re\ufb02ection. A channel-to-channel phase measurement accuracy of 9\u00b0 allows discrimination of clutter from the sh"
+      },
+      {
+        "page": 15,
+        "match": "interferometry",
+        "snippet": "eature generating the re\ufb02ection. A channel-to-channel phase measurement accuracy of 9\u00b0 allows discrimination of clutter from the shallowest nadir sounding targets (150 m at 400 km altitude). For lower altitudes Fig. 11 Illustration of the geometry involved in interferometry, including two representations of off-nadir surface features that could generate clutter, where \u201cribbons\u201d represent rough, \ufb02at terrain and \u201ccurbs\u201d represent smooth, angled terrain (EPM refers to Europa Point Model, Sect. 4.3)"
+      },
+      {
+        "page": 16,
+        "match": "interferometric",
+        "snippet": "51 Page16of91 D.D.Blankenshipetal. and deeper depths, the look angle (and the interferometric phase) of the corresponding sur- face clutter (at equivalent range) increases. However, points of ambiguity exist as the phase difference cycles over a wavelength. The capacity to use the two REASON VHF cross- track channels to separate echoes via phase will"
+      },
+      {
+        "page": 17,
+        "match": "Interferometry",
+        "snippet": "try (HF, VHF) Altimetry (VHF) Determine regolith cohesiveness, thickness, and subsurface layering; surface roughness and slopes; and the distribution of blocks Surface to Near-Surface Global Mapping Shallow Subsurface Sounding (HF, VHF) Re\ufb02ectometry (HF, VHF) Interferometry (VHF) Altimetry (VHF) Map the distribution of subsurface water, near-surface brines, ice shell structure, and exchange processes by characterizing the electromagnetic properties and interface geometries Shallow Subsurface Global Mapping Full Depth Subsurface"
+      },
+      {
+        "page": 18,
+        "match": "Interferometry",
+        "snippet": "ll Thermal Anomaly Search Sounding (HF, VHF) Re\ufb02ectometry (HF, VHF) Altimetry (VHF) Characterize the thermal signatures of current or recent geological activity Full Depth Subsurface Global Mapping Subsurface Landform Sounding (HF, VHF) Re\ufb02ectometry (HF, VHF) Interferometry (VHF) Altimetry (VHF) Characterize the subsurface structure, near-surface characteristics, and surface topography of major geologic landforms Shallow Subsurface Global Mapping Shallow Composition Re\ufb02ectometry (HF, VHF) Altimetry (VHF) Assess the composition o"
+      },
+      {
+        "page": 25,
+        "match": "Interferometry",
+        "snippet": "measurement techniques. These types of requirements are summarized in Table 2 and de\ufb01ned in Sects. 3.1\u20133.7. Table 2 Requirements on measurement quality organized by baseline measurement technique Baseline Measurement Techniques Sounding Altimetry Re\ufb02ectometry Interferometry Requirements on Measurement Quality Blind Zone HF/VHF: <7\u00d7 vertical resolution from the surface in ice N/A N/A N/A Vertical Resolution VHF: \u226430 m in ice (\ufb01ner) in top 3 km HF: \u2264300 m in ice to 30 km depth HF/VHF: \u2264300 m in ice (coarser) from 3k mt o3 0k md e"
+      },
+      {
+        "page": 27,
+        "match": "interferometry",
+        "snippet": "iginate from a subsurface target of interest or a surface feature. As such, in order to properly interpret the resulting radargrams, it is important that these \u201cclutter\u201d features be discriminated from subsurface nadir targets. For the VHF shallow sounding and interferometry measurements in the Shallow Subsurface and Full Depth Sub- surface Exchange datasets, the REASON VHF will discriminate between surface clutter and subsurface nadir features longer than 10 km at observation depths between the near-surface blind zone to 3 km fo"
+      },
+      {
+        "page": 29,
+        "match": "interferometric",
+        "snippet": "ible Europas, we evaluate requirements in the context of models for Europa consistent with the hypotheses REASON is designed to test. We represent Europa as 1D models to evaluate all REASON requirements on measure- ment quality, except for the requirement for interferometric clutter discrimination, because it is a 2D phenomenon. Each 1D model is constructed using twelve geophysical regimes that describe Europa from exosphere to ocean (Sect. 4.2), sampling a range of published scienti\ufb01c hypotheses and incorporating Europa\u2019s known"
+      },
+      {
+        "page": 36,
+        "match": "interferometry",
+        "snippet": "rface Properties Ice\u2013Ocean Interface \u22641000 km Fig.12 EPMs used to represent Europa for evaluating Measurement Quality Requirements 11The term \u201cinterfero-metric\u201d was adopted to convey that this KRP is a metric used to verify the REASON measurement technique of interferometry, hence the distinct spelling from the adjective interferometric."
+      },
+      {
+        "page": 36,
+        "match": "interferometric",
+        "snippet": "to represent Europa for evaluating Measurement Quality Requirements 11The term \u201cinterfero-metric\u201d was adopted to convey that this KRP is a metric used to verify the REASON measurement technique of interferometry, hence the distinct spelling from the adjective interferometric."
+      },
+      {
+        "page": 39,
+        "match": "interferometry",
+        "snippet": "ility KRPs or requirements for longer periods. The radiometric stability KRPs do not include imaging geometry effects. 4.4.7 Interfero-Metric Unlike the other KRPs, the interfero-metric includes geophysical effects. The interfero- metric KRP quanti\ufb01es whether interferometry is successful for a given point model at a speci\ufb01c altitude. The point models used in generating the interfero-metric include all those in the Shallow Subsurface Structure and Full Depth Subsurface Exchange EPMs that have target depths less than or equal to 3"
+      },
+      {
+        "page": 39,
+        "match": "interferometric",
+        "snippet": "km. For point models with salt layers, the salt layer depth is swept from the blind zone down to 3 km in 10-m increments. To assess whether interfer- ometry is successful, both detection and discrimination must be evaluated. For each point model, the SNR and interferometric phase of both the target and the clutter source is calcu- lated. The central assumptions for the interfero-metric are that a subsurface target or surface"
+      },
+      {
+        "page": 40,
+        "match": "interferometric",
+        "snippet": "ture is considered \u201cdetected\u201d if its SNR is above a certain threshold, de\ufb01ned as 0 dB, consistent with the detection criteria for evaluation of other REASON Measurement Quality Requirements. A feature is considered \u201cdiscriminated\u201d if the expected value of its interferometric phase can reliably be determined to be below or above a given threshold. The roughness of either the nadir or off-nadir extended target will cause a spreading of the phase of the backscattered echo. As such, the interferometric phase can be described by a sta"
+      },
+      {
+        "page": 40,
+        "match": "interferometric",
+        "snippet": "d\u201d if the expected value of its interferometric phase can reliably be determined to be below or above a given threshold. The roughness of either the nadir or off-nadir extended target will cause a spreading of the phase of the backscattered echo. As such, the interferometric phase can be described by a statistical distribution. Because of this, statistical criteria are used to establish whether the interferometric phase is above or below the threshold. 5 InstrumentDesign 5.1 DescriptionofRadarFunctions,ArchitectureandOperation Th"
+      },
+      {
+        "page": 40,
+        "match": "interferometric",
+        "snippet": "er the nadir or off-nadir extended target will cause a spreading of the phase of the backscattered echo. As such, the interferometric phase can be described by a statistical distribution. Because of this, statistical criteria are used to establish whether the interferometric phase is above or below the threshold. 5 InstrumentDesign 5.1 DescriptionofRadarFunctions,ArchitectureandOperation The radar consists of three stacks which reside inside the spacecraft vault: Digital and Syn- thesizer Electronics Stacks (DSES) that includes t"
+      },
+      {
+        "page": 42,
+        "match": "interferometric",
+        "snippet": "ronics stacks (HFS, VHFS) uses a high-ef\ufb01ciency Gallium Nitride (GaN) power ampli\ufb01er plus Transmit/Receive (T/R) switches with coupled transmit-loopback calibration signal injection back into each of three receiver channels (single-channel HF and dual-channel interferometric \u201c+X/\u2013X\u201d VHF). Loopback provides a calibration reference to compensate in post-processing for any RF transmitter/receiver ampli\ufb01er gain variations over the \ufb02yby collection period. T/R pulses are distributed through front-end power combiners-dividers, through a"
+      },
+      {
+        "page": 45,
+        "match": "interferometric",
+        "snippet": "RF electronics stack consists of a Transmit Driver Assembly (TxDA), a Power Ampli\ufb01cation Unit (PAU), Receiver (Rx) and an RF Power Supply Unit (RFPSU). The HF Stack consists of one receiver, while the VHF Stack includes 2 receiver assemblies for across-track interferometric measurements. The TxDA consists of a bandpass \ufb01lter and an ampli\ufb01er operating in saturation that drives the PAU. A GaN device-based power ampli- \ufb01er operating in a Class-D con\ufb01guration, a PIN diode T/R switch, and a discrete-element Wilkinson power divider fo"
+      },
+      {
+        "page": 64,
+        "match": "interferometry",
+        "snippet": "ometry pro\ufb01le, (iv) interferogram and correlation map im- ages, (v) reprojected radargram image, and (vi) cluttergram image. There are \ufb01ve processing modules used to generate these derived data products: (i) altimetry module, (ii) re\ufb02ectom- etry module, (iii) interferometry clutter discrimination module, (iv) reprojected radargram clutter discrimination module, and (v) cluttergram clutter discrimination module. 8.5 SpecialDataProducts Special Data Products are data products which are not produced from routine processing. There a"
+      },
+      {
+        "page": 68,
+        "match": "interferometric",
+        "snippet": "to Jovian radio noise) and richness (cap- turing cross-frequency signatures of ionosphere and ice-shell properties and processes) to the full suite of Europa Clipper radar assessment and sounding investigations. Similarly, the unique dual-channel, cross-track interferometric capability of REASON\u2019s VHF band allows for potentially obfuscating cross-track surface clutter with similar delays as subsurface sig- nals to be discriminated internally to the instrument, increasing the \ufb01delity and reliability of radargram interpretation. RE"
+      },
+      {
+        "page": 68,
+        "match": "interferometry",
+        "snippet": "HF and VHF before and after Jupiter orbit insertion, d. With these calibrations, REASON will be operated and its data analyzed to explore physical constraints on the potential habitability of Europa through a full suite ofaltimetry, re\ufb02ectom- etry, sounding, interferometry, plasma characterization,a n dranging measurements\u2014each described brie\ufb02y below with their implications for REASON guiding and extended science (Table 2) as well as complementary science. Surface returns from the REASON VHF (with ionospheric-delay corrections"
+      },
+      {
+        "page": 69,
+        "match": "interferometry",
+        "snippet": "RadarforEuropaAssessmentandSounding: OceantoNear-Surface... Page69of91 51 processes of Europa\u2019s ice shell (up to thirty kilometers) by exploiting the sensitivity of HF and VHF (assisted by interferometry) radar signals to both the compositional and geomet- ric character of the shallow subsurface (e.g. water and salt bodies) as well as the thermo- physical structure (e.g. temperature, brine pockets) across the full depth of the ice shell potentially including"
+      },
+      {
+        "page": 78,
+        "match": "interferometric",
+        "snippet": "en P, Reynolds RT, Peale SJ (1979) Is there liquid water on Europa? Geophys Res Lett 6:731\u2013734.https:// doi.org/10.1029/GL006i009p00731 Castelletti D, Schroeder DM, Hensley S, Grima C, Ng G, Young D, Gim Y , Bruzzone L, Moussessian A, Blankenship DD (2017) An interferometric approach to cross-track clutter detection in two-channel VHF radar sounders. IEEE Trans Geosci Remote Sens 55:6128\u20136140. https://doi.org/10.1109/TGRS. 2017.2721433 Castelletti D, Schroeder DM, Mantelli E, Hilger A (2019) Layer optimized SAR processing and slo"
+      },
+      {
+        "page": 81,
+        "match": "interferometry",
+        "snippet": "In: Pappalardo RT, McKinnon WB, Khurana KK (eds) Europa. University of Arizona Press, Tucson, pp 589\u2013630. https://doi.org/10.2307/j.ctt1xp3wdw.32 Haynes MS, Chapin E, Moussessian A, Madsen SN (2018a) Surface clutter discrimination analysis for radar sounding interferometry. IEEE Trans Aerosp Electron Syst 55:989\u20131003.https://doi.org/10.1109/TAES. 2018.2867689 Haynes MS, Chapin E, Schroeder DM (2018b) Geometric power fall-off in radar sounding. IEEE Trans Geosci Remote Sens 56:6571\u20136585. https://doi.org/10.1109/TGRS.2018.2840511"
+      },
+      {
+        "page": 87,
+        "match": "Interferometric",
+        "snippet": "enship DD (2019) Geometric determi- nation of ionospheric total electron content from dual frequency radar sounding measurements. Planet Space Sci 178:104696. https://doi.org/10.1016/j.pss.2019.07.010 Scanlan KM, Rutishauser A, Young DA, Blankenship DD (2020) Interferometric discrimination of cross- track bed clutter in ice-penetrating radar sounding data. Ann Glaciol 61:68\u201373. https://doi.org/10.1017/ aog.2020.20 Scanlan KM, Young DA, Steinbr\u00fcgge G, Kempf SD, Grima C, Blankenship DD (2021) Delay Doppler SAR focusing and quantita"
+      }
+    ]
+  }
+}

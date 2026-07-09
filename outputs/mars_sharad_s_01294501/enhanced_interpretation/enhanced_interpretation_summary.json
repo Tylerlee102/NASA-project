@@ -1,0 +1,32 @@
+{
+  "purpose": "Improve interpretability of messy Mars SHARAD data without inventing missing signal.",
+  "best_single_view": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\03_local_contrast_despeckled_usrdr.png",
+  "best_overlay_view": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\04_reflector_strength_overlay_usrdr.png",
+  "comparison_sheet": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\enhancement_comparison_sheet.png",
+  "inputs": {
+    "usrdr_numeric_img": "data\\sharad_s_01294501\\radargram\\s_01294501_rgram.img",
+    "rdr_complex_npz": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\rdr_complex_reprocessed_radargrams.npz",
+    "nadir_geometry_csv": "data\\sharad_s_01294501\\clutter_simulation\\s_01294501_rtrn.csv"
+  },
+  "methods": [
+    "Surface flattening aligns the nadir/surface return so dipping and weak subsurface patterns are easier to compare.",
+    "Destriping subtracts robust column and range backgrounds to reduce acquisition/display artifacts.",
+    "Local contrast uses a moving-window z-score blended with global power so weak structure is not crushed by the surface echo.",
+    "Mild median despeckling and unsharp masking improve readability but are marked as display-only conditioning.",
+    "Reflector-strength overlay highlights laterally continuous bright ridges; it is a candidate-finding aid, not proof of geology."
+  ],
+  "limits": [
+    "These views do not recover signal that is absent or non-separable in the raw/complex measurements.",
+    "Do not digitize layer depths from the enhanced images; use the original numeric data for measurements.",
+    "Treat colored overlay features as candidates that need cross-track/crossover or clutter-simulation support."
+  ],
+  "complex_surface_sample": 144,
+  "outputs": {
+    "01_surface_flattened_usrdr.png": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\01_surface_flattened_usrdr.png",
+    "02_destriped_surface_flattened_usrdr.png": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\02_destriped_surface_flattened_usrdr.png",
+    "03_local_contrast_despeckled_usrdr.png": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\03_local_contrast_despeckled_usrdr.png",
+    "04_reflector_strength_overlay_usrdr.png": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\04_reflector_strength_overlay_usrdr.png",
+    "05_complex_local_contrast.png": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\05_complex_local_contrast.png",
+    "06_complex_reflector_overlay.png": "outputs\\mars_sharad_s_01294501\\enhanced_interpretation\\06_complex_reflector_overlay.png"
+  }
+}

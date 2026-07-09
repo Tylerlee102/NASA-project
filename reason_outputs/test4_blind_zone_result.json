@@ -1,0 +1,13 @@
+{
+  "metrics": {
+    "blind_zone_cells": 7.0,
+    "candidate_depth_m": 440.0,
+    "candidate_vhf_scr_db": 28.494721264776945,
+    "detection_threshold_db": 6.0,
+    "vhf_blind_zone_depth_m": 210.0,
+    "vhf_range_resolution_m": 30.0
+  },
+  "rationale": "Candidate depth is outside the measured VHF blind zone and detectable in principle.",
+  "result": "subsurface",
+  "test": "4_blind_zone"
+}

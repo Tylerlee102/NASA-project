@@ -1,0 +1,19 @@
+{
+  "answer": "The axes should be plotted as along-track left-to-right and apparent depth/radar delay up-down. The U shape in the sketch is the off-nadir surface echo relationship: equal left/right offsets map to the same apparent depth.",
+  "generated_graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs\\01_left_right_up_down_radargram.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs\\02_candidate_power_left_to_right.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs\\03_depth_profile_up_down.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs\\04_left_right_offset_to_depth_curve.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_graphs\\05_pulse_length_prf_compression_concepts.png"
+  ],
+  "candidate_window": {
+    "along_start_km": 10.0,
+    "along_end_km": 110.0,
+    "apparent_depth_m": 440.0,
+    "depth_tolerance_m": 80.0
+  },
+  "required_left_or_right_offset_km_for_candidate_depth": 25.043430320944868,
+  "mean_candidate_phase_deg": 11.779107412262828,
+  "mean_candidate_lateral_offset_km": 24.099547585228432
+}

@@ -1,0 +1,36 @@
+{
+  "question": "Does the dark/missing radargram region look recoverable from same-orbit raw or complex data?",
+  "finding": "The apparent gap is not a full-column file/data-coverage dropout. The same orbit contains valid EDR and RDR records. When the surface is aligned, the targeted complex-domain filter mostly changes texture and power; it does not reveal a clean hidden reflector.",
+  "severity_for_filtering_goal": "high",
+  "confidence": "medium",
+  "evidence": {
+    "usrdr_shape": [
+      3600,
+      4719
+    ],
+    "rdr_complex_shape": [
+      667,
+      4719
+    ],
+    "edr_quicklook_shape": [
+      3600,
+      4719
+    ],
+    "rdr_surface_sample": 144,
+    "low_signal_column_runs": [],
+    "low_signal_column_count": 0,
+    "low_signal_rule": "average of USRDR and RDR-complex robust-z energy below -1.7 for at least 24 consecutive columns"
+  },
+  "interpretation": [
+    "The RDR complex product can be filtered before radargram rendering, but that only suppresses separable Doppler energy.",
+    "The raw EDR quicklook confirms records exist; it does not show a simple missing-file hole that can be filled.",
+    "The narrow Doppler filters looked worse because they removed broad real signal and amplified speckle/noise appearance.",
+    "A single-orbit Doppler filter cannot reconstruct signal that is weak, shadowed, geometrically ambiguous, or overlapped by clutter in the measured complex echoes."
+  ],
+  "recommended_next_step": "Use this orbit as the problem example, then compare nearby/crossover SHARAD tracks or true surface-clutter simulation/3D migration. That is the path that can distinguish clutter from real subsurface reflectors without inventing data.",
+  "outputs": {
+    "diagnostic_png": "outputs\\mars_sharad_s_01294501\\missing_signal_diagnostic\\missing_signal_diagnostic.png",
+    "surface_aligned_problem_view_png": "outputs\\mars_sharad_s_01294501\\missing_signal_diagnostic\\surface_aligned_problem_view.png",
+    "column_signal_evidence_csv": "outputs\\mars_sharad_s_01294501\\missing_signal_diagnostic\\column_signal_evidence.csv"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "source_data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_data\\reason_instrument_parameters.json",
+  "data_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\pulse_operation_data.csv",
+  "notes": {
+    "pulse_length": "The paper does not provide a single fixed pulse length. It provides bandwidths and says chirp/transmit pulse is adjustable.",
+    "pulse_compression": "Pulse compression graph is conceptual because the paper says compression causes sidelobes but does not give the exact waveform/window.",
+    "data_compression": "BFPQ is data compression, not pulse compression."
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\01_frequency_data.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\02_bandwidth_data_not_fixed_pulse_length.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\03_resolution_from_bandwidth_data.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\04_prf_vs_time_between_pulses.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\05_prf_vs_unambiguous_range.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\06_coherent_sum_pulses_vs_ideal_gain.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\07_pulse_compression_sidelobes_concept.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\pulse_operation_graphs\\08_data_compression_not_pulse_compression.png"
+  ]
+}

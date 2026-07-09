@@ -1,0 +1,17 @@
+{
+  "metrics": {
+    "alignment_ratio": 1.0360667044228054,
+    "background_p95_power": 44730.49024211511,
+    "candidate_peak_power": 46343.77161236465,
+    "candidate_window": {
+      "along_end_km": 110.0,
+      "along_start_km": 10.0,
+      "apparent_depth_m": 440.0,
+      "depth_tolerance_m": 80.0
+    },
+    "extent_fraction": 0.3034825870646766
+  },
+  "rationale": "Candidate window has a coherent counterpart in the DEM-only cluttergram.",
+  "result": "clutter",
+  "test": "1_cluttergram"
+}

@@ -1,0 +1,293 @@
+{
+  "orbit": 12945,
+  "product_ids": {
+    "rdr": "R_1294501_001_SS19_700_A",
+    "edr": "E_1294501_001_SS19_700_A"
+  },
+  "pds_urls": {
+    "rdr_label": "https://pds-geosciences.wustl.edu/mro/mro-m-sharad-4-rdr-v1/mrosh_1001/data/rdr12xxx/rdr1294501/r_1294501_001_ss19_700_a.lbl",
+    "rdr_data": "https://pds-geosciences.wustl.edu/mro/mro-m-sharad-4-rdr-v1/mrosh_1001/data/rdr12xxx/rdr1294501/r_1294501_001_ss19_700_a.dat",
+    "rdr_format": "https://pds-geosciences.wustl.edu/mro/mro-m-sharad-4-rdr-v1/mrosh_1001/label/rdr.fmt",
+    "edr_label": "https://pds-geosciences.wustl.edu/mro/mro-m-sharad-3-edr-v1/mrosh_0001/data/edr12xxx/edr1294501/e_1294501_001_ss19_700_a.lbl",
+    "edr_science_data": "https://pds-geosciences.wustl.edu/mro/mro-m-sharad-3-edr-v1/mrosh_0001/data/edr12xxx/edr1294501/e_1294501_001_ss19_700_a_s.dat",
+    "edr_aux_data": "https://pds-geosciences.wustl.edu/mro/mro-m-sharad-3-edr-v1/mrosh_0001/data/edr12xxx/edr1294501/e_1294501_001_ss19_700_a_a.dat",
+    "edr_science_format": "https://pds-geosciences.wustl.edu/mro/mro-m-sharad-3-edr-v1/mrosh_0001/label/science8bit.fmt",
+    "edr_aux_format": "https://pds-geosciences.wustl.edu/mro/mro-m-sharad-3-edr-v1/mrosh_0001/label/auxiliary.fmt"
+  },
+  "files": {
+    "rdr_label": {
+      "path": "data\\sharad_s_01294501\\raw_complex\\rdr\\r_1294501_001_ss19_700_a.lbl",
+      "bytes": 5382,
+      "expected_bytes": null,
+      "size_matches_expected": null
+    },
+    "rdr_format": {
+      "path": "data\\sharad_s_01294501\\raw_complex\\rdr\\rdr.fmt",
+      "bytes": 62657,
+      "expected_bytes": null,
+      "size_matches_expected": null
+    },
+    "rdr_data": {
+      "path": "data\\sharad_s_01294501\\raw_complex\\rdr\\r_1294501_001_ss19_700_a.dat",
+      "bytes": 711128190,
+      "expected_bytes": 711128190,
+      "size_matches_expected": true
+    },
+    "edr_label": {
+      "path": "data\\sharad_s_01294501\\raw_complex\\edr\\e_1294501_001_ss19_700_a.lbl",
+      "bytes": 9038,
+      "expected_bytes": null,
+      "size_matches_expected": null
+    },
+    "edr_science_format": {
+      "path": "data\\sharad_s_01294501\\raw_complex\\edr\\science8bit.fmt",
+      "bytes": 1307,
+      "expected_bytes": null,
+      "size_matches_expected": null
+    },
+    "edr_aux_format": {
+      "path": "data\\sharad_s_01294501\\raw_complex\\edr\\auxiliary.fmt",
+      "bytes": 20455,
+      "expected_bytes": null,
+      "size_matches_expected": null
+    },
+    "edr_science_data": {
+      "path": "data\\sharad_s_01294501\\raw_complex\\edr\\e_1294501_001_ss19_700_a_s.dat",
+      "bytes": 463970514,
+      "expected_bytes": 463970514,
+      "size_matches_expected": true
+    },
+    "edr_aux_data": {
+      "path": "data\\sharad_s_01294501\\raw_complex\\edr\\e_1294501_001_ss19_700_a_a.dat",
+      "bytes": 32720583,
+      "expected_bytes": 32720583,
+      "size_matches_expected": true
+    }
+  },
+  "rdr_complex_layout": {
+    "record_bytes": 5822,
+    "records": 122145,
+    "complex_range_samples": 667,
+    "columns_used": {
+      "SCET_BLOCK_WHOLE": {
+        "start_byte": 1,
+        "bytes": 4,
+        "items": null,
+        "data_type": "LSB_UNSIGNED_INTEGER"
+      },
+      "SCET_BLOCK_FRAC": {
+        "start_byte": 5,
+        "bytes": 2,
+        "items": null,
+        "data_type": "LSB_UNSIGNED_INTEGER"
+      },
+      "ECHO_SAMPLES_REAL": {
+        "start_byte": 195,
+        "bytes": 2668,
+        "items": 667,
+        "data_type": "PC_REAL"
+      },
+      "ECHO_SAMPLES_IMAGINARY": {
+        "start_byte": 2863,
+        "bytes": 2668,
+        "items": 667,
+        "data_type": "PC_REAL"
+      },
+      "BLOCK_ROWS": {
+        "start_byte": 5535,
+        "bytes": 2,
+        "items": null,
+        "data_type": "LSB_UNSIGNED_INTEGER"
+      },
+      "DOPPLER_BW": {
+        "start_byte": 5537,
+        "bytes": 4,
+        "items": null,
+        "data_type": "PC_REAL"
+      },
+      "DOPPLER_CENTROID": {
+        "start_byte": 5541,
+        "bytes": 4,
+        "items": null,
+        "data_type": "PC_REAL"
+      }
+    },
+    "processed_trace_rate_hz": 174.48787177509215,
+    "start_time_utc": "2009-05-01T04:51:41.336000+00:00",
+    "stop_time_utc": "2009-05-01T05:03:21.356000+00:00",
+    "duration_s": 700.02,
+    "raw_prf_hz_from_1428_microsecond_pri": 700.2801120448179,
+    "onboard_presum_from_mode_description": 4.0,
+    "professor_alias_prf_assumption_hz": 87.53501400560224,
+    "doppler_bw_median_hz": 2.6499857902526855,
+    "doppler_centroid_median_hz": 0.014247234910726547,
+    "block_rows_median": 3692.0
+  },
+  "edr_raw_layout": {
+    "science_data_column": {
+      "start_byte": 187,
+      "bytes": 3600,
+      "bit_column": {
+        "name": "ECHO_SAMPLES",
+        "start_bit": 1,
+        "bits": 8,
+        "items": 3600,
+        "item_bits": 8,
+        "bit_data_type": "MSB_INTEGER"
+      }
+    },
+    "raw_quicklook": {
+      "source": "data\\sharad_s_01294501\\raw_complex\\edr\\e_1294501_001_ss19_700_a_s.dat",
+      "record_bytes": 3786,
+      "records": 122549,
+      "sample_count": 3600,
+      "expected_bytes": 463970514,
+      "actual_bytes": 463970514,
+      "quicklook_metric": "mean absolute 8-bit raw echo value, not range-compressed",
+      "quicklook_png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\edr_raw_echo_quicklook.png",
+      "quicklook_npz": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\edr_raw_echo_quicklook.npz"
+    }
+  },
+  "alias_mapping": {
+    "source_csv": "outputs\\mars_sharad_s_01294501\\alias_risk_bands.csv",
+    "surface_sample_from_baseline_complex": 144,
+    "usrdr_alias_bands": [
+      {
+        "offset_line_start": 412.0,
+        "offset_line_end": 414.0,
+        "approx_free_space_range_start_m": 6180.0,
+        "approx_free_space_range_end_m": 6210.0,
+        "surface_along_track_offset_km_center": 62.934688568115234,
+        "surface_doppler_hz_center": 87.52946472167969,
+        "folded_doppler_hz_center": -0.0055389404296875
+      }
+    ],
+    "mapped_rdr_alias_sample_ranges": [
+      [
+        217,
+        224
+      ]
+    ],
+    "mapping_note": "The point-target model was built on the 3600-line USRDR radargram. For targeted RDR filtering, those line offsets are scaled onto the 667-sample complex echo window relative to the detected surface sample."
+  },
+  "processing": {
+    "output_columns": 4719,
+    "display_lines": 3600,
+    "trace_group_edges": {
+      "first": 0,
+      "last": 122145,
+      "median_traces_per_output_column": 26.0
+    },
+    "display_scale": {
+      "type": "common log-power dB percentile scale",
+      "low_db": -18.609578132629395,
+      "high_db": 30.95364689826915
+    },
+    "variants": [
+      {
+        "variant": "baseline_complex",
+        "label": "Baseline complex RDR power",
+        "mode": "none",
+        "doppler_bandwidth_hz": null,
+        "transition_hz": null,
+        "filter_strength": null,
+        "aperture_traces": 1,
+        "assumed_prf_hz": null,
+        "alias_only": false,
+        "median_power_db": 6.288719654083252,
+        "p95_power_db": 15.229077339172363,
+        "mean_power_db_in_alias_samples": 8.204776763916016,
+        "png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\baseline_complex_radargram.png"
+      },
+      {
+        "variant": "band_0p4hz_short_aperture",
+        "label": "0.4 Hz centered Doppler band, 8-trace aperture",
+        "mode": "center_pass",
+        "doppler_bandwidth_hz": 0.4,
+        "transition_hz": 0.15,
+        "filter_strength": 1.0,
+        "aperture_traces": 8,
+        "assumed_prf_hz": 174.48787177509215,
+        "alias_only": false,
+        "median_power_db": -7.093753337860107,
+        "p95_power_db": 3.1339211463928223,
+        "mean_power_db_in_alias_samples": -5.780588150024414,
+        "png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\band_0p4hz_short_aperture_radargram.png"
+      },
+      {
+        "variant": "band_1p2hz_standard_aperture",
+        "label": "1.2 Hz centered Doppler band, 26-trace aperture",
+        "mode": "center_pass",
+        "doppler_bandwidth_hz": 1.2,
+        "transition_hz": 0.25,
+        "filter_strength": 1.0,
+        "aperture_traces": 26,
+        "assumed_prf_hz": 174.48787177509215,
+        "alias_only": false,
+        "median_power_db": -2.965939521789551,
+        "p95_power_db": 6.9642109870910645,
+        "mean_power_db_in_alias_samples": -1.7489404678344727,
+        "png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\band_1p2hz_standard_aperture_radargram.png"
+      },
+      {
+        "variant": "zero_doppler_notch_all_ranges",
+        "label": "0.4 Hz zero-Doppler notch, all ranges",
+        "mode": "zero_notch",
+        "doppler_bandwidth_hz": 0.4,
+        "transition_hz": 0.15,
+        "filter_strength": 0.92,
+        "aperture_traces": 26,
+        "assumed_prf_hz": 174.48787177509215,
+        "alias_only": false,
+        "median_power_db": 3.294581413269043,
+        "p95_power_db": 12.685774803161621,
+        "mean_power_db_in_alias_samples": 5.183431625366211,
+        "png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\zero_doppler_notch_all_ranges_radargram.png"
+      },
+      {
+        "variant": "alias_range_notch_prefinal",
+        "label": "Targeted pre-final notch at modeled alias range",
+        "mode": "zero_notch",
+        "doppler_bandwidth_hz": 0.4,
+        "transition_hz": 0.15,
+        "filter_strength": 0.92,
+        "aperture_traces": 26,
+        "assumed_prf_hz": 174.48787177509215,
+        "alias_only": true,
+        "median_power_db": 3.6936709880828857,
+        "p95_power_db": 13.1152925491333,
+        "mean_power_db_in_alias_samples": 5.183521747589111,
+        "png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\alias_range_notch_prefinal_radargram.png"
+      },
+      {
+        "variant": "alias_range_notch_prf87_assumption",
+        "label": "Same targeted notch using PRF 87.535 Hz assumption",
+        "mode": "zero_notch",
+        "doppler_bandwidth_hz": 0.4,
+        "transition_hz": 0.15,
+        "filter_strength": 0.92,
+        "aperture_traces": 26,
+        "assumed_prf_hz": 87.53501400560224,
+        "alias_only": true,
+        "median_power_db": 3.6888070106506348,
+        "p95_power_db": 13.105402946472168,
+        "mean_power_db_in_alias_samples": 4.759247779846191,
+        "png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\alias_range_notch_prf87_assumption_radargram.png"
+      }
+    ],
+    "limitations": [
+      "This script filters the official RDR complex-voltage echoes before detected power is rendered.",
+      "It does not rebuild the full Italian SHARAD Level 1A to Level 1B range-Doppler processor from EDR.",
+      "The EDR raw quicklook is raw 8-bit echo amplitude, not a focused radargram.",
+      "The targeted alias filter can suppress coherent near-zero-Doppler energy but cannot recover a reflector that was not separable in the measured complex data."
+    ]
+  },
+  "outputs": {
+    "baseline_complex_radargram_png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\baseline_complex_radargram.png",
+    "prefinal_filtered_radargram_png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\alias_range_notch_prefinal_radargram.png",
+    "prf_assumption_filtered_radargram_png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\alias_range_notch_prf87_assumption_radargram.png",
+    "comparison_png": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\rdr_complex_filter_comparison.png",
+    "variant_summary_csv": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\rdr_complex_variant_summary.csv",
+    "reprocessed_npz": "outputs\\mars_sharad_s_01294501\\raw_complex_reprocess\\rdr_complex_reprocessed_radargrams.npz"
+  }
+}

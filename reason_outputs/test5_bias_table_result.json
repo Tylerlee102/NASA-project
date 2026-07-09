@@ -1,0 +1,14 @@
+{
+  "metrics": {
+    "beam_limit_km": 34.995465410369604,
+    "best_feature_relief_m": 131.42788035550302,
+    "best_feature_side": "positive",
+    "candidate_depth_m": 440.0,
+    "feature_threshold_m": 35.0,
+    "in_beam": true,
+    "required_offset_km": 25.043430320944868
+  },
+  "rationale": "A DEM feature exists at the lateral offset required by the observed apparent depth.",
+  "result": "clutter",
+  "test": "5_bias_table"
+}

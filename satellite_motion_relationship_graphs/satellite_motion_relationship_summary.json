@@ -1,0 +1,32 @@
+{
+  "source_paper_values": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_data\\reason_instrument_parameters.json",
+  "important_limit": "The paper does not publish an exact PRF schedule or exact pulse length during a flyby. These graphs use the paper's operating ranges and a simple closest-approach motion model.",
+  "paper_values_used": {
+    "altitude_range_km": [
+      25.0,
+      1000.0
+    ],
+    "prf_range_hz": [
+      50.0,
+      3000.0
+    ],
+    "receive_coherent_sum_max": 40.0,
+    "vhf_resolution_m": 30.0,
+    "hf_resolution_m": 300.0
+  },
+  "model_values_used": {
+    "offnadir_cross_track_offset_km": 25,
+    "representative_altitude_for_offnadir_echo_km": 400,
+    "ice_index": 1.78
+  },
+  "plain_answer": "When the satellite moves, altitude changes echo return time and therefore what PRF can do. PRF changes pulse spacing; high PRF can leave multiple pulses in the air at high altitude. Coherent summing is limited to 40 receive echoes, so higher PRF lets those 40 echoes be collected faster. Off-nadir echoes curve in apparent depth as the satellite passes the feature, and pulse compression/sidelobes move along with that curved echo.",
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\satellite_motion_relationship_graphs\\01_satellite_altitude_and_modeled_prf_vs_motion.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\satellite_motion_relationship_graphs\\02_pulse_interval_and_echo_time_vs_motion.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\satellite_motion_relationship_graphs\\03_pulses_in_air_if_prf_is_high_vs_motion.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\satellite_motion_relationship_graphs\\04_time_to_collect_40_coherent_sum_echoes_vs_motion.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\satellite_motion_relationship_graphs\\05_offnadir_false_depth_as_satellite_passes_feature.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\satellite_motion_relationship_graphs\\06_pulse_bandwidth_resolution_as_echo_moves.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\satellite_motion_relationship_graphs\\07_pulse_compression_sidelobes_move_with_echo.png"
+  ]
+}

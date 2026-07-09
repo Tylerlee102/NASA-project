@@ -1,0 +1,6 @@
+combination,layers,readability_score,evidence_score,complexity_score,recommendation
+Common foundation,"surface, depth axis, along-track axis, topography, layer bands",9,6,2,Good first figure.
+Clutter and Doppler check,"cluttergram, clutter-match mask, alias-risk overlay, A-scope, FFT inset",7,9,6,Best for explaining the problem.
+Processing confidence,"trace-quality strip, adaptive map, confidence labels, before/after",8,7,5,Best for proving you did not hide bad data.
+Everything on,all 18 interpretation items,5,10,9,"Useful as an audit sheet, too busy as a main figure."
+Recommended balanced,"surface, axes, layer bands, clutter mask, alias risk, topography, confidence strip, candidate table",9,9,4,Best main presentation figure.

@@ -1,0 +1,30 @@
+{
+  "path_equation": "x(t)=v*t; z(x)=z0+a*x^2",
+  "derivatives": {
+    "dz_dx": "2*a*x",
+    "dz_dt": "2*a*x*v",
+    "range": "sqrt(x^2 + y^2 + z(x)^2)",
+    "range_rate": "(x*dx_dt + z*dz_dt) / range",
+    "doppler": "-2*range_rate/wavelength"
+  },
+  "assumptions": {
+    "closest_altitude_km": 400.0,
+    "altitude_rise_at_plus_minus_60_km": 4.0,
+    "cross_track_offset_km": 25.0,
+    "along_speed_km_s": 4.0,
+    "vhf_wavelength_m": 5.0,
+    "hf_wavelength_m": 33.3
+  },
+  "derived": {
+    "max_abs_vhf_doppler_hz": 445.23129749250427,
+    "minimum_prf_hz_simple_nyquist": 890.4625949850085
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\calculus_parabolic_flyby_graphs\\01_parabolic_altitude_z_of_x.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\calculus_parabolic_flyby_graphs\\02_vertical_velocity_from_derivative.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\calculus_parabolic_flyby_graphs\\03_range_rate_from_chain_rule.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\calculus_parabolic_flyby_graphs\\04_doppler_from_parabolic_motion.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\calculus_parabolic_flyby_graphs\\05_prf_from_parabolic_doppler.png"
+  ],
+  "data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\calculus_parabolic_flyby_graphs\\calculus_parabolic_flyby_values.csv"
+}

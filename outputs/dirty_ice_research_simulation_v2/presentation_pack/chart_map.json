@@ -1,0 +1,113 @@
+[
+  {
+    "id": "outcomes",
+    "file": "charts/01_hf_scenario_outcomes.png",
+    "section": "Dirty-Ice Outcomes Split Into Clear, False-Risk, And Weak Cases",
+    "analytical_question": "How do scenario outcomes differ in the workbook-depth HF stress test?",
+    "family": "composition",
+    "chart_type": "stacked horizontal bars",
+    "fields": [
+      "scenario",
+      "clear_ocean_pct",
+      "deep_false_risk_pct",
+      "weak_no_deep_detection_pct"
+    ],
+    "supported_claim": "Dirty-ice scenarios separate into clear, false-risk, and weak/no deep detection failure modes.",
+    "palette_policy": "relaxed multi-category with olive, orange, and neutral marks"
+  },
+  {
+    "id": "track",
+    "file": "charts/02_false_layer_track_example.png",
+    "section": "The False-Reflector Failure Mode Is Visible Along Track",
+    "analytical_question": "Does the stacked dirty-layer false reflector exceed the true ocean echo along track?",
+    "family": "trend",
+    "chart_type": "highlighted multi-series line",
+    "fields": [
+      "x_km",
+      "ocean_snr_margin_db",
+      "false_snr_margin_db"
+    ],
+    "supported_claim": "The internal false reflector is detectable and stronger than the ocean return in the stacked dirty-layer example.",
+    "palette_policy": "hard two-root cap with blue for ocean and orange for false reflector"
+  },
+  {
+    "id": "band_shell",
+    "file": "charts/03_band_shell_margin.png",
+    "section": "REASON Band Choice And Shell Thickness Matter Before Dirty Ice Is Added",
+    "analytical_question": "How do clean-ice ocean margins change by radar band and shell mode?",
+    "family": "comparison",
+    "chart_type": "grouped bars",
+    "fields": [
+      "shell_mode",
+      "band",
+      "median_ocean_snr_margin_db"
+    ],
+    "supported_claim": "HF is the cleaner deep-ocean stress test, while VHF shallow mode should not be treated as a deep-ocean failure when out of window.",
+    "palette_policy": "relaxed multi-category with explicit band colors"
+  },
+  {
+    "id": "clutter",
+    "file": "charts/07_vhf_clutter_stress.png",
+    "section": "VHF Clutter Is Now A Separate Stress Test",
+    "analytical_question": "How much shallow-window ambiguity comes from off-nadir surface clutter rather than dirty internal layers?",
+    "family": "composition",
+    "chart_type": "stacked horizontal bars",
+    "fields": [
+      "scenario",
+      "surface_clutter_pct",
+      "internal_feature_only_pct",
+      "outside_band_depth_window_pct",
+      "weak_no_deep_detection_pct"
+    ],
+    "supported_claim": "The clutter stress test creates VHF shallow ambiguity without being counted as deep false-ocean risk.",
+    "palette_policy": "relaxed multi-category with pink clutter, gold internal-feature, and neutral depth-window states"
+  },
+  {
+    "id": "materials",
+    "file": "charts/04_material_library.png",
+    "section": "The Material Library Makes The Simulation More Audit-Friendly",
+    "analytical_question": "What material properties drive reflection and loss in v2?",
+    "family": "comparison and uncertainty",
+    "chart_type": "paired horizontal dot and interval",
+    "fields": [
+      "label",
+      "eps_real",
+      "attenuation_db_km_hf_min",
+      "attenuation_db_km_hf_max"
+    ],
+    "supported_claim": "v2 separates dielectric contrast from attenuation, making paper-backed assumptions easier to audit.",
+    "palette_policy": "relaxed multi-category for material identities"
+  },
+  {
+    "id": "sensitivity",
+    "file": "charts/05_attenuation_sensitivity.png",
+    "section": "Attenuation Sensitivity Shows Where The Claim Is Fragile",
+    "analytical_question": "Where does brine-like epsilon create false-boundary risk across thickness and attenuation?",
+    "family": "matrix",
+    "chart_type": "heatmap",
+    "fields": [
+      "dirty_layer_thickness_m",
+      "dirty_layer_attenuation_db_km_hf",
+      "deep_false_risk_pct"
+    ],
+    "supported_claim": "The false-risk claim is sensitive to dirty-layer thickness and attenuation assumptions.",
+    "palette_policy": "single-root orange sequential scale"
+  },
+  {
+    "id": "validation",
+    "file": "charts/06_physics_validation.png",
+    "section": "The Thin-Layer Solver Passes Basic Physics Smoke Tests",
+    "analytical_question": "Did the v2 solver pass simple known-answer checks?",
+    "family": "scorecards",
+    "chart_type": "validation cards",
+    "fields": [
+      "check",
+      "observed",
+      "expected",
+      "abs_error",
+      "passed"
+    ],
+    "supported_claim": "The solver passes two basic physics smoke tests before interpretation.",
+    "palette_policy": "single-root olive pass state"
+  }
+]

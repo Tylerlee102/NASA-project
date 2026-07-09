@@ -1,0 +1,39 @@
+category,parameter,value,units,source_page,notes
+radar_hf,center_frequency,9,MHz,42,HF center frequency
+radar_vhf,center_frequency,60,MHz,42,VHF center frequency
+radar_hf,wavelength,33.3,m,11,Paper text gives 33.3 m wavelength at 9 MHz
+radar_vhf,wavelength,5,m,11,Paper text gives 5 m wavelength at 60 MHz
+radar_hf,bandwidth,1,MHz,42,Table 7 actual
+radar_vhf,bandwidth,10,MHz,42,Table 7 actual
+radar_hf,resolution_in_ice,300,m,11,Low-resolution full-depth sounding
+radar_vhf,resolution_in_ice,30,m,11,High-resolution shallow sounding
+radar_hf,peak_transmit_power_per_antenna_assembly,11.75,W,42,Table 7 actual
+radar_vhf,peak_transmit_power_per_antenna_assembly,5.5,W,42,Table 7 actual
+radar_shared,operational_altitude_min,25,km,42,Table 7 actual
+radar_shared,operational_altitude_max,1000,km,42,Table 7 actual
+radar_shared,high_level_altitude_min,35,km,11,High-level instrument description
+radar_shared,high_level_altitude_max,1000,km,11,High-level instrument description
+radar_shared,prf_min,50,Hz,42,Table 7 actual
+radar_shared,prf_max,3000,Hz,42,Table 7 actual
+radar_shared,warmup_time,20,min,42,Approximate on-time per orbit
+radar_shared,science_collection_time,16,min,42,Approximate on-time per orbit
+radar_shared,mass,65.7,kg,42,Table 7 actual
+radar_shared,average_power,61,W,42,Table 7 actual
+processing,adc_sampling_rate,48,MHz,44,Analog-to-digital converters
+processing,baseband_sampling_hf,1.2,MHz,44,After downconversion/filtering/decimation
+processing,baseband_sampling_vhf,12,MHz,44,After downconversion/filtering/decimation
+processing,receive_echoes_coherent_sum_max,40,pulses,44,Commandable for receive echoes
+processing,transmit_loopback_coherent_sum_max,255,pulses,44,Commandable for transmit loopback
+processing,bfpq_input_rate_vhf,576,Mbps,44,Example BFPQ input data rate for VHF
+processing,bfpq_output_rate_vhf,99,Mbps,44,Example BFPQ output data rate
+processing,bfpq_reduction_factor,6,x,44,Approximate reduction
+processing,bfpq_signal_to_quantization_noise_ratio,20,dB,44,Over 20 dB in paper text
+operations,hf_full_depth_range,30,km,55,HF full depth sounding surface to about 30 km subsurface
+operations,vhf_shallow_depth_range,3,km,55,VHF shallow sounding surface to about 3 km depth
+operations,fdvhf_depth_range,30,km,55,Full-depth VHF up to 30 km depth
+operations,adjustable_prf,purpose,text,55,Along-track density and round-trip echo timing
+operations,adjustable_chirp,purpose,text,55,Optimize SNR given round-trip echo time and PRF
+operations,adjustable_receive_window,purpose,text,55,Collect surface and subsurface echoes
+operations,adjustable_receiver_gain,purpose,text,55,Correct echo power variations with altitude and environment
+operations,adjustable_presummed_pulses,purpose,text,55,Limit data volume
+operations,adjustable_digitized_echo_bits,purpose,text,55,Limit data volume while maintaining dynamic range

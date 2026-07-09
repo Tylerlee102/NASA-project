@@ -1,0 +1,37 @@
+{
+  "purpose": "Compare interpretation-layer combinations for Mars SHARAD orbit S_01294501.",
+  "important_limit": "These are interpretation overlays. They help judge features but do not recover missing or aliased radar information.",
+  "implemented_items": [
+    "surface pick line",
+    "depth/delay axis",
+    "along-track distance/trace number",
+    "layer picks",
+    "cluttergram comparison",
+    "ground-track map",
+    "topography context",
+    "A-scope profiles",
+    "confidence/uncertainty labels",
+    "Doppler alias-risk overlay",
+    "trace-quality strip",
+    "adaptive processing map",
+    "candidate reflector score",
+    "clutter-match mask",
+    "before/after interpretation sheet",
+    "uncertainty bands instead of single lines",
+    "FFT/Doppler inset",
+    "crossover/nearby-orbit consistency check"
+  ],
+  "crossover_status": "Not available locally; only S_01294501 is loaded.",
+  "recommended_combination": "05_recommended_balanced_interpretation_sheet.png",
+  "outputs": {
+    "common_foundation": "outputs\\mars_sharad_s_01294501\\interpretation_suite\\01_common_foundation_sheet.png",
+    "clutter_doppler": "outputs\\mars_sharad_s_01294501\\interpretation_suite\\02_clutter_doppler_sheet.png",
+    "processing_confidence": "outputs\\mars_sharad_s_01294501\\interpretation_suite\\03_processing_confidence_sheet.png",
+    "all_layers": "outputs\\mars_sharad_s_01294501\\interpretation_suite\\04_all_layers_interpretation_sheet.png",
+    "recommended_balanced": "outputs\\mars_sharad_s_01294501\\interpretation_suite\\05_recommended_balanced_interpretation_sheet.png",
+    "scorecard": "outputs\\mars_sharad_s_01294501\\interpretation_suite\\06_combination_scorecard.png",
+    "candidate_scores_csv": "outputs\\mars_sharad_s_01294501\\interpretation_suite\\candidate_reflector_scores.csv",
+    "combination_scorecard_csv": "outputs\\mars_sharad_s_01294501\\interpretation_suite\\combination_scorecard.csv"
+  },
+  "candidate_count": 4
+}

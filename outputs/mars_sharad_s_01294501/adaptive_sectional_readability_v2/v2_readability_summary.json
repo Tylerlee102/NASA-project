@@ -1,0 +1,39 @@
+{
+  "purpose": "Cleaner second-pass Mars SHARAD readability product using section-aware repair plus stripe suppression and continuity enhancement.",
+  "important_limit": "This is still display conditioning. It can make coherent reflectors easier to inspect, but it cannot prove or recover signals that are absent, aliased, or non-separable in the measured data.",
+  "input": {
+    "usrdr_numeric_img": "data\\sharad_s_01294501\\radargram\\s_01294501_rgram.img",
+    "surface_geometry_csv": "data\\sharad_s_01294501\\clutter_simulation\\s_01294501_rtrn.csv",
+    "surface_aligned_crop_shape": [
+      1100,
+      4719
+    ]
+  },
+  "method_counts": {
+    "keep/sharp": 3900,
+    "small pool": 766,
+    "wide pool": 12,
+    "muted/repaired": 41
+  },
+  "v2_steps": [
+    "Surface align to the modeled nadir/surface return.",
+    "Suppress depth-varying vertical stripe templates.",
+    "Use the v1 section quality classifier to choose sharper or softer treatment by column.",
+    "Blend detail, soft texture, wide-pool, and reflector-continuity views.",
+    "Export a confidence overlay and a reflector-guided overlay so display changes are visible."
+  ],
+  "outputs": {
+    "comparison_sheet_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability_v2\\original_vs_adaptive_v1_vs_v2.png",
+    "zoom_comparison_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability_v2\\zoom_original_vs_v1_vs_v2.png",
+    "best_readable_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability_v2\\v2_best_readable_radargram.png",
+    "reflector_guided_overlay_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability_v2\\v2_reflector_guided_overlay.png",
+    "confidence_overlay_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability_v2\\v2_confidence_overlay.png",
+    "reflector_continuity_score_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability_v2\\v2_reflector_continuity_score.png",
+    "v2_data_npz": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability_v2\\v2_readable_data.npz"
+  },
+  "recommended_use": [
+    "Use original_vs_adaptive_v1_vs_v2.png to show the improvement path.",
+    "Use v2_best_readable_radargram.png for the cleanest grayscale inspection image.",
+    "Use v2_reflector_guided_overlay.png only as a candidate-finding guide, not as proof."
+  ]
+}

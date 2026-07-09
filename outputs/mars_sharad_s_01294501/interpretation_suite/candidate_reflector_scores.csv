@@ -1,0 +1,5 @@
+candidate,zone,mean_range_below_surface_m,strength,continuity,clutter_overlap,confidence,status
+A,shallow,958.5,0.3433,0.8025,0.0429,0.5547,uncertain candidate
+B,middle,3043.6,0.2146,0.7692,0.0533,0.4689,weak candidate
+C,deep,5524.3,0.1612,0.7104,0.0236,0.4238,weak candidate
+D,very deep,8199.0,0.1629,0.7104,0.0810,0.4179,weak candidate

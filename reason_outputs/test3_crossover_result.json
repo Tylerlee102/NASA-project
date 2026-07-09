@@ -1,0 +1,12 @@
+{
+  "metrics": {
+    "clutter_limit_m": 90.0,
+    "consistency_limit_m": 30.0,
+    "crossover_count": 12,
+    "median_abs_delta_m": 405.5770049339851,
+    "range_resolution_m": 30.0
+  },
+  "rationale": "Crossover apparent depths disagree by several range cells, consistent with view-dependent clutter.",
+  "result": "clutter",
+  "test": "3_crossovers"
+}

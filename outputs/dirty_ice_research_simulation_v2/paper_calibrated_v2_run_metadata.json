@@ -1,0 +1,78 @@
+{
+  "model_name": "paper_calibrated_dirty_ice_v2",
+  "workbook_used": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\europa_ice_subsurface_simulation\\v19.xlsx",
+  "legacy_comparison_source": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation\\scenario_summary.csv",
+  "outputs": {
+    "baseline_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibrated_v2_baseline.csv",
+    "results_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibrated_v2_results.csv",
+    "summary_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibrated_v2_summary.csv",
+    "sensitivity_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibrated_v2_attenuation_sensitivity.csv",
+    "calibration_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibration_parameters.csv",
+    "calibration_json": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibration_parameters.json",
+    "material_library_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_material_library.csv",
+    "material_library_json": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_material_library.json",
+    "physics_validation_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\physics_validation_checks.csv",
+    "physics_validation_json": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\physics_validation_checks.json",
+    "comparison_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\v1_v2_headline_comparison.csv",
+    "report_html": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\dirty_ice_research_simulation_v2\\paper_calibrated_v2_report.html"
+  },
+  "radar_bands": {
+    "HF_9MHz_full_depth": {
+      "name": "HF_9MHz_full_depth",
+      "center_mhz": 9.0,
+      "bandwidth_mhz": 1.0,
+      "wavelength_m": 33.3,
+      "vertical_resolution_m": 300.0,
+      "nominal_depth_limit_m": 30000.0,
+      "dynamic_range_db": 40.0,
+      "reference_depth_m": 30000.0,
+      "reference_clean_margin_db": 6.0,
+      "radiometric_penalty_db": 0.0,
+      "role": "Full-depth, lower-resolution sounding; primary deep-ocean stress test.",
+      "source_status": "Directly paper anchored",
+      "note": "REASON HF uses 9 MHz center frequency, 1 MHz bandwidth, about 300 m vertical resolution in ice, and full-depth sounding to about 30 km."
+    },
+    "VHF_60MHz_shallow": {
+      "name": "VHF_60MHz_shallow",
+      "center_mhz": 60.0,
+      "bandwidth_mhz": 10.0,
+      "wavelength_m": 5.0,
+      "vertical_resolution_m": 30.0,
+      "nominal_depth_limit_m": 3000.0,
+      "dynamic_range_db": 35.0,
+      "reference_depth_m": 3000.0,
+      "reference_clean_margin_db": 10.0,
+      "radiometric_penalty_db": 0.0,
+      "role": "High-resolution shallow sounding and clutter discrimination support.",
+      "source_status": "Directly paper anchored",
+      "note": "REASON VHF shallow sounding uses 60 MHz center frequency, 10 MHz bandwidth, about 30 m vertical resolution in ice, and shallow sounding to about 3 km."
+    },
+    "VHF_60MHz_full_depth_lowDR": {
+      "name": "VHF_60MHz_full_depth_lowDR",
+      "center_mhz": 60.0,
+      "bandwidth_mhz": 10.0,
+      "wavelength_m": 5.0,
+      "vertical_resolution_m": 30.0,
+      "nominal_depth_limit_m": 30000.0,
+      "dynamic_range_db": 35.0,
+      "reference_depth_m": 30000.0,
+      "reference_clean_margin_db": -6.0,
+      "radiometric_penalty_db": 8.0,
+      "role": "Full-depth VHF sensitivity check with reduced radiometric fidelity.",
+      "source_status": "Paper anchored plus model penalty",
+      "note": "The REASON paper describes full-depth VHF to about 30 km as single-bit, low dynamic range; v2 models that as a conservative SNR penalty."
+    }
+  },
+  "classification_thresholds": {
+    "snr_detection_threshold_db": 0.0,
+    "ambiguity_window_db": 3.0
+  },
+  "surface_clutter_model": {
+    "applies_to": "VHF 60 MHz modes; classification effect limited to VHF shallow sounding",
+    "mechanism": "off-nadir surface clutter represented as an apparent shallow subsurface echo",
+    "source": "Blankenship et al. 2024 REASON; Castelletti et al. 2017; Scanlan et al. 2020",
+    "caveat": "Amplitude and apparent depth are deterministic sensitivity proxies, not antenna-pattern or interferometric phase simulations."
+  },
+  "thin_layer_solver": "normal_incidence_transfer_matrix",
+  "caveat": "This is a first-order sensitivity simulation, not a full REASON link budget or processing pipeline."
+}

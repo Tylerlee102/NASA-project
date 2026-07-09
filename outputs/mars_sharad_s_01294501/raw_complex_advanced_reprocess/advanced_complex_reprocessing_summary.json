@@ -1,0 +1,38 @@
+{
+  "orbit": "S_01294501 / R_1294501_001_SS19_700_A",
+  "source": "official SHARAD RDR complex-voltage product",
+  "input_shape": {
+    "complex_traces": 122145,
+    "complex_range_samples": 667
+  },
+  "trace_rate_hz": 174.48787177509215,
+  "target_surface_sample": 145,
+  "processing_steps": [
+    "estimate surface return per complex trace",
+    "residual surface-phase autofocus plus mild Doppler-centroid phase compensation",
+    "Fourier range shift to align the surface return and correct range walk/migration",
+    "centered Doppler aperture focusing",
+    "complex zero-Doppler clutter rejection",
+    "complex f-k fan filtering to suppress steep events before detected power",
+    "low-rank complex clutter removal in range chunks",
+    "multi-look detected-power rendering"
+  ],
+  "important_limits": [
+    "This uses RDR complex-voltage echoes, not only the rendered radargram image.",
+    "The available RDR product is already range-compressed and Doppler processed by the official processor.",
+    "A complete from-EDR Level-1 processor would also need the full SHARAD reference chirp/calibration chain.",
+    "The final rejected product is better for readability, but strong clutter rejection can also suppress real dipping reflectors."
+  ],
+  "outputs": {
+    "advanced_focus_migration": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\advanced_focus_migration.png",
+    "advanced_doppler_clutter_reject": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\advanced_doppler_clutter_reject.png",
+    "advanced_fk_migration_clutter_reject": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\advanced_fk_migration_clutter_reject.png",
+    "advanced_lowrank_fk_final": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\advanced_lowrank_fk_final.png",
+    "recommended_balanced": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\recommended_raw_complex_reprocessed_radargram.png",
+    "aggressive": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\aggressive_raw_complex_reprocessed_radargram.png",
+    "comparison": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\advanced_complex_reprocessing_comparison.png",
+    "zoom": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\advanced_complex_reprocessing_zoom.png",
+    "data_npz": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\raw_complex_advanced_reprocess\\advanced_complex_reprocessed_radargrams.npz",
+    "intermediate_complex": null
+  }
+}

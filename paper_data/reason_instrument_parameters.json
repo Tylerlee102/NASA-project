@@ -1,0 +1,105 @@
+{
+  "source": {
+    "file": "C:/Users/tyboy/Downloads/s11214-024-01072-3.pdf",
+    "title": "Radar for Europa Assessment and Sounding: Ocean to Near-Surface (REASON)",
+    "journal": "Space Science Reviews",
+    "year": 2024,
+    "doi": "10.1007/s11214-024-01072-3"
+  },
+  "mission_role": {
+    "instrument": "REASON",
+    "spacecraft": "Europa Clipper",
+    "description": "Dual-frequency ice-penetrating radar designed to probe Europa from exosphere to subsurface ocean.",
+    "measurement_techniques": [
+      "altimetry",
+      "reflectometry",
+      "sounding",
+      "interferometry",
+      "plasma characterization",
+      "ranging"
+    ],
+    "science_targets": [
+      "characterize non-ice material such as brines and salts in the subsurface",
+      "search for an ice-ocean interface",
+      "characterize Europa ice shell global structure",
+      "constrain Europa radial tidal deformations",
+      "discriminate nadir subsurface echoes from off-nadir clutter using VHF interferometry"
+    ],
+    "source_pages": [1, 11, 15]
+  },
+  "radar_system_actuals_table_7": {
+    "hf": {
+      "center_frequency_mhz": 9,
+      "wavelength_m": 33.3,
+      "bandwidth_mhz": 1,
+      "fractional_bandwidth_percent": 11,
+      "peak_transmit_power_w_per_antenna_assembly": 11.75,
+      "dynamic_range_db": 40,
+      "antenna_gain_at_nadir_dbi": 4
+    },
+    "vhf": {
+      "center_frequency_mhz": 60,
+      "wavelength_m": 5,
+      "bandwidth_mhz": 10,
+      "fractional_bandwidth_percent": 17,
+      "peak_transmit_power_w_per_antenna_assembly": 5.5,
+      "dynamic_range_db": 35,
+      "antenna_gain_at_nadir_dbi": 7.3
+    },
+    "shared": {
+      "operational_altitude_min_km": 25,
+      "operational_altitude_max_km": 1000,
+      "high_level_description_altitude_min_km": 35,
+      "high_level_description_altitude_max_km": 1000,
+      "pulse_repetition_frequency_min_hz": 50,
+      "pulse_repetition_frequency_max_hz": 3000,
+      "warmup_time_min": 20,
+      "science_collection_time_min": 16,
+      "mass_kg": 65.7,
+      "average_power_w": 61
+    },
+    "source_pages": [11, 42]
+  },
+  "sounding_products": {
+    "hf_full_depth": {
+      "frequency_mhz": 9,
+      "bandwidth_mhz": 1,
+      "resolution_in_ice_m": 300,
+      "depth_range": "surface to about 30 km subsurface"
+    },
+    "vhf_shallow": {
+      "frequency_mhz": 60,
+      "bandwidth_mhz": 10,
+      "resolution_in_ice_m": 30,
+      "depth_range": "surface to about 3 km depth"
+    },
+    "fdvhf_full_depth": {
+      "frequency_mhz": 60,
+      "depth_range": "up to 30 km depth",
+      "dynamic_range": "single-bit, low dynamic range"
+    },
+    "source_pages": [11, 55]
+  },
+  "adjustable_over_flyby_table_10": {
+    "pulse_repetition_frequency": "Collect desired along-track density and optimize round-trip echo travel times; more than one pulse may be in the air at one time. In the operations plan this may be called CRF.",
+    "chirp_transmit_pulse": "Optimize SNR given round-trip echo time and PRF.",
+    "receive_window_duration_and_position": "Collect surface and subsurface echoes.",
+    "receiver_gain": "Correct for echo power variations with altitude and environment.",
+    "number_of_on_board_pre_summed_pulses": "Limit data volume.",
+    "number_of_bits_in_digitized_echo": "Limit data volume while maintaining dynamic range.",
+    "source_page": 55
+  },
+  "onboard_processing": {
+    "adc_sampling_rate_mhz": 48,
+    "baseband_sampling_hf_mhz": 1.2,
+    "baseband_sampling_vhf_mhz": 12,
+    "coherently_summed_echoes_receive_max": 40,
+    "coherently_summed_echoes_transmit_loopback_max": 255,
+    "compression": "Block Floating-Point Quantization (BFPQ) after coherent summing.",
+    "vhf_bfpq_example_input_mbps": 576,
+    "vhf_bfpq_example_output_mbps": 99,
+    "vhf_bfpq_example_reduction_factor": 6,
+    "vhf_bfpq_signal_to_quantization_noise_ratio_db": 20,
+    "source_page": 44
+  }
+}

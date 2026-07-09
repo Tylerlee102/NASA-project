@@ -1,0 +1,133 @@
+{
+  "purpose": "Make the Mars SHARAD radargram more readable with section-specific pooling instead of one global interpolation.",
+  "important_limit": "This is a display/conditioning product. Low-confidence sections are marked; the script does not claim to recover Doppler information or geology that is not separable in the measured data.",
+  "input": {
+    "usrdr_numeric_img": "data\\sharad_s_01294501\\radargram\\s_01294501_rgram.img",
+    "surface_geometry_csv": "data\\sharad_s_01294501\\clutter_simulation\\s_01294501_rtrn.csv",
+    "surface_aligned_crop_shape": [
+      1100,
+      4719
+    ],
+    "surface_reference_row_in_crop": 110
+  },
+  "methods": {
+    "0": {
+      "name": "keep/sharp",
+      "description": "High-confidence section; keep the locally enhanced data.",
+      "column_count": 3900
+    },
+    "1": {
+      "name": "small pool",
+      "description": "Mildly unstable section; blend with a short local pool.",
+      "column_count": 766
+    },
+    "2": {
+      "name": "wide pool",
+      "description": "Rough section; use a wider local pool to reduce speckle/clutter texture.",
+      "column_count": 12
+    },
+    "3": {
+      "name": "muted/repaired",
+      "description": "Worst isolated trace artifacts; replace or mute and mark as low confidence.",
+      "column_count": 41
+    }
+  },
+  "repair_operations": [
+    {
+      "start_col": 2080,
+      "end_col_exclusive": 2084,
+      "length_cols": 4,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    },
+    {
+      "start_col": 2133,
+      "end_col_exclusive": 2136,
+      "length_cols": 3,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    },
+    {
+      "start_col": 2197,
+      "end_col_exclusive": 2204,
+      "length_cols": 7,
+      "operation": "medium pooled interpolation",
+      "pool_columns_each_side": 10,
+      "confidence": 0.55
+    },
+    {
+      "start_col": 2290,
+      "end_col_exclusive": 2294,
+      "length_cols": 4,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    },
+    {
+      "start_col": 2296,
+      "end_col_exclusive": 2300,
+      "length_cols": 4,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    },
+    {
+      "start_col": 2310,
+      "end_col_exclusive": 2314,
+      "length_cols": 4,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    },
+    {
+      "start_col": 2686,
+      "end_col_exclusive": 2690,
+      "length_cols": 4,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    },
+    {
+      "start_col": 2701,
+      "end_col_exclusive": 2702,
+      "length_cols": 1,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    },
+    {
+      "start_col": 2872,
+      "end_col_exclusive": 2876,
+      "length_cols": 4,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    },
+    {
+      "start_col": 3216,
+      "end_col_exclusive": 3222,
+      "length_cols": 6,
+      "operation": "short edge interpolation",
+      "pool_columns_each_side": 4,
+      "confidence": 0.78
+    }
+  ],
+  "section_count": 30,
+  "low_confidence_section_count": 0,
+  "outputs": {
+    "summary_sheet_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability\\adaptive_sectional_summary.png",
+    "best_readable_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability\\adaptive_best_readable_radargram.png",
+    "confidence_overlay_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability\\adaptive_confidence_overlay.png",
+    "method_map_png": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability\\adaptive_method_map.png",
+    "column_quality_csv": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability\\adaptive_column_quality.csv",
+    "section_summary_csv": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability\\adaptive_section_summary.csv",
+    "adaptive_data_npz": "outputs\\mars_sharad_s_01294501\\adaptive_sectional_readability\\adaptive_readable_data.npz"
+  },
+  "recommended_use": [
+    "Use adaptive_best_readable_radargram.png when you need the cleanest visual inspection image.",
+    "Use adaptive_confidence_overlay.png beside it so you do not mistake muted/repaired zones for original measurements.",
+    "Use the CSV files to explain which sections used sharp, small-pool, wide-pool, or muted/repaired processing."
+  ]
+}

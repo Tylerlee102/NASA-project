@@ -1,0 +1,41 @@
+{
+  "plain_answer": "Doppler does not directly change PRF; it constrains what PRF must be. PRF must sample Doppler in slow time, while also meeting along-track spacing and range-timing constraints.",
+  "assumptions": {
+    "closest_altitude_km": 400.0,
+    "altitude_rise_at_plus_minus_60_km": 4.0,
+    "cross_track_offset_km": 25.0,
+    "spacecraft_speed_km_s": 4.0,
+    "hf_wavelength_m": 33.3,
+    "vhf_wavelength_m": 5.0,
+    "reason_prf_range_hz": [
+      50.0,
+      3000.0
+    ]
+  },
+  "derived": {
+    "max_hf_doppler_abs_hz_for_aperture": 66.8515461700457,
+    "max_vhf_doppler_abs_hz_for_aperture": 445.23129749250427,
+    "minimum_prf_for_vhf_no_alias_hz_simple_nyquist": 890.4625949850085,
+    "pulse_spacing_m_at_50_500_3000_hz": [
+      80.0,
+      8.0,
+      1.3333333333333333
+    ],
+    "pulses_in_air_at_50_500_3000_hz": [
+      0.13342563807926083,
+      1.3342563807926082,
+      8.00553828475565
+    ]
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\01_doppler_shift_vs_satellite_motion.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\02_doppler_shift_bar_comparison.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\03_prf_doppler_sampling_limit.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\04_prf_choices_vs_vhf_doppler_requirement.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\05_prf_vs_along_track_spacing.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\06_prf_choices_along_track_spacing_bar.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\07_prf_vs_unambiguous_range.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\08_prf_pulses_in_air_bar.png"
+  ],
+  "data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\doppler_prf_graphs\\doppler_prf_values.csv"
+}

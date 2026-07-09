@@ -1,0 +1,35 @@
+{
+  "plain_answer": "Normal left-right motion gives a Doppler curve that crosses zero at closest approach. Adding up/down motion shifts that curve because vertical motion is radial motion, so Doppler is nonzero even at closest approach.",
+  "assumptions": {
+    "closest_altitude_km": 400.0,
+    "cross_track_offset_km": 25.0,
+    "left_right_speed_km_s": 4.0,
+    "vertical_speed_km_s_for_updown_cases": 0.5,
+    "vhf_wavelength_m": 5.0,
+    "hf_wavelength_m": 33.3
+  },
+  "closest_approach_vhf_doppler_hz": {
+    "normal": -0.0,
+    "upward": -199.61051569657772,
+    "downward": 199.61051569657772
+  },
+  "max_abs_vhf_doppler_hz": {
+    "normal": 236.89265630974631,
+    "upward": 430.14506295912304,
+    "downward": 430.14506295912304
+  },
+  "minimum_prf_by_simple_nyquist_hz": {
+    "normal": 473.78531261949263,
+    "upward": 860.2901259182461,
+    "downward": 860.2901259182461
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\vertical_motion_doppler_graphs\\01_altitude_motion_cases.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\vertical_motion_doppler_graphs\\02_radial_velocity_comparison.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\vertical_motion_doppler_graphs\\03_vhf_doppler_normal_vs_updown.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\vertical_motion_doppler_graphs\\04_hf_doppler_normal_vs_updown.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\vertical_motion_doppler_graphs\\05_vhf_doppler_position_bars.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\vertical_motion_doppler_graphs\\06_prf_requirement_with_vertical_motion.png"
+  ],
+  "data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\vertical_motion_doppler_graphs\\vertical_motion_doppler_values.csv"
+}

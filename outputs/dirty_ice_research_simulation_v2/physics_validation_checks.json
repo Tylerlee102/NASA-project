@@ -1,0 +1,20 @@
+[
+  {
+    "check": "single interface matches Fresnel amplitude",
+    "evidence_type": "solver sanity check, not independent physical validation",
+    "observed": 0.11499787394931256,
+    "expected": 0.11499787394931256,
+    "abs_error": 0.0,
+    "passed": true,
+    "limitation": "Expected value uses the same Fresnel helper as the one-interface solver branch."
+  },
+  {
+    "check": "no dielectric contrast returns zero reflection",
+    "evidence_type": "solver sanity check, not independent physical validation",
+    "observed": 0.0,
+    "expected": 0.0,
+    "abs_error": 0.0,
+    "passed": true,
+    "limitation": "This catches implementation regressions only; it is not external model validation."
+  }
+]

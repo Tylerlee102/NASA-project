@@ -1,0 +1,23 @@
+{
+  "comparison": "terrain radargram vs flat-surface radar baselines",
+  "metrics": {
+    "candidate_window": {
+      "along_end_km": 110.0,
+      "along_start_km": 10.0,
+      "apparent_depth_m": 440.0,
+      "depth_tolerance_m": 80.0
+    },
+    "flat_beam_candidate_mean_power": 170.5415269119664,
+    "flat_nadir_only_candidate_mean_power": 0.001973436179579479,
+    "terrain_candidate_mean_power": 35269.912373697334,
+    "terrain_minus_flat_candidate_mean_excess": 35099.370846785365,
+    "terrain_to_flat_beam_ratio": 206.8112852765982,
+    "terrain_to_nadir_only_ratio": 17872334.93469904
+  },
+  "outputs": {
+    "candidate_band_csv": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\reason_outputs\\flat_compare_candidate_band_along_track.csv",
+    "candidate_band_png": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\reason_outputs\\flat_compare_candidate_band_along_track.png",
+    "depth_profiles_png": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\reason_outputs\\flat_compare_depth_profiles.png",
+    "side_by_side_png": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\reason_outputs\\flat_compare_side_by_side.png"
+  }
+}

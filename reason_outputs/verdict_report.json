@@ -1,0 +1,80 @@
+{
+  "missing_result_files": [],
+  "rationale": "At least three independent tests support off-nadir surface geometry.",
+  "tests": [
+    {
+      "metrics": {
+        "alignment_ratio": 1.0360667044228054,
+        "background_p95_power": 44730.49024211511,
+        "candidate_peak_power": 46343.77161236465,
+        "candidate_window": {
+          "along_end_km": 110.0,
+          "along_start_km": 10.0,
+          "apparent_depth_m": 440.0,
+          "depth_tolerance_m": 80.0
+        },
+        "extent_fraction": 0.3034825870646766
+      },
+      "rationale": "Candidate window has a coherent counterpart in the DEM-only cluttergram.",
+      "result": "clutter",
+      "test": "1_cluttergram"
+    },
+    {
+      "metrics": {
+        "candidate_mean_offset_km": 25.165841480214233,
+        "candidate_mean_phase_deg": 12.549508478505363,
+        "candidate_mean_phase_rad": 0.21903024245686262,
+        "expected_offset_km": 25.0
+      },
+      "rationale": "Candidate-bin phase is nonzero and maps to the expected off-nadir surface offset.",
+      "result": "clutter",
+      "test": "2_interferometry"
+    },
+    {
+      "metrics": {
+        "clutter_limit_m": 90.0,
+        "consistency_limit_m": 30.0,
+        "crossover_count": 12,
+        "median_abs_delta_m": 405.5770049339851,
+        "range_resolution_m": 30.0
+      },
+      "rationale": "Crossover apparent depths disagree by several range cells, consistent with view-dependent clutter.",
+      "result": "clutter",
+      "test": "3_crossovers"
+    },
+    {
+      "metrics": {
+        "blind_zone_cells": 7.0,
+        "candidate_depth_m": 440.0,
+        "candidate_vhf_scr_db": 28.494721264776945,
+        "detection_threshold_db": 6.0,
+        "vhf_blind_zone_depth_m": 210.0,
+        "vhf_range_resolution_m": 30.0
+      },
+      "rationale": "Candidate depth is outside the measured VHF blind zone and detectable in principle.",
+      "result": "subsurface",
+      "test": "4_blind_zone"
+    },
+    {
+      "metrics": {
+        "beam_limit_km": 34.995465410369604,
+        "best_feature_relief_m": 131.42788035550302,
+        "best_feature_side": "positive",
+        "candidate_depth_m": 440.0,
+        "feature_threshold_m": 35.0,
+        "in_beam": true,
+        "required_offset_km": 25.043430320944868
+      },
+      "rationale": "A DEM feature exists at the lateral offset required by the observed apparent depth.",
+      "result": "clutter",
+      "test": "5_bias_table"
+    }
+  ],
+  "verdict": "probable clutter",
+  "vote_counts": {
+    "ambiguous": 0,
+    "clutter": 4,
+    "missing": 0,
+    "subsurface": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "source_data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\paper_data\\reason_instrument_parameters.json",
+  "answers": {
+    "pulse_length": "The paper does not give a single fixed pulse length. It says chirp/transmit pulse is adjustable; paper-backed numeric values are 1 MHz HF bandwidth -> 300 m in-ice resolution and 10 MHz VHF bandwidth -> 30 m in-ice resolution.",
+    "prf": "The paper gives PRF as 50 Hz to 3 kHz. Time between pulses is 20 ms at 50 Hz and 0.333 ms at 3 kHz.",
+    "number_of_pulses": "The paper gives coherent summing up to 40 receive echoes and up to 255 transmit-loopback echoes.",
+    "pulse_compression": "The paper says range sidelobes appear adjacent to the main peak as a result of pulse compression, but does not give the exact waveform or sidelobe level.",
+    "data_compression": "The paper's BFPQ example reduces VHF data from 576 Mbps to 99 Mbps, about 6x; this is data compression, not pulse compression."
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_answer_graphs\\01_pulse_chirp_bandwidth_resolution.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_answer_graphs\\02_prf_pulse_interval_vs_echo_time.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_answer_graphs\\03_number_of_summed_pulses_snr_gain.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_answer_graphs\\04_pulse_compression_range_sidelobes_concept.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\question_answer_graphs\\05_data_compression_from_paper_not_pulse_compression.png"
+  ]
+}

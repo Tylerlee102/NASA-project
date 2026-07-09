@@ -1,0 +1,47 @@
+{
+  "orbit": "S_01294501",
+  "product": "plain corrected/filter-only grayscale radargram",
+  "shape_rows_cols": [
+    980,
+    4719
+  ],
+  "full_depth_shape_rows_cols": [
+    1100,
+    4719
+  ],
+  "surface_aligned_row": 110,
+  "common_valid_row_limit": 980,
+  "common_valid_depth_coverage": 0.995,
+  "steps_applied": [
+    "surface alignment using return-table nadir line",
+    "common valid-depth crop to remove bottom no-data areas without inventing signal",
+    "section-aware column quality repair",
+    "depth-varying stripe suppression",
+    "display-domain attenuation of texture matching the simulated cluttergram",
+    "along-track frequency filtering on the radargram before final tone mapping",
+    "directional skew suppression that weakens steep diagonal bands while keeping flatter horizons",
+    "frequency-domain dip filtering that favors flatter events over steep upward-skewing bands",
+    "darker radargram tone grade for black-background readability"
+  ],
+  "important_limit": "This is a corrected/filter-only radargram display. It improves readability but does not recover Doppler information that was never sampled or prove that weak subsurface-looking returns are real geology.",
+  "column_method_counts": {
+    "keep/sharp": 3900,
+    "small pool": 766,
+    "wide pool": 12,
+    "muted/repaired": 41
+  },
+  "repaired_column_count": 41,
+  "repair_operation_count": 10,
+  "mean_clutter_match_strength": 0.007575394120067358,
+  "max_clutter_match_strength": 0.9970532059669495,
+  "outputs": {
+    "final": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\corrected_filtered_radargram_no_overlay\\05_final_corrected_filtered_radargram.png",
+    "aggressive_deskewed": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\corrected_filtered_radargram_no_overlay\\05b_aggressive_deskewed_radargram.png",
+    "skew_suppressed": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\corrected_filtered_radargram_no_overlay\\04b_skew_suppressed_radargram.png",
+    "dip_filtered": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\corrected_filtered_radargram_no_overlay\\04c_dip_filtered_radargram.png",
+    "full_depth_reference": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\corrected_filtered_radargram_no_overlay\\00_final_full_depth_corrected_filtered_reference.png",
+    "lighter_tone_reference": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\corrected_filtered_radargram_no_overlay\\00_final_lighter_tone_reference.png",
+    "comparison": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\corrected_filtered_radargram_no_overlay\\06_original_vs_corrected_filters_no_overlay.png",
+    "zoom": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\outputs\\mars_sharad_s_01294501\\corrected_filtered_radargram_no_overlay\\07_zoom_original_vs_final_no_overlay.png"
+  }
+}

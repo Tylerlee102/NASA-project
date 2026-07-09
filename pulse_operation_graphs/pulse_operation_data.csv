@@ -1,0 +1,14 @@
+variable,value,units,kind,notes
+HF center frequency,9,MHz,paper value,REASON HF center frequency
+VHF center frequency,60,MHz,paper value,REASON VHF center frequency
+HF bandwidth,1,MHz,paper value,"Paper gives bandwidth, not one fixed pulse length"
+VHF bandwidth,10,MHz,paper value,"Paper gives bandwidth, not one fixed pulse length"
+HF resolution in ice,300,m,paper value,Full-depth sounding
+VHF resolution in ice,30,m,paper value,Shallow sounding
+PRF minimum,50,Hz,paper value,Pulse repetition frequency range
+PRF maximum,3000,Hz,paper value,Pulse repetition frequency range
+receive coherent sum maximum,40,echoes,paper value,Maximum commandable receive echoes coherently summed
+transmit loopback coherent sum maximum,255,echoes,paper value,Maximum commandable transmit loopback echoes
+receive coherent sum ideal gain at 40,16.02,dB,derived,Ideal 10 log10(N) gain
+VHF BFPQ input data rate,576,Mbps,paper value,"Data compression example, not pulse compression"
+VHF BFPQ output data rate,99,Mbps,paper value,"Data compression example, not pulse compression"

@@ -1,0 +1,17 @@
+{
+  "plain_answer": "A nadir surface echo stays at the reference surface line. An off-nadir surface echo travels a longer slant path, so it arrives late and appears as a curved false subsurface feature as the satellite moves left-to-right.",
+  "model": {
+    "altitude_km": 400.0,
+    "offnadir_cross_track_offset_km": 25.0,
+    "ice_index": 1.78
+  },
+  "closest_approach": {
+    "nadir_surface_echo_m": 0.0,
+    "offnadir_apparent_depth_m": 438.47671181736564,
+    "offnadir_extra_two_way_delay_us": 5.206859120084408
+  },
+  "files": {
+    "graph": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_comparison\\nadir_vs_offnadir_apparent_depth.png",
+    "data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\nadir_offnadir_comparison\\nadir_vs_offnadir_data.csv"
+  }
+}

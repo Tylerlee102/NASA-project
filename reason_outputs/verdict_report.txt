@@ -1,0 +1,10 @@
+Verdict: probable clutter
+Rationale: At least three independent tests support off-nadir surface geometry.
+Votes: clutter=4, subsurface=1, ambiguous=0, missing=0
+
+Test results:
+- 1_cluttergram: clutter (Candidate window has a coherent counterpart in the DEM-only cluttergram.)
+- 2_interferometry: clutter (Candidate-bin phase is nonzero and maps to the expected off-nadir surface offset.)
+- 3_crossovers: clutter (Crossover apparent depths disagree by several range cells, consistent with view-dependent clutter.)
+- 4_blind_zone: subsurface (Candidate depth is outside the measured VHF blind zone and detectable in principle.)
+- 5_bias_table: clutter (A DEM feature exists at the lateral offset required by the observed apparent depth.)

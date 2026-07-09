@@ -1,0 +1,232 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Europa Dirty-Ice Radar Simulation v2</title><style>
+    :root {
+      --surface: #FCFCFD;
+      --panel: #FFFFFF;
+      --ink: #1F2430;
+      --muted: #6F768A;
+      --grid: #E6E8F0;
+      --blue: #5477C4;
+      --orange: #CC6F47;
+      --olive: #71B436;
+      --gold: #B8A037;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--surface);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.55;
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 48px 24px 72px;
+    }
+    header { margin-bottom: 32px; }
+    h1 { font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1.05; margin: 0 0 16px; letter-spacing: 0; }
+    h2 { font-size: 1.55rem; line-height: 1.2; margin: 44px 0 14px; letter-spacing: 0; }
+    h3 { font-size: 1.1rem; margin: 24px 0 8px; }
+    p { margin: 0 0 14px; }
+    a { color: var(--blue); }
+    .lede { font-size: 1.15rem; max-width: 850px; color: #323849; }
+    .summary {
+      border-left: 5px solid var(--blue);
+      padding: 18px 22px;
+      background: #F4F7FE;
+      margin: 24px 0;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 24px 0 8px;
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--grid);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .metric strong { display: block; font-size: 1.7rem; line-height: 1.05; margin-bottom: 8px; }
+    .metric span { color: var(--muted); font-size: 0.92rem; }
+    figure {
+      margin: 20px 0 30px;
+      padding: 0;
+    }
+    figure img {
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--grid);
+      background: var(--panel);
+      border-radius: 8px;
+    }
+    figcaption { color: var(--muted); font-size: 0.92rem; margin-top: 8px; }
+    .note {
+      background: #FFF7E8;
+      border-left: 5px solid var(--gold);
+      padding: 16px 18px;
+      margin: 20px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0 30px;
+      font-size: 0.94rem;
+      background: var(--panel);
+    }
+    th, td {
+      border-bottom: 1px solid var(--grid);
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #F4F5F7; }
+    ul, ol { padding-left: 1.35rem; }
+    li { margin-bottom: 8px; }
+    .source-list li { overflow-wrap: anywhere; }
+    @media (max-width: 800px) {
+      main { padding: 28px 16px 48px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+      .metrics { grid-template-columns: 1fr; }
+    }
+    </style></head><body>
+    <main>
+      <header>
+        <h1>Europa Dirty-Ice Radar Simulation v2</h1>
+        <p class="lede">A paper-calibrated sensitivity simulation for testing when Europa radar-bright layers or clutter could mimic, compete with, or hide the echoes used to interpret Europa's ice shell.</p>
+      </header>
+
+      <section>
+        <h2>Technical Summary</h2>
+        <div class="summary">
+          <p><strong>Main result:</strong> v2 now separates three radar interpretation problems: attenuation can weaken the true deep return, internal dirty/briny layers can create deep false-boundary risk, and VHF off-nadir clutter can confuse shallow-window returns. This is a sensitivity simulation, not a claim about Europa's actual subsurface.</p>
+          <p>The clean-ice HF control remains easy to interpret in the workbook-depth shell, with a median true-ocean SNR margin of <strong>13.4 dB</strong>. In contrast, the stacked dirty-layer scenario reaches <strong>100% deep false-boundary risk</strong>, the complex dirty-ice scenario is dominated by <strong>98.8% weak or no deep detection</strong>, and the rough-surface clutter stress test produces <strong>98.8% shallow-window clutter ambiguity</strong> in VHF.</p>
+        </div>
+        <div class="metrics">
+          <div class="metric"><strong>100%</strong><span>deep false-boundary risk in stacked dirty layers</span></div>
+          <div class="metric"><strong>98.8%</strong><span>weak/no deep detection in complex dirty ice</span></div>
+          <div class="metric"><strong>98.8%</strong><span>VHF shallow clutter ambiguity in rough terrain</span></div>
+          <div class="metric"><strong>13.4 dB</strong><span>clean-control median ocean SNR margin</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Dirty-Ice Outcomes Split Into Clear, False-Risk, And Weak Cases</h2>
+        <p>The headline comparison uses the workbook-depth shell and HF 9 MHz full-depth mode because that is the clearest stress test for bottom-echo interpretation. Clean ice, salt layers, near-surface brine, and warm impure ice can still preserve a clear ocean interpretation under these settings. The stacked dirty-layer case is different: the internal reflector becomes the stronger deep return. The complex case mostly weakens the deep interpretation instead of replacing it with a strong false layer.</p>
+        <figure><img src="charts/01_hf_scenario_outcomes.png" alt="Stacked horizontal bars showing clear ocean, deep false-risk, and weak/no deep detection shares by scenario." loading="lazy">
+          <figcaption>Percent of along-track points by interpretation class. Detection threshold is 0 dB SNR margin; deep false-risk uses the v2 3 dB ambiguity rule.</figcaption>
+        </figure>
+      </section>
+
+      <section>
+        <h2>The False-Reflector Failure Mode Is Visible Along Track</h2>
+        <p>The stacked dirty-layer example shows why a single bright deep return is not enough to prove that the deepest interface has been identified. The orange internal return remains above the true ocean return across the track, so a simplified strongest-echo interpretation would infer the wrong boundary depth.</p>
+        <figure><img src="charts/02_false_layer_track_example.png" alt="Line chart comparing true ocean and internal false reflector SNR margins along track." loading="lazy">
+          <figcaption>Along-track SNR margin for the workbook-depth HF run. The shaded region marks where the internal false reflector is stronger and detectable.</figcaption>
+        </figure>
+      </section>
+
+      <section>
+        <h2>REASON Band Choice And Shell Thickness Matter Before Dirty Ice Is Added</h2>
+        <p>The clean-control comparison keeps the material model simple and changes only the shell mode and radar band. It shows why HF 9 MHz is the main deep sounding stress test, while the VHF shallow mode should not be treated as a failed ocean detector when the ocean is outside its shallow depth window.</p>
+        <figure><img src="charts/03_band_shell_margin.png" alt="Grouped bars showing median ocean SNR margin by shell mode and radar band." loading="lazy">
+          <figcaption>Clean ice only. Values are median true-ocean SNR margins in dB; n/a marks depth-window cases where a deep margin is not defined.</figcaption>
+        </figure>
+      </section>
+
+      <section>
+        <h2>VHF Clutter Is Now A Separate Stress Test</h2>
+        <p>Clutter is not counted as deep false-ocean risk. In v2 it is a separate shallow-window class that represents off-nadir surface echoes arriving at similar delay to shallow nadir targets. The rough-surface clutter case reaches 98.8% shallow-window clutter ambiguity, and the complex-plus-clutter case reaches 100.0%, while the complex dirty-ice case without clutter is mostly internal-feature interpretation rather than surface clutter.</p>
+        <figure><img src="charts/07_vhf_clutter_stress.png" alt="Stacked bars showing VHF shallow clutter, internal-feature, outside-window, and weak/no detection shares." loading="lazy">
+          <figcaption>Workbook-depth, VHF 60 MHz shallow mode. REASON's VHF interferometry is designed to help separate cross-track clutter; this simulation only flags the ambiguity.</figcaption>
+        </figure>
+      </section>
+
+      <section>
+        <h2>The Material Library Makes The Simulation More Audit-Friendly</h2>
+        <p>v2 separates mechanisms that were too blurred in the first fake model: dielectric contrast controls reflection strength, attenuation controls how much signal survives through the ice, and clutter is tracked as a separate VHF shallow-window ambiguity. Brine-filled and dirty mixed ice have both stronger dielectric contrast and higher loss brackets, which is why they can create bright internal returns while also hiding deeper returns.</p>
+        <figure><img src="charts/04_material_library.png" alt="Material library chart showing epsilon and HF attenuation brackets." loading="lazy">
+          <figcaption>Material endmembers and brackets pulled from paper-anchored REASON values plus sensitivity ranges where lab constraints remain uncertain.</figcaption>
+        </figure>
+        <table><thead><tr><th>Material</th><th>epsilon real</th><th>HF loss min</th><th>HF loss max</th><th>Status</th></tr></thead><tbody><tr><td>Clean compact water ice</td><td>3.1</td><td>0.2</td><td>0.7</td><td>Directly paper anchored epsilon; attenuation profile modeled</td></tr><tr><td>Pore close-off / porous ice endmember</td><td>2.8</td><td>0.2</td><td>1.2</td><td>Directly paper anchored epsilon; attenuation bracketed</td></tr><tr><td>Brine-filled ice</td><td>9</td><td>5.0</td><td>18.0</td><td>Directly paper anchored epsilon; high-loss bracket modeled</td></tr><tr><td>Hydrated salt layer</td><td>5</td><td>0.7</td><td>2.0</td><td>Directly paper anchored epsilon and layer thicknesses</td></tr><tr><td>Mixed dirty ice bracket</td><td>6.2</td><td>1.4</td><td>7.8</td><td>Sensitivity bracket from paper-supported material families</td></tr><tr><td>Void/porous fracture contrast</td><td>2.2</td><td>0.2</td><td>1.2</td><td>Sensitivity bracket</td></tr></tbody></table>
+      </section>
+
+      <section>
+        <h2>Attenuation Sensitivity Shows Where The Claim Is Fragile</h2>
+        <p>The brine-like epsilon grid is useful because it makes the model's dependence on thickness and loss visible. When future paper values change the attenuation range, this grid is the first place to update before changing the conclusion.</p>
+        <figure><img src="charts/05_attenuation_sensitivity.png" alt="Heatmap showing deep false-boundary risk across dirty layer thickness and attenuation." loading="lazy">
+          <figcaption>Heatmap cells show deep false-boundary risk percentage for epsilon = 9.0 in the HF workbook-depth setup.</figcaption>
+        </figure>
+      </section>
+
+      <section>
+        <h2>The Thin-Layer Solver Passes Basic Physics Smoke Tests</h2>
+        <p>The validation checks do not make the model mission-grade, but they do reduce two simple numerical risks: the solver reproduces a single-interface Fresnel amplitude, and it returns zero reflection when there is no dielectric contrast.</p>
+        <figure><img src="charts/06_physics_validation.png" alt="Validation cards showing two passing physics checks." loading="lazy">
+          <figcaption>Basic solver checks generated from the v2 run.</figcaption>
+        </figure>
+      </section>
+
+      <section>
+        <h2>Scope, Data, And Metric Definitions</h2>
+        <p><strong>Scope:</strong> Synthetic along-track radar sensitivity model, not real Europa subsurface data and not a NASA mission-grade processor. The model tests whether plausible dirty-ice structures can confuse a bottom/ocean interpretation and whether rough-surface clutter can confuse shallow VHF returns.</p>
+        <p><strong>Primary cohort:</strong> Workbook-depth shell, HF 9 MHz full-depth radar mode, 241 along-track points per scenario. Supporting views compare REASON shell modes and VHF 60 MHz behavior.</p>
+        <p><strong>Clear ocean percent:</strong> share of points where the true ocean boundary is the clear strongest deep interpretation. <strong>Deep false-boundary risk:</strong> share classified as ambiguous, false stronger, or hidden-false-visible under the v2 3 dB ambiguity window. <strong>Weak/no deep detection:</strong> share where no clear deep ocean interpretation is available. <strong>Surface clutter percent:</strong> share of VHF shallow points where off-nadir surface clutter is detectable enough to confuse the shallow-window interpretation.</p>
+      </section>
+
+      <section>
+        <h2>Methodology And Validation</h2>
+        <p>v2 uses REASON-aligned 9 MHz and 60 MHz modes, separate shell-depth modes, a paper-anchored dielectric material library, depth-varying attenuation, a normal-incidence transfer-matrix solver for unresolved thin-layer packets, and a VHF off-nadir clutter stress-test proxy. Echo interpretation is then summarized with a 0 dB SNR detection threshold and a 3 dB ambiguity window.</p>
+        <p>Compared with the original fake simulation, v2 is better because major knobs are now traceable: radar band, depth window, material epsilon, attenuation bracket, scenario layer count, clutter mechanism, and solver sanity checks. It is still simplified because it does not model full spacecraft geometry, antenna pattern, interferometric phase processing, Europa-specific thermal history, or real REASON processing.</p>
+      </section>
+
+      <section>
+        <h2>Limitations, Uncertainty, And Robustness</h2>
+        <div class="note">
+          <p><strong>Do not overclaim this result.</strong> The current evidence supports "dirty ice can plausibly create ambiguity under these assumptions." It does not prove that Europa has these layers, that REASON will see these exact patterns, or that an ocean echo would be misread in final mission analysis.</p>
+        </div>
+        <ul>
+          <li>Attenuation in warm or impure ice is the biggest uncertainty and can change the depth at which the ocean becomes hidden.</li>
+          <li>The thin-layer interference model is a useful first-order upgrade but should eventually be checked against a fuller radar forward model.</li>
+          <li>The clutter model is a stress-test proxy. It flags VHF shallow-window ambiguity but does not simulate REASON's antenna pattern or cross-track interferometric phase retrieval.</li>
+          <li>False-boundary risk depends on the 3 dB ambiguity rule, the 0 dB detection threshold, and the layer-depth logic used to decide whether a reflector is a deep confuser.</li>
+          <li>Laboratory dielectric values for mixed salts, brines, voids, hydrates, and radiolytic products remain incomplete for all Europa-relevant temperatures and radar frequencies.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Recommended Next Steps</h2>
+        <ol>
+          <li>Add more paper-backed attenuation curves by temperature and impurity type, then rerun the sensitivity grid.</li>
+          <li>Separate shallow science reflectors from deep bottom-confusers more explicitly, so bright shallow features do not inflate the ocean-ambiguity claim.</li>
+          <li>Upgrade the clutter proxy into a beam-pattern and interferometric-phase model, because REASON is specifically designed to help discriminate cross-track clutter.</li>
+          <li>Keep Excel untouched until the Python model stabilizes; then export only the validated scenario summaries and chart-ready tables.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Further Questions</h2>
+        <ul>
+          <li>Which impurity mixtures are most plausible at Europa temperatures for REASON frequencies?</li>
+          <li>How sensitive is the false-risk conclusion to layer roughness and non-normal incidence?</li>
+          <li>How much of the VHF shallow clutter stress test would REASON's cross-track interferometry reject in practice?</li>
+          <li>Should the model promote temperature-dependent conductivity from a sensitivity bracket to an explicit thermal profile?</li>
+          <li>What exact threshold should be used for a student project: 0 dB detection, 3 dB ambiguity, or a more conservative margin?</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Source Anchors</h2>
+        <ul class="source-list">
+          <li><a href="https://science.nasa.gov/mission/europa-clipper/spacecraft-instruments/">NASA Europa Clipper spacecraft instruments</a> - mission instrument context for REASON and the Europa Clipper payload.</li>
+          <li><a href="https://link.springer.com/article/10.1007/s11214-024-01072-3">Blankenship et al. 2024, REASON</a> - dual-frequency REASON design, 9 MHz and 60 MHz modes, shell-mode framing, detection threshold, and paper-anchored dielectric assumptions used in v2.</li>
+          <li><a href="https://arxiv.org/abs/2107.03497">Lalich et al. 2021</a> - Mars radar analog showing how bright basal-like reflections can arise from interference between layer boundaries without requiring liquid water.</li>
+          <li><a href="https://doi.org/10.1109/TGRS.2017.2721433">Castelletti et al. 2017</a> and <a href="https://doi.org/10.1017/aog.2020.20">Scanlan et al. 2020</a> - supporting cross-track clutter discrimination context cited by the REASON paper.</li>
+          <li><a href="https://doi.org/10.1002/2014RG000463">Pettinelli et al. 2015 review</a> - supporting context for dielectric contrasts in icy planetary materials and analog endmembers.</li>
+        </ul>
+      </section>
+    </main>
+    </body></html>

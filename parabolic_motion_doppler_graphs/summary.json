@@ -1,0 +1,34 @@
+{
+  "plain_answer": "This graph uses one continuous parabolic flyby path. The parabolic motion descends before closest approach and climbs after closest approach, so the Doppler curve is steeper than the normal constant-altitude pass.",
+  "assumptions": {
+    "closest_altitude_km": 400.0,
+    "altitude_rise_at_plus_minus_60_km": 4.0,
+    "cross_track_offset_km": 25.0,
+    "along_speed_km_s": 4.0,
+    "vhf_wavelength_m": 5.0,
+    "hf_wavelength_m": 33.3
+  },
+  "closest_approach": {
+    "normal_vhf_doppler_hz": -0.0,
+    "parabolic_vhf_doppler_hz": -0.0,
+    "parabolic_vertical_speed_km_s": 0.0
+  },
+  "max_abs_vhf_doppler_hz": {
+    "normal": 236.89265630974631,
+    "parabolic": 445.23129749250427
+  },
+  "minimum_prf_by_simple_nyquist_hz": {
+    "normal": 473.78531261949263,
+    "parabolic": 890.4625949850085
+  },
+  "graphs": [
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\parabolic_motion_doppler_graphs\\01_normal_vs_parabolic_path.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\parabolic_motion_doppler_graphs\\02_vertical_speed_from_parabolic_path.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\parabolic_motion_doppler_graphs\\03_radial_velocity_normal_vs_parabolic.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\parabolic_motion_doppler_graphs\\04_vhf_doppler_normal_vs_parabolic.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\parabolic_motion_doppler_graphs\\05_hf_doppler_normal_vs_parabolic.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\parabolic_motion_doppler_graphs\\06_vhf_doppler_bar_normal_vs_parabolic.png",
+    "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\parabolic_motion_doppler_graphs\\07_prf_requirement_normal_vs_parabolic.png"
+  ],
+  "data": "C:\\Users\\tyboy\\OneDrive\\Documents\\Nasa project\\parabolic_motion_doppler_graphs\\parabolic_motion_doppler_values.csv"
+}

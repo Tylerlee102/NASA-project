@@ -1,0 +1,4 @@
+position_label,satellite_distance_from_closest_km,parabolic_altitude_km,nadir_apparent_depth_m,offnadir_apparent_depth_m,offnadir_extra_delay_us,offnadir_look_angle_deg,offnadir_power_loss_db,offnadir_vhf_phase_deg
+closest 0 km,0.0,400.000,0.000,438.477,5.207,3.576,-0.033863,22.456
+30 km away,30.0,401.000,0.000,1065.735,12.655,5.562,-0.081987,22.338
+60 km away,60.0,404.000,0.000,2918.850,34.661,9.140,-0.221982,21.994
