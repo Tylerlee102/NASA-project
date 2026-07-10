@@ -3,22 +3,23 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Europa Radar Flyby Model</title>
-    <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
+    <title>Europa Doppler Aliasing Lab</title>
+    <link rel="stylesheet" href="styles.css?v=owner-archive-20260709">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=reason-blur-live-20260708"></script>
+    <script defer src="app.js?v=owner-archive-password-20260709"></script>
   </head>
   <body>
     <div class="site-frame">
       <aside class="site-rail" aria-label="Project dossier">
         <div class="rail-sticky" id="site-rail-content">
           <p class="eyebrow">NASA project</p>
-          <h1>Europa Radar Flyby Model</h1>
-          <p class="lead">A static research interface for testing how flyby geometry, dirty ice, false layers, attenuation, and Doppler correction can change the interpretation of a possible ice-ocean boundary.</p>
+          <h1>Europa Doppler Aliasing Lab</h1>
+          <p class="lead">An interactive view of how surface clutter folds into a fixed subsurface target as the effective Doppler sampling PRF changes.</p>
           <div class="hero-actions" aria-label="Project actions">
-            <a class="secondary-link" href="?page=false-layer" data-tab-jump="false-layer">Test false-layer ambiguity</a>
+            <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
+            <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
           </div>
           <dl class="dossier-meta" aria-label="Project summary">
             <div>
@@ -37,23 +38,62 @@
           <details class="section-menu" open>
             <summary>Section pages</summary>
             <nav class="tabs" aria-label="Section pages">
-              <a class="tab is-active" href="?page=overview" data-target="overview">Overview</a>
-              <a class="tab" href="?page=surface" data-target="surface">Flyby Geometry</a>
-              <a class="tab" href="?page=subsurface" data-target="subsurface">Subsurface Echoes</a>
-              <a class="tab" href="?page=false-layer" data-target="false-layer">False-Layer Response</a>
-              <a class="tab" href="?page=doppler" data-target="doppler">Doppler Correction</a>
-              <a class="tab" href="?page=folding" data-target="folding">PRF Folding</a>
-              <nav id="folding-group-nav" class="section-group-nav" aria-label="PRF folding subsections"></nav>
-              <a class="tab" href="?page=v30" data-target="v30">Advanced Sensitivity</a>
-              <nav id="v30-group-nav" class="section-group-nav" aria-label="Advanced sensitivity subsections"></nav>
-              <a class="tab" href="?page=audit" data-target="audit">Graph QA</a>
+              <a class="tab is-active" href="?page=aliasing-lab" data-target="aliasing-lab">Doppler Aliasing Lab</a>
+              <a class="tab" href="?page=owner-access" data-target="owner-access">Owner Archive</a>
+              <div id="owner-tabs" class="owner-tabs" hidden>
+                <a class="tab" href="?page=overview" data-target="overview">Overview</a>
+                <a class="tab" href="?page=surface" data-target="surface">Flyby Geometry</a>
+                <a class="tab" href="?page=subsurface" data-target="subsurface">Subsurface Echoes</a>
+                <a class="tab" href="?page=false-layer" data-target="false-layer">False-Layer Response</a>
+                <a class="tab" href="?page=doppler" data-target="doppler">Doppler Correction</a>
+                <a class="tab" href="?page=folding" data-target="folding">PRF Folding</a>
+                <nav id="folding-group-nav" class="section-group-nav" aria-label="PRF folding subsections"></nav>
+                <a class="tab" href="?page=v30" data-target="v30">Advanced Sensitivity</a>
+                <nav id="v30-group-nav" class="section-group-nav" aria-label="Advanced sensitivity subsections"></nav>
+                <a class="tab" href="?page=audit" data-target="audit">Graph QA</a>
+              </div>
             </nav>
           </details>
+          <button id="owner-lock-button" class="owner-lock-button" type="button" hidden>Lock owner archive</button>
         </div>
       </aside>
 
       <main class="content-shell">
-      <section id="overview" class="page-section is-active">
+      <section id="aliasing-lab" class="page-section is-active">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Interactive PRF simulation</p>
+            <h2>Surface-clutter aliasing at the target depth</h2>
+          </div>
+        </div>
+        <p class="section-intro">Move the PRF slider to see the continuous clutter band shift in apparent depth and the two folding returns move through the target's Doppler cell.</p>
+        <div class="aliasing-embed-shell">
+          <iframe id="aliasing-frame" class="aliasing-frame" src="aliasing.html" title="Interactive Doppler aliasing simulator" loading="eager"></iframe>
+        </div>
+      </section>
+
+      <section id="owner-access" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Owner viewing gate</p>
+            <h2>Research dashboard archive</h2>
+          </div>
+        </div>
+        <div class="owner-gate-panel">
+          <p class="body-copy">Enter the viewing password to reveal the previous website sections for this browser session.</p>
+          <form id="owner-access-form" class="owner-access-form">
+            <label for="owner-password">Viewing password</label>
+            <div class="owner-password-row">
+              <input id="owner-password" name="password" type="password" autocomplete="current-password" required>
+              <button type="submit">Unlock archive</button>
+            </div>
+            <p id="owner-access-status" class="owner-access-status" role="status" aria-live="polite"></p>
+          </form>
+          <p class="owner-gate-note">This is a casual viewing gate on a public static website, not secure authentication.</p>
+        </div>
+      </section>
+
+      <section id="overview" class="page-section">
         <div class="section-heading">
           <div>
             <p class="section-kicker">Mission question</p>
@@ -176,6 +216,7 @@
             <li>Echo power is relative dB: one-way attenuation is applied over a two-way path, then compared with a simple threshold.</li>
             <li>The PRF value shown is a Nyquist-style Doppler sampling floor, not a complete radar PRF design rule.</li>
             <li>Doppler depth correction is a controlled demonstration with deterministic residual error, not a full inversion from noisy instrument data.</li>
+            <li>The Doppler angle is a line-of-sight projection proxy; it cannot independently recover cross-track look geometry.</li>
           </ul>
         </section>
       </section>
@@ -231,7 +272,7 @@
             <h2>Doppler depth inversion</h2>
           </div>
         </div>
-        <p class="section-intro">This section is trying to show whether a controlled Doppler-based angle correction reduces slant-depth error enough to make the boundary interpretation less risky.</p>
+        <p class="section-intro">This controlled line-of-sight projection demo shows how an angle correction can reduce slant-depth error. Doppler alone does not recover cross-track look angle, so a real inversion also needs spacecraft geometry, attitude, and/or interferometric constraints.</p>
         <div class="split-layout compact">
           <section class="panel">
             <h3>Main Result</h3>

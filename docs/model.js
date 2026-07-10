@@ -568,6 +568,12 @@
     const dopplerMeanRaw = mean(dopplerRows.map(r => r.uncorrectedOceanError));
     const dopplerMeanCorrected = mean(dopplerRows.map(r => Math.abs(r.correctedOceanError)));
     const maxDopplerAngle = Math.max(...dopplerRows.map(r => r.dopplerAngle));
+    const layersOrdered = subRows.every(r => r.upperDepth < r.lensDepth && r.lensDepth < r.oceanDepth);
+    const depthsPositive = subRows.every(r => r.upperDepth > 0 && r.lensDepth > 0 && r.oceanDepth > 0);
+    const lensStrengthValid = subRows.every(r => r.lensStrength >= 0 && r.lensStrength <= 1);
+    const echoesFinite = subRows.every(r => [r.upperEcho, r.lensEcho, r.oceanEcho].every(Number.isFinite));
+    const marginsFinite = subRows.every(r => [r.lensMargin, r.oceanMargin].every(Number.isFinite));
+    const evidenceWeightsPositive = [p.radarWeight, p.thermalWeight, p.compositionWeight, p.magneticWeight].every(value => Number.isFinite(value) && value > 0);
     const prfs = [p.prf1, p.prf2, p.prf3].map(prf => ({
       prfHz: prf,
       pulseIntervalMs: 1000 / prf,
@@ -640,7 +646,17 @@
         { check: 'PRF high vs simple sampling floor', status: p.prf3 >= 2 * maxTopoDoppler ? 'OK' : 'CHECK', formula: 'PRF_3 should exceed 2 * max(abs(VHF Doppler)); this is a Nyquist-style floor only.' },
         { check: 'Subsurface layer order', status: subMid.upperDepth < subMid.lensDepth && subMid.lensDepth < subMid.oceanDepth ? 'OK' : 'CHECK', formula: 'Upper layer < lens < ocean at mid-pass.' }
       ],
-      subsurfaceChecks: window.V19_RESULTS.subsurfaceChecks,
+      subsurfaceChecks: [
+        { check: 'Layer order across pass', status: layersOrdered ? 'OK' : 'CHECK', why: 'Requires upper layer < lens < ocean at every modeled position.' },
+        { check: 'Positive depths across pass', status: depthsPositive ? 'OK' : 'CHECK', why: 'All modeled layer depths must stay below the local surface.' },
+        { check: 'Lens strength in range', status: lensStrengthValid ? 'OK' : 'CHECK', why: 'Lens strength must remain between 0 and 1.' },
+        { check: 'Echo values finite', status: echoesFinite ? 'OK' : 'CHECK', why: 'All relative echo estimates must remain numeric.' },
+        { check: 'Detection threshold numeric', status: Number.isFinite(p.detectionThreshold) ? 'OK' : 'CHECK', why: 'Detection threshold must be a finite relative dB value.' },
+        { check: 'Detectability margins finite', status: marginsFinite ? 'OK' : 'CHECK', why: 'Lens and ocean margins must remain numeric.' },
+        { check: 'Boundary uncertainty valid', status: Number.isFinite(p.boundaryUncertainty) && p.boundaryUncertainty >= 0 ? 'OK' : 'CHECK', why: 'Boundary uncertainty must be finite and nonnegative.' },
+        { check: 'Evidence weights positive', status: evidenceWeightsPositive ? 'OK' : 'CHECK', why: 'Every evidence channel needs a positive weight.' },
+        { check: 'Model claim boundary', status: 'REVIEW', why: 'Synthetic sensitivity output; not measured Europa data or a mission-validated inversion.' }
+      ],
       audit: window.V19_RESULTS.audit,
       charts: buildCharts(modelRows, subRows, dopplerRows, falseRows, p)
     };
@@ -1180,7 +1196,7 @@
         { name: 'Aliased +Doppler edge', points: tracePts(traceRows, 'aliasPlusHz', 3) },
         { name: 'Aliased -Doppler edge', points: tracePts(traceRows, 'aliasMinusHz', 3) },
         { name: 'Zero Doppler reference', role: 'reference', points: tracePts(traceRows, 'zeroHz', 3) }
-      ], 'Live trace-removal check: the demonstration stream starts at PRF = 4 x |fD|, then keeping fewer traces lowers the effective PRF.', 'line', {
+      ], 'The original trace stream stays at PRF = 4 x |fD|. Post-processing keeps every Nth reading, so only the effective along-track sampling PRF falls to original PRF / N.', 'line', {
         xLabel: 'Trace selection',
         formulaNote: 'For this live trace-removal check: PRF_all = 4 x |fD|, PRF_keepN = PRF_all / N, and f_alias = ((+/-fD + PRF_keepN/2) mod PRF_keepN) - PRF_keepN/2.'
       }),
