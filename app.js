@@ -70,18 +70,30 @@
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
+  function ordinal(value) {
+    const integer = Math.abs(Math.trunc(Number(value)));
+    const lastTwo = integer % 100;
+    if (lastTwo >= 11 && lastTwo <= 13) return `${integer}th`;
+    if (integer % 10 === 1) return `${integer}st`;
+    if (integer % 10 === 2) return `${integer}nd`;
+    if (integer % 10 === 3) return `${integer}rd`;
+    return `${integer}th`;
+  }
+
   const CORE_QUESTION = 'Can a bright deep radar return be trusted as the ice-ocean boundary?';
 
   const SECTION_CAVEATS = {
     'Surface and motion': 'This is a synthetic geometry and terrain sensitivity test, not a reconstruction of an actual Europa flyby.',
     'Subsurface model': 'These layers and echo strengths are generated sensitivity cases; they do not prove real Europa geology.',
     'False-layer response': 'The false reflectors are synthetic receiver stress tests, not mission-validated detections of internal Europa layers.',
-    'Doppler depth correction': 'This is a controlled browser-side correction demonstration with simplified residual error, not a full radar inversion.',
+    'Doppler depth correction': 'This is a controlled line-of-sight projection demo. Doppler alone does not recover cross-track look angle, so a real inversion also needs geometry, attitude, and/or interferometric constraints.',
     'PRF Doppler folding': 'This is a simplified one-target plus along-track surface-scatterer model; it is intended to expose aliasing behavior, not to validate a mission PRF design.',
     'Advanced sensitivity': 'The v30 charts are workbook-derived and browser-adjusted sensitivity views, not a mission-validated Europa radar processor.'
   };
 
   const PAGE_TITLES = {
+    'aliasing-lab': 'Doppler Aliasing Lab',
+    'owner-access': 'Owner Archive',
     overview: 'Overview',
     surface: 'Flyby Geometry',
     subsurface: 'Subsurface Echoes',
@@ -91,6 +103,36 @@
     v30: 'Advanced Sensitivity',
     audit: 'Graph QA'
   };
+  const OWNER_SESSION_KEY = 'europa-owner-archive-unlocked';
+  const OWNER_PASSWORD_SHA256 = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+  const PUBLIC_PAGE_TARGETS = new Set(['aliasing-lab', 'owner-access']);
+  let pendingOwnerTarget = 'overview';
+  let ownerUnlocked = (() => {
+    try {
+      return window.sessionStorage.getItem(OWNER_SESSION_KEY) === 'true';
+    } catch (_error) {
+      return false;
+    }
+  })();
+
+  function rememberOwnerUnlock(unlocked) {
+    ownerUnlocked = unlocked;
+    try {
+      if (unlocked) {
+        window.sessionStorage.setItem(OWNER_SESSION_KEY, 'true');
+      } else {
+        window.sessionStorage.removeItem(OWNER_SESSION_KEY);
+      }
+    } catch (_error) {
+      // The viewing gate still works for the current page when storage is blocked.
+    }
+  }
+
+  async function sha256(value) {
+    const bytes = new TextEncoder().encode(value);
+    const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
 
   const V30_CHART_GROUPS = [
     {
@@ -918,18 +960,63 @@
     `).join('');
   }
 
+  function revealActiveNavigation() {
+    window.requestAnimationFrame(() => {
+      const nav = document.querySelector('.tabs');
+      if (!nav || nav.scrollWidth <= nav.clientWidth) return;
+      const activeTab = nav.querySelector('.tab.is-active');
+      const adjacentGroup = activeTab && activeTab.nextElementSibling?.classList.contains('section-group-nav')
+        ? activeTab.nextElementSibling
+        : null;
+      const active = adjacentGroup?.querySelector('a.is-active') || activeTab;
+      if (!active) return;
+      const navRect = nav.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      const centeredOffset = (nav.clientWidth - activeRect.width) / 2;
+      nav.scrollLeft = Math.max(0, nav.scrollLeft + activeRect.left - navRect.left - centeredOffset);
+    });
+  }
+
   function initTabs() {
     const tabs = document.querySelectorAll('.tab');
     const sections = document.querySelectorAll('.page-section');
     const validTargets = new Set(Array.from(sections).map((section) => section.id));
+    const ownerTabs = document.getElementById('owner-tabs');
+    const ownerLockButton = document.getElementById('owner-lock-button');
+    const ownerAccessForm = document.getElementById('owner-access-form');
+    const ownerPassword = document.getElementById('owner-password');
+    const ownerAccessStatus = document.getElementById('owner-access-status');
+
+    function isProtectedTarget(target) {
+      return validTargets.has(target) && !PUBLIC_PAGE_TARGETS.has(target);
+    }
+
+    function syncOwnerNavigation() {
+      if (ownerTabs) ownerTabs.hidden = !ownerUnlocked;
+      if (ownerLockButton) ownerLockButton.hidden = !ownerUnlocked;
+    }
+
+    syncOwnerNavigation();
 
     function targetFromLocation() {
       const url = new URL(window.location.href);
       const page = url.searchParams.get('page');
-      if (validTargets.has(page)) return page;
+      if (validTargets.has(page)) {
+        if (isProtectedTarget(page) && !ownerUnlocked) {
+          pendingOwnerTarget = page;
+          return 'owner-access';
+        }
+        return page;
+      }
       const hashTarget = window.location.hash.replace('#', '');
-      if (validTargets.has(hashTarget)) return hashTarget;
-      return 'overview';
+      if (validTargets.has(hashTarget)) {
+        if (isProtectedTarget(hashTarget) && !ownerUnlocked) {
+          pendingOwnerTarget = hashTarget;
+          return 'owner-access';
+        }
+        return hashTarget;
+      }
+      return 'aliasing-lab';
     }
 
     function setPageUrl(target, mode) {
@@ -948,7 +1035,11 @@
     }
 
     function setActive(target, updateUrl) {
-      const next = validTargets.has(target) ? target : 'overview';
+      let next = validTargets.has(target) ? target : 'aliasing-lab';
+      if (isProtectedTarget(next) && !ownerUnlocked) {
+        pendingOwnerTarget = next;
+        next = 'owner-access';
+      }
       tabs.forEach((t) => {
         const active = t.dataset.target === next;
         t.classList.toggle('is-active', active);
@@ -964,10 +1055,54 @@
         section.setAttribute('role', 'region');
         section.hidden = !active;
       });
-      document.title = `${PAGE_TITLES[next] || 'Section'} | Europa Radar Flyby Model`;
+      document.title = `${PAGE_TITLES[next] || 'Section'} | Europa Doppler Aliasing Lab`;
       if (updateUrl) setPageUrl(next, 'push');
+      revealActiveNavigation();
     }
     window.setActiveProjectPage = setActive;
+
+    if (ownerAccessForm && ownerPassword && ownerAccessStatus) {
+      if (ownerUnlocked) {
+        ownerAccessStatus.textContent = 'Archive is unlocked for this browser session.';
+        ownerAccessStatus.classList.add('is-success');
+      }
+      ownerAccessForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        ownerAccessStatus.classList.remove('is-success');
+        if (!window.crypto?.subtle) {
+          ownerAccessStatus.textContent = 'Password checking requires a normal HTTPS or local website connection.';
+          return;
+        }
+        const enteredHash = await sha256(ownerPassword.value);
+        if (enteredHash !== OWNER_PASSWORD_SHA256) {
+          ownerAccessStatus.textContent = 'That viewing password is not correct.';
+          ownerPassword.select();
+          return;
+        }
+        rememberOwnerUnlock(true);
+        syncOwnerNavigation();
+        ownerPassword.value = '';
+        ownerAccessStatus.textContent = 'Archive unlocked for this browser session.';
+        ownerAccessStatus.classList.add('is-success');
+        setActive(pendingOwnerTarget || 'overview', true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    if (ownerLockButton) {
+      ownerLockButton.addEventListener('click', () => {
+        rememberOwnerUnlock(false);
+        pendingOwnerTarget = 'overview';
+        syncOwnerNavigation();
+        if (ownerAccessStatus) {
+          ownerAccessStatus.textContent = '';
+          ownerAccessStatus.classList.remove('is-success');
+        }
+        setActive('aliasing-lab', true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
     tabs.forEach((tab) => {
       const panel = document.getElementById(tab.dataset.target);
       if (panel) {
@@ -1260,6 +1395,7 @@
           renderV30();
         });
       });
+      revealActiveNavigation();
     }
     const target = document.getElementById('v30-charts');
     if (target) {
@@ -1387,6 +1523,7 @@
           renderFolding();
         });
       });
+      revealActiveNavigation();
     }
     const target = document.getElementById('folding-subsections');
     if (target) {
@@ -1784,13 +1921,13 @@
     if (!row.usable) return 'Already unusable';
     if (!row.lastUsableKeepEvery) return 'No trace removal';
     const removed = formatValue(row.maxRemovedPercent, 1);
-    const keep = row.lastUsableKeepEvery === 1 ? 'all traces' : `every ${row.lastUsableKeepEvery}th trace`;
+    const keep = row.lastUsableKeepEvery === 1 ? 'all traces' : `every ${ordinal(row.lastUsableKeepEvery)} trace`;
     return `${removed}% removed; keep ${keep}`;
   }
 
   function traceBreakLabel(row) {
     if (!row.firstUnusableKeepEvery) return 'Not reached';
-    return row.firstUnusableKeepEvery === 1 ? 'keep all' : `keep every ${row.firstUnusableKeepEvery}th`;
+    return row.firstUnusableKeepEvery === 1 ? 'keep all' : `keep every ${ordinal(row.firstUnusableKeepEvery)}`;
   }
 
   function renderTraceUsabilitySvg(traceCase) {
@@ -1812,6 +1949,9 @@
       const plotWidth = plot.right - plot.left;
       const plotHeight = plot.bottom - plot.top;
       const rows = bandRow.traceRows || [];
+      const optimalPrfLabel = bandRow.optimalPrfHz
+        ? `optimal PRF ${formatValue(bandRow.optimalPrfHz, 1)} Hz`
+        : 'no usable PRF window';
       const yMax = Math.max(
         bandRow.maxPrfHz || 1,
         bandRow.minPrfHz || 1,
@@ -1824,7 +1964,7 @@
 
       svg += `<rect class="live-prf-panel" x="${x0}" y="${y0}" width="${panelWidth}" height="${panelHeight}" rx="4"></rect>`;
       svg += `<text class="live-prf-title" x="${x0 + 14}" y="${y0 + 24}">${escapeHtml(bandRow.band.name)} ${escapeHtml(formatValue(bandRow.band.frequencyMhz, 0))} MHz</text>`;
-      svg += `<text class="live-prf-subtitle" x="${x0 + 14}" y="${y0 + 43}">optimal PRF ${escapeHtml(bandRow.optimalPrfHz ? formatValue(bandRow.optimalPrfHz, 1) : 'none')} Hz</text>`;
+      svg += `<text class="live-prf-subtitle" x="${x0 + 14}" y="${y0 + 43}">${escapeHtml(optimalPrfLabel)}</text>`;
       svg += `<rect class="live-prf-plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
       ticks(0, yMax, 5).forEach((tick) => {
         const y = sy(tick);
@@ -1859,7 +1999,7 @@
       return `
         <tr>
           <td>${escapeHtml(row.band.name)} ${escapeHtml(formatValue(row.band.frequencyMhz, 0))} MHz</td>
-          <td>${escapeHtml(row.optimalPrfHz ? `${formatValue(row.optimalPrfHz, 1)} Hz` : 'none')}</td>
+          <td>${escapeHtml(row.optimalPrfHz ? `${formatValue(row.optimalPrfHz, 1)} Hz` : 'No usable window')}</td>
           <td>${escapeHtml(formatValue(row.minPrfHz, 1))} Hz</td>
           <td>${escapeHtml(traceRemovalLabel(row))}</td>
           <td>${escapeHtml(traceBreakLabel(row))}</td>
@@ -2460,7 +2600,39 @@
     renderFolding();
   }
 
+  function initAliasingFrame() {
+    const frame = document.getElementById('aliasing-frame');
+    if (!frame) return;
+    let observer = null;
+    const resize = () => {
+      try {
+        const doc = frame.contentDocument;
+        if (!doc) return;
+        const nextHeight = Math.max(
+          1100,
+          doc.documentElement?.scrollHeight || 0,
+          doc.body?.scrollHeight || 0
+        );
+        frame.style.height = `${Math.ceil(nextHeight)}px`;
+      } catch (_error) {
+        // Keep the CSS minimum height if same-origin sizing is unavailable.
+      }
+    };
+    const connect = () => {
+      resize();
+      observer?.disconnect();
+      if (window.ResizeObserver && frame.contentDocument?.body) {
+        observer = new ResizeObserver(resize);
+        observer.observe(frame.contentDocument.body);
+      }
+    };
+    frame.addEventListener('load', connect);
+    if (frame.contentDocument?.readyState === 'complete') connect();
+    window.addEventListener('resize', resize);
+  }
+
   initTabs();
+  initAliasingFrame();
   renderLiveControls();
   renderV30Controls();
   renderFoldingControls();
