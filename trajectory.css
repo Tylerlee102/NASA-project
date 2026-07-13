@@ -204,10 +204,11 @@ a:focus-visible {
 
 .trajectory-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
-  width: min(1120px, 100%);
+  width: 100%;
   margin: 0 auto;
+  align-items: stretch;
 }
 
 .graph-panel {
@@ -309,4 +310,8 @@ a:focus-visible {
   .control-row { align-items: stretch; flex-wrap: wrap; }
   #time-slider { flex-basis: 100%; }
   .live-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 980px) {
+  .trajectory-grid { grid-template-columns: minmax(0, 1fr); }
 }
