@@ -209,7 +209,11 @@
     const width = 600;
     const height = 360;
     const margin = { left: 58, right: 24, top: 42, bottom: 46 };
-    const scales = chartScales(width, height, margin, -68, 68, -10, 30);
+    // Geometry uses the physical sign convention: positive values are above
+    // the surface and negative values are below it. Reversing the y-domain
+    // puts positive altitude at the top of the screen while retaining the
+    // mathematical coordinates used by the model.
+    const scales = chartScales(width, height, margin, -68, 68, 30, -10);
     // In a surface-relative frame, a straight tangent flyby appears as a
     // shallow parabola because Europa curves away beneath the spacecraft.
     const trajectoryRows = Array.from({ length: 137 }, (_, index) => {
@@ -221,8 +225,8 @@
     });
     const trajectoryPath = linePath(trajectoryRows, scales.x, scales.y, (row) => row);
     const spacecraftYKm = state.spacecraft.altitudeKm;
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Moving satellite on a curved surface-relative flyby path above twelve fixed clutter points and one fixed subsurface target">`;
-    svg += axes(width, height, margin, scales, [-60, -30, 0, 30, 60], [-10, 0, 10, 20, 30], 'along-track distance (km)', 'altitude / depth relative to surface (km)', signed, fmt);
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Moving satellite on a locally parabolic closest-approach path above twelve fixed surface clutter points and one fixed subsurface target">`;
+    svg += axes(width, height, margin, scales, [-60, -30, 0, 30, 60], [-10, 0, 10, 20, 30], 'along-track distance (km)', 'height above (+) / depth below (-) surface (km)', signed, signed);
     svg += `<line class="surface" x1="${scales.x(-68)}" y1="${scales.y(0)}" x2="${scales.x(68)}" y2="${scales.y(0)}"></line>`;
     svg += `<path class="trajectory-line" d="${trajectoryPath}"></path>`;
     state.foldingPair.forEach((point) => {
@@ -239,8 +243,9 @@
     svg += `<rect class="target" x="${targetX - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${targetX} ${targetY})"></rect>`;
     svg += `<circle class="satellite" cx="${scales.x(state.spacecraft.xKm)}" cy="${scales.y(spacecraftYKm)}" r="8"><title>Moving satellite at ${signed(state.timeS, 2)} seconds</title></circle>`;
     svg += `<text class="label-strong" x="${scales.x(state.spacecraft.xKm) + 11}" y="${scales.y(spacecraftYKm) - 10}">moving satellite: t = ${signed(state.timeS, 2)} s</text>`;
-    svg += `<text class="label" x="${scales.x(-65)}" y="${scales.y(27.4)}">surface-relative flyby altitude profile</text>`;
-    svg += `<text class="label-strong" x="${targetX + 12}" y="${targetY + 4}">fixed subsurface target</text>`;
+    svg += `<text class="label" x="${scales.x(-65)}" y="${scales.y(27.4)}">locally parabolic flyby path</text>`;
+    svg += `<text class="label" x="${scales.x(-65)}" y="${scales.y(0) - 8}">Europa surface: 0 km</text>`;
+    svg += `<text class="label-strong" x="${targetX + 12}" y="${targetY + 4}">fixed subsurface target: -${fmt(model.targetDepthKm, 2)} km</text>`;
     if (state.overlap) {
       svg += `<text class="label-danger" x="${width - margin.right}" y="24" text-anchor="end">folding overlap at closest approach</text>`;
     }
