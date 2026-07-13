@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Doppler Aliasing Lab</title>
-    <link rel="stylesheet" href="styles.css?v=owner-archive-20260709">
+    <link rel="stylesheet" href="styles.css?v=nasa-trajectory-20260713">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=owner-archive-password-20260709"></script>
+    <script defer src="app.js?v=nasa-trajectory-20260713"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -19,6 +19,7 @@
           <p class="lead">An interactive view of how surface clutter folds into a fixed subsurface target as the effective Doppler sampling PRF changes.</p>
           <div class="hero-actions" aria-label="Project actions">
             <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
+            <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run NASA-reference flyby</a>
             <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
           </div>
           <dl class="dossier-meta" aria-label="Project summary">
@@ -39,6 +40,7 @@
             <summary>Section pages</summary>
             <nav class="tabs" aria-label="Section pages">
               <a class="tab is-active" href="?page=aliasing-lab" data-target="aliasing-lab">Doppler Aliasing Lab</a>
+              <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">NASA Trajectory Lab</a>
               <a class="tab" href="?page=owner-access" data-target="owner-access">Owner Archive</a>
               <div id="owner-tabs" class="owner-tabs" hidden>
                 <a class="tab" href="?page=overview" data-target="overview">Overview</a>
@@ -69,6 +71,19 @@
         <p class="section-intro">Move the PRF slider to see the continuous clutter band shift in apparent depth and the two folding returns move through the target's Doppler cell.</p>
         <div class="aliasing-embed-shell">
           <iframe id="aliasing-frame" class="aliasing-frame" src="aliasing.html" title="Interactive Doppler aliasing simulator" loading="eager"></iframe>
+        </div>
+      </section>
+
+      <section id="trajectory-lab" class="page-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">NASA-reference flyby simulation</p>
+            <h2>Europa trajectory with folding enabled</h2>
+          </div>
+        </div>
+        <p class="section-intro">Run through closest approach using NASA-published reference altitude, typical speed, and Europa radius while the fold-tuned sampling PRF stays fixed.</p>
+        <div class="aliasing-embed-shell">
+          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html" title="NASA-reference Europa flyby folding simulator" loading="eager"></iframe>
         </div>
       </section>
 
