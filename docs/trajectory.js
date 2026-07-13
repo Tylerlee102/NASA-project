@@ -228,7 +228,10 @@
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Moving satellite on a locally parabolic closest-approach path above twelve fixed surface clutter points and one fixed subsurface target">`;
     svg += axes(width, height, margin, scales, [-60, -30, 0, 30, 60], [-10, 0, 10, 20, 30], 'along-track distance (km)', 'height above (+) / depth below (-) surface (km)', signed, signed);
     svg += `<line class="surface" x1="${scales.x(-68)}" y1="${scales.y(0)}" x2="${scales.x(68)}" y2="${scales.y(0)}"></line>`;
-    svg += `<path class="trajectory-line" d="${trajectoryPath}"></path>`;
+    // Keep the trajectory strictly as a stroked line. The explicit SVG
+    // attribute prevents any browser or stale stylesheet from closing the open
+    // path and painting a dark polygon beneath it.
+    svg += `<path class="trajectory-line" fill="none" d="${trajectoryPath}"></path>`;
     state.foldingPair.forEach((point) => {
       svg += `<line class="ray" x1="${scales.x(state.spacecraft.xKm)}" y1="${scales.y(spacecraftYKm)}" x2="${scales.x(point.pointXKm)}" y2="${scales.y(0)}"></line>`;
     });
