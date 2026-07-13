@@ -298,6 +298,20 @@ input:focus-visible,
   background: var(--paper);
 }
 
+/* The trajectory lab supplies its own complete header and graph cards. Present
+   it as one continuous page instead of a framed box inside a second header. */
+.trajectory-embed-shell {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.trajectory-embed-shell .aliasing-frame {
+  min-height: 1500px;
+  background: transparent;
+}
+
 .owner-gate-panel {
   max-width: 680px;
   padding: 28px;

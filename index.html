@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Doppler Aliasing Lab</title>
-    <link rel="stylesheet" href="styles.css?v=nasa-trajectory-20260713">
+    <link rel="stylesheet" href="styles.css?v=seamless-trajectory-20260713">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=nasa-trajectory-20260713"></script>
+    <script defer src="app.js?v=seamless-trajectory-20260713"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -74,16 +74,9 @@
         </div>
       </section>
 
-      <section id="trajectory-lab" class="page-section">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">NASA-reference flyby simulation</p>
-            <h2>Europa trajectory with folding enabled</h2>
-          </div>
-        </div>
-        <p class="section-intro">Run through closest approach using NASA-published reference altitude, typical speed, and Europa radius while the fold-tuned sampling PRF stays fixed.</p>
-        <div class="aliasing-embed-shell">
-          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=two-column-clean-path-20260713" title="NASA-reference Europa flyby folding simulator" loading="eager"></iframe>
+      <section id="trajectory-lab" class="page-section trajectory-page-section">
+        <div class="aliasing-embed-shell trajectory-embed-shell">
+          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=seamless-two-by-two-20260713" title="NASA-reference Europa flyby folding simulator" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 

@@ -1059,6 +1059,10 @@
       document.title = `${PAGE_TITLES[next] || 'Section'} | Europa Doppler Aliasing Lab`;
       if (updateUrl) setPageUrl(next, 'push');
       revealActiveNavigation();
+      // Embedded simulators can be loaded while their tab is hidden. Re-measure
+      // them after the selected tab becomes visible so the iframe expands to
+      // the full document and never creates a smaller internal scrolling box.
+      window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
     }
     window.setActiveProjectPage = setActive;
 
@@ -2624,7 +2628,11 @@
         if (window.ResizeObserver && frame.contentDocument?.body) {
           observer = new ResizeObserver(resize);
           observer.observe(frame.contentDocument.body);
+          if (frame.contentDocument.documentElement) {
+            observer.observe(frame.contentDocument.documentElement);
+          }
         }
+        window.requestAnimationFrame(resize);
       };
       frame.addEventListener('load', connect);
       if (frame.contentDocument?.readyState === 'complete') connect();
