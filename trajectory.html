@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>NASA-Reference Europa Flyby Folding</title>
-    <link rel="stylesheet" href="trajectory.css?v=nasa-reference-20260713">
-    <script defer src="trajectory.js?v=nasa-reference-20260713"></script>
+    <link rel="stylesheet" href="trajectory.css?v=stacked-motion-20260713">
+    <script defer src="trajectory.js?v=stacked-motion-20260713"></script>
   </head>
   <body>
     <main class="trajectory-page">
@@ -13,7 +13,7 @@
         <a class="back-link" href="index.html?page=aliasing-lab" target="_top">Back to fixed-geometry lab</a>
         <p class="kicker">NASA-reference teaching trajectory</p>
         <h1>Europa flyby with PRF folding</h1>
-        <p class="lede">Move through closest approach to see the same folding test applied to a moving Europa Clipper reference flyby.</p>
+        <p class="lede">Move the satellite along the curved altitude profile while the surface clutter and subsurface target remain fixed.</p>
       </header>
 
       <section class="assumption-note" aria-label="Model boundary and sources">
@@ -36,7 +36,7 @@
         <div class="control-row">
           <button id="play-button" type="button">Play flyby</button>
           <button id="closest-button" class="secondary-button" type="button">Closest approach</button>
-          <input id="time-slider" type="range" min="-3" max="3" step="0.01" value="0" aria-label="Time from closest approach in seconds">
+          <input id="time-slider" type="range" min="-10" max="10" step="0.01" value="0" aria-label="Time from closest approach in seconds">
         </div>
         <dl class="live-values" aria-label="Current flyby values">
           <div><dt>Altitude</dt><dd id="altitude-value"></dd></div>
@@ -53,7 +53,7 @@
             <p class="graph-number">1</p>
             <div>
               <h2>NASA-reference flyby geometry</h2>
-              <p>The spacecraft moves along the tangent path while the 12 clutter points and subsurface target remain fixed on Europa.</p>
+              <p>The satellite moves along the curved altitude profile. The 12 surface points and subsurface target remain fixed.</p>
             </div>
           </div>
           <div id="geometry-plot" class="plot" aria-live="polite"></div>
@@ -75,7 +75,7 @@
             <p class="graph-number">3</p>
             <div>
               <h2>Individual fast-time traces</h2>
-              <p>The two folding surface points and the fixed subsurface target are calculated across the same flyby.</p>
+              <p>The moving satellite guide samples the two fixed clutter points and fixed target, producing measurement hyperbolas.</p>
             </div>
           </div>
           <div id="trace-plot" class="plot" aria-live="polite"></div>
