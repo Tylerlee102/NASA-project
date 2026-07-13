@@ -27,9 +27,9 @@ body {
 a { color: var(--teal); }
 
 .trajectory-page {
-  width: min(1500px, calc(100% - 32px));
+  width: 100%;
   margin: 0 auto;
-  padding: 28px 0 54px;
+  padding: 0 0 54px;
 }
 
 .trajectory-header { margin-bottom: 20px; }
@@ -279,6 +279,8 @@ a:focus-visible {
 .target-cell { fill: var(--teal-soft); stroke: none; }
 .fold-band { fill: var(--red-soft); stroke: none; }
 .fold-center { fill: none; stroke: var(--red); stroke-width: 2.3; }
+.fold-band.is-higher-order { opacity: .58; }
+.fold-center.is-higher-order { opacity: .82; stroke-dasharray: 6 4; }
 .target-trace { fill: none; stroke: var(--teal); stroke-width: 2.3; stroke-dasharray: 7 5; }
 .clutter-trace-a { fill: none; stroke: #a35e3d; stroke-width: 2.1; }
 .clutter-trace-b { fill: none; stroke: #7f3d3f; stroke-width: 2.1; }

@@ -112,40 +112,44 @@
     return alias(point.trueDopplerHz - target.trueDopplerHz, effectivePrfHz);
   }
 
-  function continuousFoldBand(timeS, target) {
+  function continuousFoldBands(timeS, target) {
     const groups = [];
     let active = null;
+    let activeFoldOrder = null;
     const stepKm = 0.25;
     for (let surfaceArcKm = -240; surfaceArcKm <= 240 + 1e-9; surfaceArcKm += stepKm) {
       const point = measureFixedPoint(timeS, model.europaRadiusKm, surfaceArcKm);
-      const residualHz = Math.abs(relativeAliasHz(point, target));
-      const isCandidate = residualHz <= model.dopplerToleranceHz
+      const relativeDopplerHz = point.trueDopplerHz - target.trueDopplerHz;
+      const foldOrder = Math.round(relativeDopplerHz / effectivePrfHz);
+      const residualHz = Math.abs(relativeDopplerHz - foldOrder * effectivePrfHz);
+      // k = 0 is the unfurled zero-Doppler surface response. A true PRF fold
+      // requires a nonzero integer multiple of PRF.
+      const isCandidate = foldOrder !== 0
+        && residualHz <= model.dopplerToleranceHz
         && point.apparentDepthKm >= 0
         && point.apparentDepthKm <= 40;
       if (isCandidate) {
-        if (!active) {
+        if (!active || activeFoldOrder !== foldOrder) {
           active = [];
+          activeFoldOrder = foldOrder;
           groups.push(active);
         }
-        active.push({ ...point, residualHz });
+        active.push({ ...point, foldOrder, residualHz });
       } else {
         active = null;
+        activeFoldOrder = null;
       }
     }
-    if (!groups.length) return null;
-    const summarized = groups.map((group) => {
+    return groups.map((group) => {
       const center = group.reduce((best, point) => point.residualHz < best.residualHz ? point : best);
       return {
+        foldOrder: center.foldOrder,
         centerDepthKm: center.apparentDepthKm,
         minDepthKm: Math.min(...group.map((point) => point.apparentDepthKm)),
         maxDepthKm: Math.max(...group.map((point) => point.apparentDepthKm)),
         centerArcKm: center.surfaceArcKm
       };
     });
-    return summarized.reduce((best, candidate) => (
-      Math.abs(candidate.centerDepthKm - target.apparentDepthKm)
-        < Math.abs(best.centerDepthKm - target.apparentDepthKm) ? candidate : best
-    ));
   }
 
   function stateAt(timeS) {
@@ -156,20 +160,26 @@
       return { index, ...point, relativeAliasHz: relativeAliasHz(point, target) };
     });
     const foldingPair = points.filter((point) => foldingIndexes.has(point.index));
-    const band = continuousFoldBand(timeS, target);
+    const bands = continuousFoldBands(timeS, target);
+    const band = bands.length ? bands.reduce((best, candidate) => (
+      Math.abs(candidate.centerDepthKm - target.apparentDepthKm)
+        < Math.abs(best.centerDepthKm - target.apparentDepthKm) ? candidate : best
+    )) : null;
     const discreteOverlap = foldingPair.some((point) => (
       Math.abs(point.relativeAliasHz) <= model.dopplerToleranceHz
       && Math.abs(point.apparentDepthKm - target.apparentDepthKm) <= model.depthToleranceKm
     ));
-    const continuousOverlap = Boolean(band)
-      && band.maxDepthKm >= target.apparentDepthKm - model.depthToleranceKm
-      && band.minDepthKm <= target.apparentDepthKm + model.depthToleranceKm;
+    const continuousOverlap = bands.some((candidate) => (
+      candidate.maxDepthKm >= target.apparentDepthKm - model.depthToleranceKm
+      && candidate.minDepthKm <= target.apparentDepthKm + model.depthToleranceKm
+    ));
     return {
       timeS,
       spacecraft,
       target,
       points,
       foldingPair,
+      bands,
       band,
       overlap: discreteOverlap && continuousOverlap
     };
@@ -258,12 +268,29 @@
 
   const timelineDepthValues = timeline.flatMap((row) => [
     row.target.apparentDepthKm,
-    row.band?.minDepthKm,
-    row.band?.maxDepthKm,
+    ...row.bands.flatMap((band) => [band.minDepthKm, band.maxDepthKm]),
     ...row.foldingPair.map((point) => point.apparentDepthKm)
   ]).filter(Number.isFinite);
   const timelineDepthMin = Math.max(0, Math.floor(Math.min(...timelineDepthValues) - 0.5));
   const timelineDepthMax = Math.ceil(Math.max(...timelineDepthValues) + 0.5);
+  const foldOrders = [...new Set(timeline.flatMap((row) => row.bands.map((band) => band.foldOrder)))]
+    .sort((a, b) => a - b);
+
+  function foldOrderSegments(order) {
+    const segments = [];
+    let active = [];
+    timeline.forEach((row) => {
+      const orderBand = row.bands.find((band) => band.foldOrder === order);
+      if (orderBand) {
+        active.push({ ...row, orderBand });
+      } else if (active.length) {
+        segments.push(active);
+        active = [];
+      }
+    });
+    if (active.length) segments.push(active);
+    return segments;
+  }
 
   function areaPath(rows, scales, lowAccessor, highAccessor) {
     const valid = rows.filter((row) => Number.isFinite(lowAccessor(row)) && Number.isFinite(highAccessor(row)));
@@ -278,18 +305,36 @@
     const margin = { left: 64, right: 24, top: 38, bottom: 48 };
     const scales = chartScales(width, height, margin, model.timeMinS, model.timeMaxS, timelineDepthMin, timelineDepthMax);
     const yTicks = Array.from({ length: 5 }, (_, index) => timelineDepthMin + ((timelineDepthMax - timelineDepthMin) * index) / 4);
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Continuous folded clutter depth and target depth through the NASA-reference flyby">`;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="All nonzero integer PRF fold orders and target depth through the NASA-reference flyby">`;
     svg += axes(width, height, margin, scales, [-10, -5, 0, 5, 10], yTicks, 'time from closest approach (s)', 'apparent depth (km, downward)', signed, (v) => fmt(v, 1));
     svg += `<path class="target-cell" d="${areaPath(timeline, scales, (row) => row.target.apparentDepthKm - model.depthToleranceKm, (row) => row.target.apparentDepthKm + model.depthToleranceKm)}"></path>`;
-    svg += `<path class="fold-band" d="${areaPath(timeline, scales, (row) => row.band?.minDepthKm, (row) => row.band?.maxDepthKm)}"></path>`;
-    svg += `<path class="fold-center" d="${linePath(timeline.filter((row) => row.band), scales.x, scales.y, (row) => ({ x: row.timeS, y: row.band.centerDepthKm }))}"></path>`;
+    foldOrders.forEach((order) => {
+      const higherOrderClass = Math.abs(order) > 1 ? ' is-higher-order' : '';
+      foldOrderSegments(order).forEach((segment) => {
+        svg += `<path class="fold-band${higherOrderClass}" d="${areaPath(segment, scales, (row) => row.orderBand.minDepthKm, (row) => row.orderBand.maxDepthKm)}"></path>`;
+        svg += `<path class="fold-center${higherOrderClass}" d="${linePath(segment, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.orderBand.centerDepthKm }))}"></path>`;
+      });
+    });
     svg += `<path class="target-trace" d="${linePath(timeline, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.target.apparentDepthKm }))}"></path>`;
     svg += `<line class="current-guide" x1="${scales.x(state.timeS)}" y1="${margin.top}" x2="${scales.x(state.timeS)}" y2="${height - margin.bottom}"></line>`;
-    if (state.band) {
-      svg += `<circle class="response-center" cx="${scales.x(state.timeS)}" cy="${scales.y(state.band.centerDepthKm)}" r="5"></circle>`;
-    }
+    const currentBandGroups = [];
+    [...state.bands].sort((a, b) => a.centerDepthKm - b.centerDepthKm).forEach((band) => {
+      const existing = currentBandGroups.find((group) => Math.abs(group.centerDepthKm - band.centerDepthKm) < 0.06);
+      if (existing) {
+        existing.orders.push(band.foldOrder);
+      } else {
+        currentBandGroups.push({ centerDepthKm: band.centerDepthKm, orders: [band.foldOrder] });
+      }
+    });
+    const bandLabelAnchor = state.timeS > 6 ? 'end' : 'start';
+    const bandLabelX = scales.x(state.timeS) + (state.timeS > 6 ? -8 : 8);
+    currentBandGroups.forEach((group) => {
+      const orderLabel = group.orders.map((order) => signed(order, 0)).join(', ');
+      svg += `<circle class="response-center" cx="${scales.x(state.timeS)}" cy="${scales.y(group.centerDepthKm)}" r="5"><title>Fold order k = ${orderLabel}</title></circle>`;
+      svg += `<text class="label-danger" x="${bandLabelX}" y="${scales.y(group.centerDepthKm) - 7}" text-anchor="${bandLabelAnchor}">k = ${orderLabel}</text>`;
+    });
     svg += `<rect class="target" x="${scales.x(state.timeS) - 5}" y="${scales.y(state.target.apparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(state.timeS)} ${scales.y(state.target.apparentDepthKm)})"></rect>`;
-    svg += `<text class="label-danger" x="${margin.left + 8}" y="22">red: continuous folded surface band</text>`;
+    svg += `<text class="label-danger" x="${margin.left + 8}" y="22">red: fold orders k = ${foldOrders.map((order) => signed(order, 0)).join(', ')}</text>`;
     svg += `<text class="label-strong" x="${width - margin.right}" y="22" text-anchor="end">teal: target fast-time trace</text>`;
     svg += '</svg>';
     foldPlot.innerHTML = svg;

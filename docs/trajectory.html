@@ -4,27 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>NASA-Reference Europa Flyby Folding</title>
-    <link rel="stylesheet" href="trajectory.css?v=two-column-clean-path-20260713">
-    <script defer src="trajectory.js?v=two-column-clean-path-20260713"></script>
+    <link rel="stylesheet" href="trajectory.css?v=all-fold-orders-20260713">
+    <script defer src="trajectory.js?v=all-fold-orders-20260713"></script>
   </head>
   <body>
     <main class="trajectory-page">
-      <header class="trajectory-header">
-        <a class="back-link" href="index.html?page=aliasing-lab" target="_top">Back to fixed-geometry lab</a>
-        <p class="kicker">NASA-reference teaching trajectory</p>
-        <h1>Europa flyby with PRF folding</h1>
-        <p class="lede">Move the satellite along the curved altitude profile while the surface clutter and subsurface target remain fixed.</p>
-      </header>
-
-      <section class="assumption-note" aria-label="Model boundary and sources">
-        <strong>Model boundary:</strong> NASA publishes flybys as low as 25 km and an early mission study uses 4.5 km/s as a typical flyby speed. This page uses those values with Europa's 1,560.8 km radius in a local straight-line tangent pass. It is not an operational SPICE reconstruction. The effective PRF is intentionally tuned to demonstrate folding and is not claimed to be NASA's flight PRF.
-        <span class="source-links">
-          <a href="https://science.nasa.gov/mission/europa-clipper/mission-faq/" target="_blank" rel="noreferrer">NASA mission FAQ</a>
-          <a href="https://europa.nasa.gov/system/internal_resources/details/original/154_ICEE_Update_revE_0108141.pdf" target="_blank" rel="noreferrer">NASA flyby-speed study</a>
-          <a href="https://europa.nasa.gov/system/downloadable_items/56_ES_2012_Report_-_Final_-_20120502.pdf" target="_blank" rel="noreferrer">NASA Europa radius</a>
-        </span>
-      </section>
-
       <section class="trajectory-control" aria-label="Flyby time control">
         <div class="control-heading">
           <div>
@@ -64,7 +48,7 @@
             <p class="graph-number">2</p>
             <div>
               <h2>Folded depth through the flyby</h2>
-              <p>The red band is continuous surface clutter that aliases into the target's Doppler cell as the trajectory changes.</p>
+              <p>Each red branch is a nonzero integer fold satisfying f<sub>relative</sub> &asymp; k &middot; PRF. The plot keeps every modeled order instead of only the nearest one.</p>
             </div>
           </div>
           <div id="fold-plot" class="plot" aria-live="polite"></div>
