@@ -269,7 +269,7 @@ a:focus-visible {
 .guide { stroke: var(--teal); stroke-width: 1.4; stroke-dasharray: 5 5; }
 .current-guide { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 6 5; }
 .surface { fill: none; stroke: #6e6659; stroke-width: 2; }
-.trajectory-line { stroke: var(--teal); stroke-width: 2.2; stroke-dasharray: 7 5; }
+.trajectory-line { fill: none; stroke: var(--teal); stroke-width: 2.2; stroke-dasharray: 7 5; }
 .ray { stroke: rgba(151, 65, 67, .62); stroke-width: 1.6; }
 .satellite { fill: var(--teal); stroke: var(--panel); stroke-width: 2; }
 .surface-point { fill: #a76844; stroke: var(--panel); stroke-width: 1.5; }
