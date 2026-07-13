@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Effective-PRF Clutter Aliasing</title>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=asymmetric-traces-20260710">
-    <script defer src="aliasing.js?v=asymmetric-traces-20260710"></script>
+    <link rel="stylesheet" href="aliasing.css?v=two-return-motion-20260713">
+    <script defer src="aliasing.js?v=two-return-motion-20260713"></script>
   </head>
   <body>
     <main class="simple-lab">
-      <header class="simple-header">
-        <a class="lab-back-link" href="index.html?page=folding&amp;section=folding-risk-checks" target="_top">Back to PRF folding</a>
-        <p class="section-kicker">PRF-limited Doppler sampling</p>
-        <h1>Clutter aliasing near the fold</h1>
-      </header>
-
       <section class="prf-control" aria-label="Effective Doppler sampling PRF control">
         <div class="prf-label-row">
           <div>
@@ -37,52 +31,58 @@
           <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
           <div><dt>Ice index</dt><dd id="given-index"></dd></div>
         </dl>
-        <p class="model-boundary"><strong>Model boundary:</strong> the slider changes the effective Doppler sampling PRF, while the transmitted radar PRF and geometry stay fixed. The moving red band is a continuous-surface approximation; the 12 dots are the discrete clutter points checked for target overlap.</p>
+        <p class="model-boundary"><strong>Two-return model:</strong> one surface-clutter return moves in aliased Doppler as PRF changes; one subsurface target stays fixed at 0 Hz and 6.74 km.</p>
         <p id="trace-status" class="prf-status" aria-live="polite"></p>
       </section>
 
-      <div class="visual-grid">
-        <section class="horizontal-map" aria-labelledby="map-title">
+      <section class="visual-grid" aria-label="Aliasing graphs">
+        <article class="horizontal-map" aria-labelledby="map-title">
           <div class="map-heading">
-            <h2 id="map-title">Fixed geometry</h2>
-            <p>One fixed satellite, 12 fixed surface clutter points, and one fixed target.</p>
+            <p class="graph-number">1</p>
+            <div>
+              <h2 id="map-title">Fixed geometry</h2>
+              <p>One surface-clutter point and one subsurface target. Their physical locations stay fixed.</p>
+              <p class="graph-formula">R = √(h² + x²); depth<sub>app</sub> = (R − h) / n</p>
+            </div>
           </div>
           <div id="horizontal-plot" class="horizontal-plot" aria-live="polite"></div>
-        </section>
+        </article>
 
-        <section class="horizontal-map blur-map" aria-labelledby="blur-title">
+        <article class="horizontal-map blur-map" aria-labelledby="blur-title">
           <div class="map-heading">
-            <h2 id="blur-title">Continuous-surface fold band</h2>
-            <p>The band width is calculated from the ±25 Hz Doppler tolerance. It is not merely a decorative blur width.</p>
+            <p class="graph-number">2</p>
+            <div>
+              <h2 id="blur-title">Depth alignment</h2>
+              <p>The two returns already share the same apparent-depth cell; PRF decides whether their Doppler also matches.</p>
+              <p class="graph-formula">Δdepth = depth<sub>surface</sub> − depth<sub>target</sub></p>
+            </div>
           </div>
           <div id="blur-plot" class="blur-plot" aria-live="polite"></div>
-        </section>
-      </div>
+        </article>
 
-      <section class="checks-section" aria-labelledby="checks-title">
-        <div class="checks-heading">
-          <p class="section-kicker">Independent sanity checks</p>
-          <h2 id="checks-title">Trace and fast-time checks</h2>
-          <p>Both checks use only clutter points 4 and 9—the fixed pair responsible for the target-depth fold. Their unequal trace shapes are schematic; the delay and Doppler calculations are unchanged.</p>
-        </div>
-
-        <div class="visual-grid checks-grid">
-          <section class="horizontal-map" aria-labelledby="trace-check-title">
-            <div class="map-heading">
-              <h3 id="trace-check-title">1. Asymmetric trace hyperbolas</h3>
-              <p>One trace is intentionally larger, while both remain constrained to the same 6.74 km target crossing.</p>
+        <article class="horizontal-map" aria-labelledby="trace-check-title">
+          <div class="map-heading">
+            <p class="graph-number">3</p>
+            <div>
+              <h3 id="trace-check-title">Two-return PRF trace</h3>
+              <p>The surface return moves across aliased Doppler while the subsurface target remains at 0 Hz.</p>
+              <p class="graph-formula">f<sub>alias</sub> = ((f<sub>D</sub> + PRF/2) mod PRF) − PRF/2</p>
             </div>
-            <div id="trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
-          </section>
+          </div>
+          <div id="trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
+        </article>
 
-          <section class="horizontal-map" aria-labelledby="doppler-check-title">
-            <div class="map-heading">
-              <h3 id="doppler-check-title">2. Fast-time × Doppler tails</h3>
-              <p>Checks whether the aliased clutter responses fold into the target's 0 Hz, 6.74 km resolution cell.</p>
+        <article class="horizontal-map" aria-labelledby="doppler-check-title">
+          <div class="map-heading">
+            <p class="graph-number">4</p>
+            <div>
+              <h3 id="doppler-check-title">Doppler × depth</h3>
+              <p>The clutter return interferes only when it enters the target cell in both Doppler and depth.</p>
+              <p class="graph-formula">overlap: |f<sub>alias</sub>| ≤ 25 Hz and |Δdepth| ≤ 0.15 km</p>
             </div>
-            <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
-          </section>
-        </div>
+          </div>
+          <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
+        </article>
       </section>
     </main>
   </body>
