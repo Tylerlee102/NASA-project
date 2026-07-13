@@ -93,6 +93,7 @@
 
   const PAGE_TITLES = {
     'aliasing-lab': 'Doppler Aliasing Lab',
+    'trajectory-lab': 'NASA Trajectory Lab',
     'owner-access': 'Owner Archive',
     overview: 'Overview',
     surface: 'Flyby Geometry',
@@ -105,7 +106,7 @@
   };
   const OWNER_SESSION_KEY = 'europa-owner-archive-unlocked';
   const OWNER_PASSWORD_SHA256 = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-  const PUBLIC_PAGE_TARGETS = new Set(['aliasing-lab', 'owner-access']);
+  const PUBLIC_PAGE_TARGETS = new Set(['aliasing-lab', 'trajectory-lab', 'owner-access']);
   let pendingOwnerTarget = 'overview';
   let ownerUnlocked = (() => {
     try {
@@ -2600,39 +2601,39 @@
     renderFolding();
   }
 
-  function initAliasingFrame() {
-    const frame = document.getElementById('aliasing-frame');
-    if (!frame) return;
-    let observer = null;
-    const resize = () => {
-      try {
-        const doc = frame.contentDocument;
-        if (!doc) return;
-        const nextHeight = Math.max(
-          1100,
-          doc.documentElement?.scrollHeight || 0,
-          doc.body?.scrollHeight || 0
-        );
-        frame.style.height = `${Math.ceil(nextHeight)}px`;
-      } catch (_error) {
-        // Keep the CSS minimum height if same-origin sizing is unavailable.
-      }
-    };
-    const connect = () => {
-      resize();
-      observer?.disconnect();
-      if (window.ResizeObserver && frame.contentDocument?.body) {
-        observer = new ResizeObserver(resize);
-        observer.observe(frame.contentDocument.body);
-      }
-    };
-    frame.addEventListener('load', connect);
-    if (frame.contentDocument?.readyState === 'complete') connect();
-    window.addEventListener('resize', resize);
+  function initEmbeddedFrames() {
+    document.querySelectorAll('.aliasing-frame').forEach((frame) => {
+      let observer = null;
+      const resize = () => {
+        try {
+          const doc = frame.contentDocument;
+          if (!doc) return;
+          const nextHeight = Math.max(
+            1100,
+            doc.documentElement?.scrollHeight || 0,
+            doc.body?.scrollHeight || 0
+          );
+          frame.style.height = `${Math.ceil(nextHeight)}px`;
+        } catch (_error) {
+          // Keep the CSS minimum height if same-origin sizing is unavailable.
+        }
+      };
+      const connect = () => {
+        resize();
+        observer?.disconnect();
+        if (window.ResizeObserver && frame.contentDocument?.body) {
+          observer = new ResizeObserver(resize);
+          observer.observe(frame.contentDocument.body);
+        }
+      };
+      frame.addEventListener('load', connect);
+      if (frame.contentDocument?.readyState === 'complete') connect();
+      window.addEventListener('resize', resize);
+    });
   }
 
   initTabs();
-  initAliasingFrame();
+  initEmbeddedFrames();
   renderLiveControls();
   renderV30Controls();
   renderFoldingControls();
