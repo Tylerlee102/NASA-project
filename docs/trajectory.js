@@ -12,8 +12,8 @@
     pointCount: 12,
     dopplerToleranceHz: 25,
     depthToleranceKm: 0.15,
-    timeMinS: -3,
-    timeMaxS: 3
+    timeMinS: -10,
+    timeMaxS: 10
   };
 
   const wavelengthM = C / (model.frequencyMhz * 1e6);
@@ -209,37 +209,38 @@
     const width = 600;
     const height = 360;
     const margin = { left: 58, right: 24, top: 42, bottom: 46 };
-    const scales = chartScales(width, height, margin, -68, 68, -13, 34);
-    const surfaceRows = Array.from({ length: 137 }, (_, index) => {
-      const arcKm = -68 + index;
+    const scales = chartScales(width, height, margin, -68, 68, -10, 30);
+    // In a surface-relative frame, a straight tangent flyby appears as a
+    // shallow parabola because Europa curves away beneath the spacecraft.
+    const trajectoryRows = Array.from({ length: 137 }, (_, index) => {
+      const xKm = -68 + index;
       return {
-        x: model.europaRadiusKm * Math.sin(arcKm / model.europaRadiusKm),
-        y: model.europaRadiusKm * (Math.cos(arcKm / model.europaRadiusKm) - 1)
+        x: xKm,
+        y: Math.hypot(xKm, tangentRadiusKm) - model.europaRadiusKm
       };
     });
-    const surfacePath = linePath(surfaceRows, scales.x, scales.y, (row) => row);
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="NASA-reference tangent flyby above twelve fixed surface clutter points and one fixed subsurface target">`;
-    svg += axes(width, height, margin, scales, [-60, -30, 0, 30, 60], [-10, 0, 10, 20, 30], 'along-track distance (km)', 'height relative to tangent surface (km)', signed, fmt);
-    svg += `<path class="surface" d="${surfacePath}"></path>`;
-    svg += `<line class="trajectory-line" x1="${scales.x(-68)}" y1="${scales.y(model.closestAltitudeKm)}" x2="${scales.x(68)}" y2="${scales.y(model.closestAltitudeKm)}"></line>`;
+    const trajectoryPath = linePath(trajectoryRows, scales.x, scales.y, (row) => row);
+    const spacecraftYKm = state.spacecraft.altitudeKm;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Moving satellite on a curved surface-relative flyby path above twelve fixed clutter points and one fixed subsurface target">`;
+    svg += axes(width, height, margin, scales, [-60, -30, 0, 30, 60], [-10, 0, 10, 20, 30], 'along-track distance (km)', 'altitude / depth relative to surface (km)', signed, fmt);
+    svg += `<line class="surface" x1="${scales.x(-68)}" y1="${scales.y(0)}" x2="${scales.x(68)}" y2="${scales.y(0)}"></line>`;
+    svg += `<path class="trajectory-line" d="${trajectoryPath}"></path>`;
     state.foldingPair.forEach((point) => {
-      const yKm = point.pointYKm - model.europaRadiusKm;
-      svg += `<line class="ray" x1="${scales.x(state.spacecraft.xKm)}" y1="${scales.y(model.closestAltitudeKm)}" x2="${scales.x(point.pointXKm)}" y2="${scales.y(yKm)}"></line>`;
+      svg += `<line class="ray" x1="${scales.x(state.spacecraft.xKm)}" y1="${scales.y(spacecraftYKm)}" x2="${scales.x(point.pointXKm)}" y2="${scales.y(0)}"></line>`;
     });
     state.points.forEach((point) => {
-      const yKm = point.pointYKm - model.europaRadiusKm;
       const fold = foldingIndexes.has(point.index) ? ' fold' : '';
-      svg += `<circle class="surface-point${fold}" cx="${scales.x(point.pointXKm)}" cy="${scales.y(yKm)}" r="${fold ? 6.5 : 4.5}"><title>Clutter ${point.index + 1}</title></circle>`;
+      svg += `<circle class="surface-point${fold}" cx="${scales.x(point.pointXKm)}" cy="${scales.y(0)}" r="${fold ? 6.5 : 4.5}"><title>Fixed clutter point ${point.index + 1}</title></circle>`;
     });
     const targetX = scales.x(0);
     // Draw the target at its physical depth. The refractive index is used only
     // in the fast-time/equivalent-range calculation, not in its drawn location.
     const targetY = scales.y(-model.targetDepthKm);
     svg += `<rect class="target" x="${targetX - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${targetX} ${targetY})"></rect>`;
-    svg += `<circle class="satellite" cx="${scales.x(state.spacecraft.xKm)}" cy="${scales.y(model.closestAltitudeKm)}" r="8"></circle>`;
-    svg += `<text class="label-strong" x="${scales.x(state.spacecraft.xKm) + 11}" y="${scales.y(model.closestAltitudeKm) - 10}">t = ${signed(state.timeS, 2)} s</text>`;
-    svg += `<text class="label" x="${scales.x(-65)}" y="${scales.y(model.closestAltitudeKm) - 9}">straight-line tangent trajectory</text>`;
-    svg += `<text class="label-strong" x="${targetX + 12}" y="${targetY + 4}">fixed target</text>`;
+    svg += `<circle class="satellite" cx="${scales.x(state.spacecraft.xKm)}" cy="${scales.y(spacecraftYKm)}" r="8"><title>Moving satellite at ${signed(state.timeS, 2)} seconds</title></circle>`;
+    svg += `<text class="label-strong" x="${scales.x(state.spacecraft.xKm) + 11}" y="${scales.y(spacecraftYKm) - 10}">moving satellite: t = ${signed(state.timeS, 2)} s</text>`;
+    svg += `<text class="label" x="${scales.x(-65)}" y="${scales.y(27.4)}">surface-relative flyby altitude profile</text>`;
+    svg += `<text class="label-strong" x="${targetX + 12}" y="${targetY + 4}">fixed subsurface target</text>`;
     if (state.overlap) {
       svg += `<text class="label-danger" x="${width - margin.right}" y="24" text-anchor="end">folding overlap at closest approach</text>`;
     }
@@ -270,7 +271,7 @@
     const scales = chartScales(width, height, margin, model.timeMinS, model.timeMaxS, timelineDepthMin, timelineDepthMax);
     const yTicks = Array.from({ length: 5 }, (_, index) => timelineDepthMin + ((timelineDepthMax - timelineDepthMin) * index) / 4);
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Continuous folded clutter depth and target depth through the NASA-reference flyby">`;
-    svg += axes(width, height, margin, scales, [-3, -1.5, 0, 1.5, 3], yTicks, 'time from closest approach (s)', 'apparent depth (km, downward)', signed, (v) => fmt(v, 1));
+    svg += axes(width, height, margin, scales, [-10, -5, 0, 5, 10], yTicks, 'time from closest approach (s)', 'apparent depth (km, downward)', signed, (v) => fmt(v, 1));
     svg += `<path class="target-cell" d="${areaPath(timeline, scales, (row) => row.target.apparentDepthKm - model.depthToleranceKm, (row) => row.target.apparentDepthKm + model.depthToleranceKm)}"></path>`;
     svg += `<path class="fold-band" d="${areaPath(timeline, scales, (row) => row.band?.minDepthKm, (row) => row.band?.maxDepthKm)}"></path>`;
     svg += `<path class="fold-center" d="${linePath(timeline.filter((row) => row.band), scales.x, scales.y, (row) => ({ x: row.timeS, y: row.band.centerDepthKm }))}"></path>`;
@@ -294,7 +295,7 @@
     const yTicks = Array.from({ length: 5 }, (_, index) => timelineDepthMin + ((timelineDepthMax - timelineDepthMin) * index) / 4);
     const pairIndexes = [...foldingIndexes];
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Individual fast-time traces for the two folding clutter points and the subsurface target">`;
-    svg += axes(width, height, margin, scales, [-3, -1.5, 0, 1.5, 3], yTicks, 'time from closest approach (s)', 'apparent depth / fast time (km)', signed, (v) => fmt(v, 1));
+    svg += axes(width, height, margin, scales, [-10, -5, 0, 5, 10], yTicks, 'time from closest approach (s)', 'apparent depth / fast time (km)', signed, (v) => fmt(v, 1));
     svg += `<rect class="overlap-window" x="${scales.x(-0.12)}" y="${margin.top}" width="${scales.x(0.12) - scales.x(-0.12)}" height="${height - margin.top - margin.bottom}"></rect>`;
     const traceA = timeline.map((row) => ({ timeS: row.timeS, point: row.points[pairIndexes[0]] }));
     const traceB = timeline.map((row) => ({ timeS: row.timeS, point: row.points[pairIndexes[1]] }));
@@ -302,12 +303,14 @@
     svg += `<path class="clutter-trace-b" d="${linePath(traceB, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.point.apparentDepthKm }))}"></path>`;
     svg += `<path class="target-trace" d="${linePath(timeline, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.target.apparentDepthKm }))}"></path>`;
     svg += `<line class="current-guide" x1="${scales.x(state.timeS)}" y1="${margin.top}" x2="${scales.x(state.timeS)}" y2="${height - margin.bottom}"></line>`;
+    svg += `<circle class="satellite" cx="${scales.x(state.timeS)}" cy="${margin.top - 10}" r="7"><title>Moving satellite/current radar sample</title></circle>`;
+    svg += `<text class="label-strong" x="${Math.min(width - margin.right - 70, scales.x(state.timeS) + 10)}" y="${margin.top - 7}">satellite now</text>`;
     state.foldingPair.forEach((point) => {
       svg += `<circle class="response-center" cx="${scales.x(state.timeS)}" cy="${scales.y(point.apparentDepthKm)}" r="5"></circle>`;
     });
     svg += `<rect class="target" x="${scales.x(state.timeS) - 5}" y="${scales.y(state.target.apparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(state.timeS)} ${scales.y(state.target.apparentDepthKm)})"></rect>`;
-    svg += `<text class="label" x="${margin.left + 7}" y="22">solid: clutter points ${pairIndexes.map((index) => index + 1).join(' and ')}</text>`;
-    svg += `<text class="label-strong" x="${width - margin.right}" y="22" text-anchor="end">dashed: fixed target</text>`;
+    svg += `<text class="label" x="${margin.left + 7}" y="18">solid: fixed clutter points ${pairIndexes.map((index) => index + 1).join(' and ')}</text>`;
+    svg += `<text class="label-strong" x="${width - margin.right}" y="18" text-anchor="end">dashed: fixed target's measured trace</text>`;
     svg += '</svg>';
     tracePlot.innerHTML = svg;
   }
@@ -374,7 +377,7 @@
     if (Number(slider.value) >= model.timeMaxS - 0.001) slider.value = String(model.timeMinS);
     playButton.textContent = 'Pause flyby';
     animationTimer = window.setInterval(() => {
-      const next = Math.min(model.timeMaxS, Number(slider.value) + 0.04);
+      const next = Math.min(model.timeMaxS, Number(slider.value) + 0.13);
       slider.value = String(next);
       draw(next);
       if (next >= model.timeMaxS) stopAnimation();
