@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=processing-format-20260713">
-    <script defer src="aliasing.js?v=processing-format-20260713"></script>
+    <link rel="stylesheet" href="aliasing.css?v=timing-consistent-20260713">
+    <script defer src="aliasing.js?v=timing-consistent-20260713"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -31,11 +31,11 @@
           </div>
           <output id="effective-prf-output" aria-live="polite"></output>
         </div>
-        <input id="effective-prf-slider" class="prf-slider" type="range" min="1330" max="1385" step="0.1" value="1357.3" aria-label="Effective Doppler sampling PRF in hertz">
+        <input id="effective-prf-slider" class="prf-slider" type="range" min="857" max="913" step="0.1" value="885.2" aria-label="Effective Doppler sampling PRF in hertz">
         <div class="prf-range-labels" aria-hidden="true">
-          <span>1,330 Hz</span>
+          <span id="prf-min-label">857 Hz</span>
           <span>target folding neighborhood</span>
-          <span>1,385 Hz</span>
+          <span id="prf-max-label">913 Hz</span>
         </div>
         <dl class="lab-givens" aria-label="Fixed model assumptions">
           <div><dt>Altitude</dt><dd id="given-altitude"></dd></div>
@@ -44,7 +44,7 @@
           <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
           <div><dt>Ice index</dt><dd id="given-index"></dd></div>
         </dl>
-        <p class="model-boundary"><strong>Model boundary:</strong> the slider changes the effective Doppler sampling PRF, while the transmitted radar PRF and geometry stay fixed. The moving red band is a continuous-surface reference; only one selected surface dot is checked as the clutter return that aliases onto the target.</p>
+        <p class="model-boundary"><strong>Model boundary:</strong> this synthetic case uses a timing-safe base trace PRF, then slides only the effective Doppler sampling PRF near the selected fold. Doppler/depth tolerances are derived from the FFT and depth-bin spacing. The moving red band is a continuous-surface reference; one selected surface dot is checked as the clutter return that aliases onto the target.</p>
         <p id="trace-status" class="prf-status" aria-live="polite"></p>
       </section>
 
@@ -91,7 +91,7 @@
         <div class="checks-heading">
           <p class="section-kicker">Radar-processing check</p>
           <h2 id="processing-title">Trace matrix, FFT, decimation, and reconstruction</h2>
-          <p class="processing-caveat">Fixed sanity check: these four plots use all/every-2/every-4 trace deletion, so they do not move with the PRF slider.</p>
+          <p class="processing-caveat">Fixed sanity check: these four plots use all/every-2/every-4 trace deletion, so they do not move with the PRF slider. The every-4 case is intentionally constructed; the non-tuned row shows a nearby case that does not land exactly at 0 Hz. The trace matrix is a local constant-Doppler approximation, not full range-migration focusing.</p>
         </div>
 
         <div class="visual-grid processing-grid">
