@@ -165,7 +165,7 @@
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Folded clutter depth produced by the effective sampling PRF">
       <defs><linearGradient id="blur-block" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b3d3f" stop-opacity=".10"></stop><stop offset=".5" stop-color="#9b3d3f" stop-opacity="${overlapsTarget ? '.50' : '.30'}"></stop><stop offset="1" stop-color="#9b3d3f" stop-opacity=".10"></stop></linearGradient></defs>`;
 
-    svg += `<text class="blur-title-text" x="${margin.left}" y="18">original trace PRF fixed: ${fmt(originalPrfHz, 1)} Hz</text>`;
+    svg += `<text class="blur-title-text" x="${margin.left}" y="18">timing-safe trace PRF: ${fmt(originalPrfHz, 1)} Hz</text>`;
     svg += `<text class="blur-title-text" x="${margin.left}" y="35">effective sampling PRF: ${fmt(effectivePrfHz, 1)} Hz</text>`;
     for (let index = 0; index < 6; index += 1) {
       const value = depthMinKm + ((depthMaxKm - depthMinKm) * index) / 5;
@@ -239,9 +239,9 @@
       <defs><clipPath id="trace-check-clip"><rect x="${margin.left}" y="${margin.top}" width="${width - margin.left - margin.right}" height="${height - margin.top - margin.bottom}"></rect></clipPath></defs>`;
 
     svg += `<line class="check-clutter-curve selected" x1="${margin.left}" y1="16" x2="${margin.left + 28}" y2="16"></line>`;
-    svg += `<text class="check-title" x="${margin.left + 35}" y="20">selected clutter ${foldingReturn.index + 1}</text>`;
+    svg += `<text class="check-title" x="${margin.left + 35}" y="20">surface clutter hyperbola</text>`;
     svg += `<line class="check-target-curve" x1="${margin.left + 230}" y1="16" x2="${margin.left + 258}" y2="16"></line>`;
-    svg += `<text class="check-title" x="${margin.left + 265}" y="20">subsurface target</text>`;
+    svg += `<text class="check-title" x="${margin.left + 265}" y="20">subsurface target hyperbola</text>`;
     svg += `<text class="${overlapsTarget ? 'check-danger' : 'check-title'}" x="${margin.left}" y="40">trace 0: ${stateLabel}</text>`;
 
     [0, 3, 6, 9, 12].forEach((value) => {
@@ -642,7 +642,7 @@
       xTicks: [0, 16, 32, 48, 63],
       yTicks: [0, 6, 12, 18, 24],
       tint: 'teal',
-      title: '64 complex traces: 12 surface points + one target',
+      title: 'synthetic radargram: 64 traces, 12 surface points, one target',
       note: 'selected and mirror surface points are comparable; other points use angle weighting',
       xLabel: 'trace number',
       ariaLabel: 'Generated complex radargram with twelve surface scatterers and one fixed subsurface target',
@@ -659,7 +659,7 @@
       xTicks: [-originalPrfHz / 2, -selectedFoldingPoint.trueDopplerHz, 0, selectedFoldingPoint.trueDopplerHz, originalPrfHz / 2],
       yTicks: [0, 6, 12, 18, 24],
       tint: 'copper',
-      title: `all-trace FFT at ${fmt(originalPrfHz, 1)} Hz sampling`,
+      title: `pre-decimation Doppler image at ${fmt(originalPrfHz, 1)} Hz sampling`,
       note: `selected clutter is at true Doppler ${signed(selectedFoldingPoint.trueDopplerHz, 1)} Hz, not yet at 0 Hz`,
       xLabel: 'Doppler frequency (Hz)',
       ariaLabel: 'Original all-trace along-track FFT before trace deletion',
@@ -697,7 +697,7 @@
       xTicks: [-200, -100, 0, 100, 200],
       yTicks: [6.0, model.targetDepthKm, 7.5],
       tint: 'red',
-      title: 'constructed trace deletion plus a non-tuned check',
+      title: 'trace decimation FFT: tuned fold plus non-tuned check',
       xLabel: 'aliased Doppler near target cell (Hz)',
       ariaLabel: 'Recalculated FFTs after keeping all traces every second trace and every fourth trace',
       formatX: (value) => signed(value, 0),
@@ -726,7 +726,7 @@
       xTicks: [0, 0.25, 0.5, 0.75, 1],
       yTicks: [6.0, model.targetDepthKm, 7.5],
       tint: 'teal',
-      title: `0-Hz inverse FFT; tuned every-4 alias = ${signed(selectedAliasEveryFour, 1)} Hz`,
+      title: `zero-Doppler reconstruction; tuned every-4 alias = ${signed(selectedAliasEveryFour, 1)} Hz`,
       xLabel: 'normalized along-track aperture',
       ariaLabel: 'Inverse FFT reconstruction of the zero Doppler cell after trace deletion',
       formatX: (value) => `${fmt(value * 100, 0)}%`,

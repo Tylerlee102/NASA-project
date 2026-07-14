@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=timing-consistent-20260713">
-    <script defer src="aliasing.js?v=timing-consistent-20260713"></script>
+    <link rel="stylesheet" href="aliasing.css?v=professor-titles-20260713">
+    <script defer src="aliasing.js?v=professor-titles-20260713"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -51,14 +51,14 @@
       <div class="visual-grid">
         <section class="horizontal-map" aria-labelledby="map-title">
           <div class="map-heading">
-            <h2 id="map-title">Fixed geometry</h2>
+            <h2 id="map-title">Fixed point-target geometry</h2>
           </div>
           <div id="horizontal-plot" class="horizontal-plot" aria-live="polite"></div>
         </section>
 
         <section class="horizontal-map blur-map" aria-labelledby="blur-title">
           <div class="map-heading">
-            <h2 id="blur-title">Selected fold band</h2>
+            <h2 id="blur-title">PRF fold-band depth</h2>
           </div>
           <div id="blur-plot" class="blur-plot" aria-live="polite"></div>
         </section>
@@ -67,20 +67,20 @@
       <section class="checks-section" aria-labelledby="checks-title">
         <div class="checks-heading">
           <p class="section-kicker">Independent sanity checks</p>
-          <h2 id="checks-title">Trace and fast-time checks</h2>
+          <h2 id="checks-title">Trace and Doppler overlap checks</h2>
         </div>
 
         <div class="visual-grid checks-grid">
           <section class="horizontal-map" aria-labelledby="trace-check-title">
             <div class="map-heading">
-              <h3 id="trace-check-title">1. Selected clutter trace</h3>
+              <h3 id="trace-check-title">1. Trace hyperbola overlap</h3>
             </div>
             <div id="trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
           </section>
 
           <section class="horizontal-map" aria-labelledby="doppler-check-title">
             <div class="map-heading">
-              <h3 id="doppler-check-title">2. Fast-time x Doppler tails</h3>
+              <h3 id="doppler-check-title">2. Fast-time × Doppler overlap</h3>
             </div>
             <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
           </section>
@@ -90,35 +90,35 @@
       <section class="processing-section" aria-labelledby="processing-title">
         <div class="checks-heading">
           <p class="section-kicker">Radar-processing check</p>
-          <h2 id="processing-title">Trace matrix, FFT, decimation, and reconstruction</h2>
+          <h2 id="processing-title">Trace-matrix processing check</h2>
           <p class="processing-caveat">Fixed sanity check: these four plots use all/every-2/every-4 trace deletion, so they do not move with the PRF slider. The every-4 case is intentionally constructed; the non-tuned row shows a nearby case that does not land exactly at 0 Hz. The trace matrix is a local constant-Doppler approximation, not full range-migration focusing.</p>
         </div>
 
         <div class="visual-grid processing-grid">
           <section class="horizontal-map" aria-labelledby="radargram-title">
             <div class="map-heading">
-              <h3 id="radargram-title">1. Generated trace matrix</h3>
+              <h3 id="radargram-title">1. Synthetic radargram: traces × depth</h3>
             </div>
             <div id="radargram-plot" class="processing-plot" aria-live="polite"></div>
           </section>
 
           <section class="horizontal-map" aria-labelledby="fft-title">
             <div class="map-heading">
-              <h3 id="fft-title">2. Along-track FFT</h3>
+              <h3 id="fft-title">2. Doppler image before deletion</h3>
             </div>
             <div id="fft-plot" class="processing-plot" aria-live="polite"></div>
           </section>
 
           <section class="horizontal-map" aria-labelledby="decimated-fft-title">
             <div class="map-heading">
-              <h3 id="decimated-fft-title">3. Delete traces, then FFT again</h3>
+              <h3 id="decimated-fft-title">3. FFT after trace decimation</h3>
             </div>
             <div id="decimated-fft-plot" class="processing-plot" aria-live="polite"></div>
           </section>
 
           <section class="horizontal-map" aria-labelledby="reconstruction-title">
             <div class="map-heading">
-              <h3 id="reconstruction-title">4. Reconstruct the zero-Doppler cell</h3>
+              <h3 id="reconstruction-title">4. Zero-Doppler reconstruction</h3>
             </div>
             <div id="reconstruction-plot" class="processing-plot" aria-live="polite"></div>
           </section>
