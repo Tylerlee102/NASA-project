@@ -8,6 +8,23 @@
   margin-bottom: 22px;
 }
 
+.lab-back-link {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  color: var(--accent-2);
+  font-size: .82rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.lab-back-link:hover,
+.lab-back-link:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .radargram-header h1 {
   max-width: 1100px;
   margin: 10px 0 0;
@@ -196,16 +213,24 @@
   stroke-dasharray: 8 6;
 }
 
-.rg-bad-band {
-  fill: rgba(155, 61, 63, .25);
-  stroke: rgba(155, 61, 63, .72);
-  stroke-width: 2;
+.rg-bad-band-soft {
+  fill: url(#rg-fixed-blur-fill);
+  filter: url(#rg-layer-blur);
 }
 
-.rg-dot-band {
+.rg-bad-band-core {
+  fill: rgba(155, 61, 63, .20);
+  stroke: rgba(155, 61, 63, .42);
+  stroke-width: 1.2;
+}
+
+.rg-blur-blob {
+  fill: url(#rg-blob-fill);
+  filter: url(#rg-blob-blur);
+}
+
+.rg-blur-blob-core {
   fill: rgba(155, 61, 63, .28);
-  stroke: rgba(155, 61, 63, .66);
-  stroke-width: 1.4;
 }
 
 .rg-current-line {

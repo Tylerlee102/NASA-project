@@ -34,6 +34,7 @@
   const prfMaxHz = 680;
   const depthMinKm = 1.35;
   const depthMaxKm = 2.90;
+  const visualBlurHalfKm = model.targetToleranceKm * 2.4;
 
   const overlay = document.getElementById('radargram-overlay');
   const prfPlot = document.getElementById('prf-schedule-plot');
@@ -44,7 +45,8 @@
   const traceSlider = document.getElementById('trace-position');
   const traceOutput = document.getElementById('trace-position-output');
   const caseSummary = document.getElementById('case-summary');
-  let mode = 'fixed';
+  const initialCase = new URLSearchParams(window.location.search).get('case');
+  let mode = initialCase === 'four' || initialCase === 'staggered' ? 'staggered' : 'fixed';
 
   const fmt = (value, digits = 1) => Number(value).toLocaleString(undefined, {
     minimumFractionDigits: digits,
@@ -96,29 +98,55 @@
     const currentX = xFromDistance(state.distanceKm);
     const currentY = yFromDepth(state.foldDepthKm);
     let svg = `<svg viewBox="0 0 ${image.width} ${image.height}" role="img" aria-label="Operation IceBridge radargram with synthetic PRF fold overlay">
+      <defs>
+        <filter id="rg-layer-blur" x="-8%" y="-140%" width="116%" height="380%">
+          <feGaussianBlur stdDeviation="13"></feGaussianBlur>
+        </filter>
+        <filter id="rg-blob-blur" x="-90%" y="-160%" width="280%" height="420%">
+          <feGaussianBlur stdDeviation="10"></feGaussianBlur>
+        </filter>
+        <linearGradient id="rg-fixed-blur-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#9b3d3f" stop-opacity="0"></stop>
+          <stop offset=".36" stop-color="#9b3d3f" stop-opacity=".28"></stop>
+          <stop offset=".50" stop-color="#9b3d3f" stop-opacity=".42"></stop>
+          <stop offset=".64" stop-color="#9b3d3f" stop-opacity=".28"></stop>
+          <stop offset="1" stop-color="#9b3d3f" stop-opacity="0"></stop>
+        </linearGradient>
+        <radialGradient id="rg-blob-fill">
+          <stop offset="0" stop-color="#9b3d3f" stop-opacity=".50"></stop>
+          <stop offset=".44" stop-color="#9b3d3f" stop-opacity=".25"></stop>
+          <stop offset="1" stop-color="#9b3d3f" stop-opacity="0"></stop>
+        </radialGradient>
+      </defs>
       <image href="${image.href}" x="0" y="0" width="${image.width}" height="${image.height}"></image>
       <rect class="rg-target-window" x="${image.plotLeft}" y="${windowTop}" width="${image.plotRight - image.plotLeft}" height="${windowBottom - windowTop}"></rect>
       <line class="rg-target-line" x1="${image.plotLeft}" y1="${targetY}" x2="${image.plotRight}" y2="${targetY}"></line>
       <text class="rg-title" x="${image.plotRight - 18}" y="${targetY - 12}" text-anchor="end">teaching target cell: ${fmt(model.targetDepthKm, 2)} km</text>`;
 
     if (mode === 'fixed') {
-      const bandTop = yFromDepth(state.foldDepthKm - model.targetToleranceKm);
-      const bandBottom = yFromDepth(state.foldDepthKm + model.targetToleranceKm);
-      svg += `<rect class="rg-bad-band" x="${image.plotLeft}" y="${bandTop}" width="${image.plotRight - image.plotLeft}" height="${bandBottom - bandTop}"></rect>`;
-      svg += `<text class="rg-danger" x="${image.plotLeft + 18}" y="${bandTop - 10}">fixed bad PRF: folded clutter stacks into one layer</text>`;
+      const blurTop = yFromDepth(state.foldDepthKm - visualBlurHalfKm);
+      const blurBottom = yFromDepth(state.foldDepthKm + visualBlurHalfKm);
+      const coreTop = yFromDepth(state.foldDepthKm - model.targetToleranceKm * 0.7);
+      const coreBottom = yFromDepth(state.foldDepthKm + model.targetToleranceKm * 0.7);
+      svg += `<rect class="rg-bad-band-soft" x="${image.plotLeft}" y="${blurTop}" width="${image.plotRight - image.plotLeft}" height="${blurBottom - blurTop}"></rect>`;
+      svg += `<rect class="rg-bad-band-core" x="${image.plotLeft}" y="${coreTop}" width="${image.plotRight - image.plotLeft}" height="${coreBottom - coreTop}"></rect>`;
+      svg += `<text class="rg-danger" x="${image.plotLeft + 18}" y="${blurTop - 10}">fixed bad PRF: folded clutter smears into one blurry layer</text>`;
     } else {
       for (let block = 0; block < blockCount; block += 1) {
         const startKm = (block / blockCount) * model.distanceKm;
         const endKm = ((block + 1) / blockCount) * model.distanceKm;
         const prfHz = staggeredPrfsHz[block % staggeredPrfsHz.length];
         const foldDepthKm = foldDepthForPrf(prfHz);
-        const x = xFromDistance(startKm);
-        const width = xFromDistance(endKm) - x;
-        const y = yFromDepth(foldDepthKm - model.targetToleranceKm * 0.65);
-        const height = yFromDepth(foldDepthKm + model.targetToleranceKm * 0.65) - y;
-        svg += `<rect class="rg-dot-band" x="${x}" y="${y}" width="${width}" height="${height}" rx="7"></rect>`;
+        const x1 = xFromDistance(startKm);
+        const x2 = xFromDistance(endKm);
+        const cx = (x1 + x2) / 2;
+        const cy = yFromDepth(foldDepthKm);
+        const rx = Math.max(24, (x2 - x1) * 0.82);
+        const ry = Math.abs(yFromDepth(foldDepthKm + visualBlurHalfKm * 0.72) - cy);
+        svg += `<ellipse class="rg-blur-blob" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"></ellipse>`;
+        svg += `<ellipse class="rg-blur-blob-core" cx="${cx}" cy="${cy}" rx="${rx * 0.42}" ry="${ry * 0.38}"></ellipse>`;
       }
-      svg += `<text class="rg-danger" x="${image.plotLeft + 18}" y="${image.plotTop + 34}">four PRFs: folded clutter hops between depths instead of forming one layer</text>`;
+      svg += `<text class="rg-danger" x="${image.plotLeft + 18}" y="${image.plotTop + 34}">four PRFs: folded clutter appears as moving blurred dots, not one layer</text>`;
     }
 
     svg += `<line class="rg-current-line" x1="${currentX}" y1="${image.plotTop}" x2="${currentX}" y2="${image.plotBottom}"></line>`;
