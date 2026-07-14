@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=bigger-clean-graphs-20260713">
-    <script defer src="aliasing.js?v=moving-trace-dot-20260713"></script>
+    <link rel="stylesheet" href="aliasing.css?v=processing-fft-demo-20260713">
+    <script defer src="aliasing.js?v=processing-fft-demo-20260713"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -83,6 +83,43 @@
               <h3 id="doppler-check-title">2. Fast-time x Doppler tails</h3>
             </div>
             <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="processing-section" aria-labelledby="processing-title">
+        <div class="checks-heading">
+          <p class="section-kicker">Radar-processing check</p>
+          <h2 id="processing-title">Trace matrix, FFT, decimation, and reconstruction</h2>
+        </div>
+
+        <div class="visual-grid processing-grid">
+          <section class="horizontal-map" aria-labelledby="radargram-title">
+            <div class="map-heading">
+              <h3 id="radargram-title">1. Generated trace matrix</h3>
+            </div>
+            <div id="radargram-plot" class="processing-plot" aria-live="polite"></div>
+          </section>
+
+          <section class="horizontal-map" aria-labelledby="fft-title">
+            <div class="map-heading">
+              <h3 id="fft-title">2. Along-track FFT</h3>
+            </div>
+            <div id="fft-plot" class="processing-plot" aria-live="polite"></div>
+          </section>
+
+          <section class="horizontal-map" aria-labelledby="decimated-fft-title">
+            <div class="map-heading">
+              <h3 id="decimated-fft-title">3. Delete traces, then FFT again</h3>
+            </div>
+            <div id="decimated-fft-plot" class="processing-plot" aria-live="polite"></div>
+          </section>
+
+          <section class="horizontal-map" aria-labelledby="reconstruction-title">
+            <div class="map-heading">
+              <h3 id="reconstruction-title">4. Reconstruct the zero-Doppler cell</h3>
+            </div>
+            <div id="reconstruction-plot" class="processing-plot" aria-live="polite"></div>
           </section>
         </div>
       </section>

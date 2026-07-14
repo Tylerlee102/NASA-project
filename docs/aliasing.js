@@ -22,7 +22,12 @@
   const blurPlot = document.getElementById('blur-plot');
   const traceCheckPlot = document.getElementById('trace-check-plot');
   const dopplerCheckPlot = document.getElementById('doppler-check-plot');
+  const radargramPlot = document.getElementById('radargram-plot');
+  const fftPlot = document.getElementById('fft-plot');
+  const decimatedFftPlot = document.getElementById('decimated-fft-plot');
+  const reconstructionPlot = document.getElementById('reconstruction-plot');
   const wavelengthM = C / (model.frequencyMhz * 1e6);
+  let processingRendered = false;
   const mod = (value, divisor) => ((value % divisor) + divisor) % divisor;
   const alias = (dopplerHz, prfHz) => mod(dopplerHz + prfHz / 2, prfHz) - prfHz / 2;
   const fmt = (value, digits = 0) => Number(value).toLocaleString(undefined, {
@@ -301,6 +306,406 @@
     dopplerCheckPlot.innerHTML = svg;
   }
 
+  const processingModel = {
+    traceCount: 64,
+    depthBins: 96,
+    maxDepthKm: 24,
+    depthSigmaKm: 0.14,
+    zoomDepthMinKm: 5.95,
+    zoomDepthMaxKm: 7.55,
+    zoomDopplerHz: 220
+  };
+
+  function fftComplex(input, inverse = false) {
+    const n = input.length;
+    const outputValues = input.map((value) => ({ re: value.re, im: value.im }));
+    for (let i = 1, j = 0; i < n; i += 1) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) {
+        const temporary = outputValues[i];
+        outputValues[i] = outputValues[j];
+        outputValues[j] = temporary;
+      }
+    }
+    for (let length = 2; length <= n; length <<= 1) {
+      const halfLength = length >> 1;
+      const angle = (inverse ? 2 : -2) * Math.PI / length;
+      const stepRe = Math.cos(angle);
+      const stepIm = Math.sin(angle);
+      for (let start = 0; start < n; start += length) {
+        let wRe = 1;
+        let wIm = 0;
+        for (let offset = 0; offset < halfLength; offset += 1) {
+          const even = outputValues[start + offset];
+          const odd = outputValues[start + offset + halfLength];
+          const rotatedRe = odd.re * wRe - odd.im * wIm;
+          const rotatedIm = odd.re * wIm + odd.im * wRe;
+          outputValues[start + offset] = {
+            re: even.re + rotatedRe,
+            im: even.im + rotatedIm
+          };
+          outputValues[start + offset + halfLength] = {
+            re: even.re - rotatedRe,
+            im: even.im - rotatedIm
+          };
+          const nextWRe = wRe * stepRe - wIm * stepIm;
+          wIm = wRe * stepIm + wIm * stepRe;
+          wRe = nextWRe;
+        }
+      }
+    }
+    if (inverse) {
+      outputValues.forEach((value) => {
+        value.re /= n;
+        value.im /= n;
+      });
+    }
+    return outputValues;
+  }
+
+  function transformRows(matrix, inverse = false) {
+    return matrix.map((row) => fftComplex(row, inverse));
+  }
+
+  function magnitudeRows(matrix) {
+    return matrix.map((row) => row.map((value) => Math.hypot(value.re, value.im)));
+  }
+
+  function shiftedSpectrum(specRows, prfHz, xMinHz = -prfHz / 2, xMaxHz = prfHz / 2) {
+    const length = specRows[0].length;
+    const half = length / 2;
+    const shiftedIndexes = Array.from({ length }, (_, index) => (index + half) % length);
+    const frequencies = shiftedIndexes.map((sourceIndex, shiftedIndex) => ({
+      sourceIndex,
+      frequencyHz: (shiftedIndex - half) * prfHz / length
+    })).filter((entry) => entry.frequencyHz >= xMinHz && entry.frequencyHz <= xMaxHz);
+    return {
+      xMinHz,
+      xMaxHz,
+      data: specRows.map((row) => frequencies.map((entry) => row[entry.sourceIndex])),
+      frequencies: frequencies.map((entry) => entry.frequencyHz)
+    };
+  }
+
+  function surfaceScatterersForProcessing() {
+    return fixedPoints.map((point) => {
+      const selected = foldingIndexes.has(point.index);
+      const mirrorOfSelected = !selected && Math.abs(point.trueDopplerHz + selectedFoldingPoint.trueDopplerHz) < 2;
+      return {
+        kind: 'surface',
+        label: selected ? `selected surface ${point.index + 1}` : `surface ${point.index + 1}`,
+        depthKm: point.apparentDepthKm,
+        dopplerHz: point.trueDopplerHz,
+        amplitude: selected ? 1.35 : (mirrorOfSelected ? 0.05 : 0.08),
+        phase: selected ? 0 : point.index * 0.71
+      };
+    });
+  }
+
+  function buildTraceMatrix(samplePrfHz) {
+    const depthStepKm = processingModel.maxDepthKm / (processingModel.depthBins - 1);
+    const scatterers = [
+      ...surfaceScatterersForProcessing(),
+      {
+        kind: 'target',
+        label: 'fixed subsurface target',
+        depthKm: model.targetDepthKm,
+        dopplerHz: 0,
+        amplitude: 0.32,
+        phase: 0
+      }
+    ];
+    return Array.from({ length: processingModel.depthBins }, (_, depthIndex) => {
+      const depthKm = depthIndex * depthStepKm;
+      return Array.from({ length: processingModel.traceCount }, (_, traceIndex) => {
+        let re = 0;
+        let im = 0;
+        scatterers.forEach((scatterer) => {
+          const envelope = Math.exp(-0.5 * ((depthKm - scatterer.depthKm) / processingModel.depthSigmaKm) ** 2);
+          if (envelope < 1e-4) return;
+          const phase = 2 * Math.PI * (scatterer.dopplerHz / samplePrfHz) * traceIndex + scatterer.phase;
+          const amplitude = scatterer.amplitude * envelope;
+          re += amplitude * Math.cos(phase);
+          im += amplitude * Math.sin(phase);
+        });
+        re += 0.012 * Math.sin(0.31 * depthIndex + 0.17 * traceIndex);
+        im += 0.012 * Math.cos(0.23 * depthIndex - 0.11 * traceIndex);
+        return { re, im };
+      });
+    });
+  }
+
+  function downsampleMatrix(matrix, step) {
+    return matrix.map((row) => row.filter((_, traceIndex) => traceIndex % step === 0));
+  }
+
+  function zeroDopplerOnly(specRows) {
+    return specRows.map((row) => row.map((value, index) => (
+      index === 0 ? { re: value.re, im: value.im } : { re: 0, im: 0 }
+    )));
+  }
+
+  function heatColor(value, maxValue, tint = 'red') {
+    const normalized = maxValue > 0 ? Math.log1p(value) / Math.log1p(maxValue) : 0;
+    const alpha = Math.max(0.02, Math.min(0.86, 0.04 + normalized * 0.82));
+    if (tint === 'teal') return `rgba(47, 111, 115, ${alpha.toFixed(3)})`;
+    if (tint === 'copper') return `rgba(184, 135, 52, ${alpha.toFixed(3)})`;
+    return `rgba(155, 61, 63, ${alpha.toFixed(3)})`;
+  }
+
+  function valuesInDepthRange(data, depthMinKm, depthMaxKm) {
+    const depthStepKm = processingModel.maxDepthKm / (processingModel.depthBins - 1);
+    return data.map((row, depthIndex) => ({
+      row,
+      depthKm: depthIndex * depthStepKm
+    })).filter((entry) => entry.depthKm >= depthMinKm && entry.depthKm <= depthMaxKm);
+  }
+
+  function maxFromPanels(panels) {
+    return panels.reduce((currentMax, panel) => Math.max(
+      currentMax,
+      ...panel.visibleRows.flatMap((entry) => entry.row)
+    ), 0);
+  }
+
+  function renderSingleProcessingHeatmap(container, options) {
+    const width = 560;
+    const height = 365;
+    const margin = { left: 68, right: 25, top: 48, bottom: 46 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const visibleRows = valuesInDepthRange(options.data, options.depthMinKm, options.depthMaxKm);
+    const columnCount = visibleRows[0].row.length;
+    const maxValue = Math.max(...visibleRows.flatMap((entry) => entry.row));
+    const sx = (value) => margin.left + ((value - options.xMin) / (options.xMax - options.xMin)) * plotWidth;
+    const sy = (value) => margin.top + ((value - options.depthMinKm) / (options.depthMaxKm - options.depthMinKm)) * plotHeight;
+    const cellWidth = plotWidth / columnCount;
+    const cellHeight = plotHeight / visibleRows.length;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${options.ariaLabel}">`;
+    svg += `<text class="processing-title" x="${margin.left}" y="18">${options.title}</text>`;
+    svg += `<text class="processing-note" x="${margin.left}" y="36">${options.note}</text>`;
+    options.yTicks.forEach((value) => {
+      const y = sy(value);
+      svg += `<line class="processing-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+      svg += `<text class="processing-label" x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${fmt(value, 1)}</text>`;
+    });
+    options.xTicks.forEach((value) => {
+      const x = sx(value);
+      svg += `<line class="processing-grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
+      svg += `<text class="processing-label" x="${x}" y="${height - margin.bottom + 17}" text-anchor="middle">${options.formatX(value)}</text>`;
+    });
+    svg += `<rect class="processing-frame" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    visibleRows.forEach((entry, rowIndex) => {
+      entry.row.forEach((value, columnIndex) => {
+        svg += `<rect class="processing-cell" x="${(margin.left + columnIndex * cellWidth).toFixed(2)}" y="${(margin.top + rowIndex * cellHeight).toFixed(2)}" width="${(cellWidth + 0.25).toFixed(2)}" height="${(cellHeight + 0.25).toFixed(2)}" fill="${heatColor(value, maxValue, options.tint)}"></rect>`;
+      });
+    });
+    if (options.showZero) {
+      svg += `<line class="processing-zero-line" x1="${sx(0)}" y1="${margin.top}" x2="${sx(0)}" y2="${height - margin.bottom}"></line>`;
+    }
+    svg += `<rect class="processing-target-window" x="${margin.left}" y="${sy(model.targetDepthKm - model.depthToleranceKm)}" width="${plotWidth}" height="${Math.max(1, sy(model.targetDepthKm + model.depthToleranceKm) - sy(model.targetDepthKm - model.depthToleranceKm))}"></rect>`;
+    svg += `<line class="processing-target-line" x1="${margin.left}" y1="${sy(model.targetDepthKm)}" x2="${width - margin.right}" y2="${sy(model.targetDepthKm)}"></line>`;
+    if (options.marker) {
+      svg += `<circle class="processing-marker" cx="${sx(options.marker.x)}" cy="${sy(options.marker.depthKm)}" r="5"><title>${options.marker.label}</title></circle>`;
+    }
+    if (options.targetMarker) {
+      svg += `<rect class="processing-target-marker" x="${sx(options.targetMarker.x) - 5}" y="${sy(model.targetDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${sx(options.targetMarker.x)} ${sy(model.targetDepthKm)})"><title>subsurface target</title></rect>`;
+    }
+    svg += `<line class="processing-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
+    svg += `<line class="processing-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
+    svg += `<text class="processing-title" x="${margin.left + plotWidth / 2}" y="${height - 6}" text-anchor="middle">${options.xLabel}</text>`;
+    svg += `<text class="processing-title" transform="translate(17 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km)</text>`;
+    svg += '</svg>';
+    container.innerHTML = svg;
+  }
+
+  function renderStackedProcessingHeatmaps(container, options) {
+    const width = 560;
+    const height = 365;
+    const margin = { left: 80, right: 25, top: 32, bottom: 45 };
+    const gap = 13;
+    const plotWidth = width - margin.left - margin.right;
+    const panelHeight = (height - margin.top - margin.bottom - gap * (options.panels.length - 1)) / options.panels.length;
+    const panels = options.panels.map((panel) => ({
+      ...panel,
+      visibleRows: valuesInDepthRange(panel.data, options.depthMinKm, options.depthMaxKm)
+    }));
+    const maxValue = maxFromPanels(panels);
+    const sx = (value) => margin.left + ((value - options.xMin) / (options.xMax - options.xMin)) * plotWidth;
+    const sy = (value, top) => top + ((value - options.depthMinKm) / (options.depthMaxKm - options.depthMinKm)) * panelHeight;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${options.ariaLabel}">`;
+    svg += `<text class="processing-title" x="${margin.left}" y="16">${options.title}</text>`;
+    panels.forEach((panel, panelIndex) => {
+      const top = margin.top + panelIndex * (panelHeight + gap);
+      const columnCount = panel.visibleRows[0].row.length;
+      const cellWidth = plotWidth / columnCount;
+      const cellHeight = panelHeight / panel.visibleRows.length;
+      svg += `<text class="${panel.danger ? 'processing-danger' : 'processing-title'}" x="${margin.left - 12}" y="${top + 13}" text-anchor="end">${panel.label}</text>`;
+      options.yTicks.forEach((value) => {
+        const y = sy(value, top);
+        svg += `<line class="processing-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+      });
+      options.xTicks.forEach((value) => {
+        const x = sx(value);
+        svg += `<line class="processing-grid-line" x1="${x}" y1="${top}" x2="${x}" y2="${top + panelHeight}"></line>`;
+      });
+      svg += `<rect class="processing-frame" x="${margin.left}" y="${top}" width="${plotWidth}" height="${panelHeight}"></rect>`;
+      panel.visibleRows.forEach((entry, rowIndex) => {
+        entry.row.forEach((value, columnIndex) => {
+          svg += `<rect class="processing-cell" x="${(margin.left + columnIndex * cellWidth).toFixed(2)}" y="${(top + rowIndex * cellHeight).toFixed(2)}" width="${(cellWidth + 0.25).toFixed(2)}" height="${(cellHeight + 0.25).toFixed(2)}" fill="${heatColor(value, maxValue, panel.tint || options.tint)}"></rect>`;
+        });
+      });
+      if (options.showZero) {
+        svg += `<line class="processing-zero-line" x1="${sx(0)}" y1="${top}" x2="${sx(0)}" y2="${top + panelHeight}"></line>`;
+      }
+      svg += `<rect class="processing-target-window" x="${margin.left}" y="${sy(model.targetDepthKm - model.depthToleranceKm, top)}" width="${plotWidth}" height="${Math.max(1, sy(model.targetDepthKm + model.depthToleranceKm, top) - sy(model.targetDepthKm - model.depthToleranceKm, top))}"></rect>`;
+      svg += `<line class="processing-target-line" x1="${margin.left}" y1="${sy(model.targetDepthKm, top)}" x2="${width - margin.right}" y2="${sy(model.targetDepthKm, top)}"></line>`;
+      if (panel.note) {
+        svg += `<text class="${panel.danger ? 'processing-danger' : 'processing-note'}" x="${width - margin.right}" y="${top + 13}" text-anchor="end">${panel.note}</text>`;
+      }
+    });
+    options.xTicks.forEach((value) => {
+      const x = sx(value);
+      svg += `<text class="processing-label" x="${x}" y="${height - margin.bottom + 17}" text-anchor="middle">${options.formatX(value)}</text>`;
+    });
+    options.yTicks.forEach((value) => {
+      const y = sy(value, margin.top + panelHeight + gap);
+      svg += `<text class="processing-label" x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${fmt(value, 1)}</text>`;
+    });
+    svg += `<line class="processing-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
+    svg += `<line class="processing-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
+    svg += `<text class="processing-title" x="${margin.left + plotWidth / 2}" y="${height - 6}" text-anchor="middle">${options.xLabel}</text>`;
+    svg += `<text class="processing-title" transform="translate(17 ${margin.top + (height - margin.top - margin.bottom) / 2}) rotate(-90)" text-anchor="middle">apparent depth (km)</text>`;
+    svg += '</svg>';
+    container.innerHTML = svg;
+  }
+
+  function processingExperiment() {
+    const rawMatrix = buildTraceMatrix(originalPrfHz);
+    const cases = [
+      { label: 'all', step: 1, prfHz: originalPrfHz, matrix: rawMatrix },
+      { label: 'every 2nd', step: 2, prfHz: originalPrfHz / 2, matrix: downsampleMatrix(rawMatrix, 2) },
+      { label: 'every 4th', step: 4, prfHz: originalPrfHz / 4, matrix: downsampleMatrix(rawMatrix, 4) }
+    ].map((entry) => ({
+      ...entry,
+      spectrum: transformRows(entry.matrix)
+    }));
+    return {
+      rawMatrix,
+      rawMagnitude: magnitudeRows(rawMatrix),
+      cases
+    };
+  }
+
+  function renderProcessingExperiment() {
+    const experiment = processingExperiment();
+    const allCase = experiment.cases[0];
+    const fullSpectrum = shiftedSpectrum(allCase.spectrum, allCase.prfHz);
+    const selectedAliasEveryFour = alias(selectedFoldingPoint.trueDopplerHz, originalPrfHz / 4);
+
+    renderSingleProcessingHeatmap(radargramPlot, {
+      data: experiment.rawMagnitude,
+      depthMinKm: 0,
+      depthMaxKm: processingModel.maxDepthKm,
+      xMin: 0,
+      xMax: 1,
+      xTicks: [0, 0.25, 0.5, 0.75, 1],
+      yTicks: [0, 6, 12, 18, 24],
+      tint: 'teal',
+      title: '64 complex traces: 12 surface points + one target',
+      note: 'selected surface point is bright; other surface points are weak background',
+      xLabel: 'trace number',
+      ariaLabel: 'Generated complex radargram with twelve surface scatterers and one fixed subsurface target',
+      formatX: (value) => fmt(value, 0),
+      targetMarker: { x: 32 }
+    });
+
+    renderSingleProcessingHeatmap(fftPlot, {
+      data: magnitudeRows(fullSpectrum.data),
+      depthMinKm: 0,
+      depthMaxKm: processingModel.maxDepthKm,
+      xMin: fullSpectrum.xMinHz,
+      xMax: fullSpectrum.xMaxHz,
+      xTicks: [-originalPrfHz / 2, -selectedFoldingPoint.trueDopplerHz, 0, selectedFoldingPoint.trueDopplerHz, originalPrfHz / 2],
+      yTicks: [0, 6, 12, 18, 24],
+      tint: 'copper',
+      title: `all-trace FFT at ${fmt(originalPrfHz, 1)} Hz sampling`,
+      note: `selected clutter is at true Doppler ${signed(selectedFoldingPoint.trueDopplerHz, 1)} Hz, not yet at 0 Hz`,
+      xLabel: 'Doppler frequency (Hz)',
+      ariaLabel: 'Original all-trace along-track FFT before trace deletion',
+      formatX: (value) => signed(value, 0),
+      showZero: true,
+      marker: {
+        x: selectedFoldingPoint.trueDopplerHz,
+        depthKm: selectedFoldingPoint.apparentDepthKm,
+        label: 'selected surface clutter true Doppler'
+      },
+      targetMarker: { x: 0 }
+    });
+
+    renderStackedProcessingHeatmaps(decimatedFftPlot, {
+      panels: experiment.cases.map((entry) => {
+        const zoomSpectrum = shiftedSpectrum(
+          entry.spectrum,
+          entry.prfHz,
+          -processingModel.zoomDopplerHz,
+          processingModel.zoomDopplerHz
+        );
+        const selectedAliasHz = alias(selectedFoldingPoint.trueDopplerHz, entry.prfHz);
+        return {
+          label: entry.label,
+          data: magnitudeRows(zoomSpectrum.data),
+          danger: Math.abs(selectedAliasHz) < 1,
+          note: `selected alias ${signed(selectedAliasHz, 1)} Hz`,
+          tint: Math.abs(selectedAliasHz) < 1 ? 'red' : 'copper'
+        };
+      }),
+      depthMinKm: processingModel.zoomDepthMinKm,
+      depthMaxKm: processingModel.zoomDepthMaxKm,
+      xMin: -processingModel.zoomDopplerHz,
+      xMax: processingModel.zoomDopplerHz,
+      xTicks: [-200, -100, 0, 100, 200],
+      yTicks: [6.0, model.targetDepthKm, 7.5],
+      tint: 'red',
+      title: 'same data after numerical trace deletion',
+      xLabel: 'aliased Doppler near target cell (Hz)',
+      ariaLabel: 'Recalculated FFTs after keeping all traces every second trace and every fourth trace',
+      formatX: (value) => signed(value, 0),
+      showZero: true
+    });
+
+    renderStackedProcessingHeatmaps(reconstructionPlot, {
+      panels: experiment.cases.map((entry) => {
+        const zeroOnly = zeroDopplerOnly(entry.spectrum);
+        const reconstructed = magnitudeRows(transformRows(zeroOnly, true));
+        const selectedAliasHz = alias(selectedFoldingPoint.trueDopplerHz, entry.prfHz);
+        return {
+          label: entry.label,
+          data: reconstructed,
+          danger: Math.abs(selectedAliasHz) < 1,
+          note: Math.abs(selectedAliasHz) < 1
+            ? 'folded clutter reconstructs at target depth'
+            : 'target only in 0-Hz cell',
+          tint: Math.abs(selectedAliasHz) < 1 ? 'red' : 'teal'
+        };
+      }),
+      depthMinKm: processingModel.zoomDepthMinKm,
+      depthMaxKm: processingModel.zoomDepthMaxKm,
+      xMin: 0,
+      xMax: processingModel.traceCount - 1,
+      xTicks: [0, 16, 32, 48, 63],
+      yTicks: [6.0, model.targetDepthKm, 7.5],
+      tint: 'teal',
+      title: `0-Hz inverse FFT; every-4 alias = ${signed(selectedAliasEveryFour, 1)} Hz`,
+      xLabel: 'normalized along-track aperture',
+      ariaLabel: 'Inverse FFT reconstruction of the zero Doppler cell after trace deletion',
+      formatX: (value) => `${fmt(value * 100, 0)}%`,
+      showZero: false
+    });
+  }
+
   function draw(effectivePrfHz) {
     const { points, foldingReturn, selectedOverlaps, foldBand } = calculate(effectivePrfHz);
     const discreteTargetOverlap = selectedOverlaps.some((point) => Math.abs(point.apparentDepthKm - model.targetDepthKm) <= model.depthToleranceKm);
@@ -363,6 +768,10 @@
     renderFoldDepthBlock(effectivePrfHz, foldBand, targetOverlap);
     renderTraceCheck(foldingReturn, targetOverlap);
     renderFastTimeDopplerCheck(effectivePrfHz, foldingReturn, targetOverlap);
+    if (!processingRendered) {
+      renderProcessingExperiment();
+      processingRendered = true;
+    }
     originalPrfText.textContent = `Fixed transmitted/trace PRF: ${fmt(originalPrfHz, 1)} Hz. Only the effective Doppler sampling rate moves.`;
     output.textContent = `${fmt(effectivePrfHz, 1)} Hz`;
     status.className = `prf-status${targetOverlap ? ' is-overlap' : ''}`;
