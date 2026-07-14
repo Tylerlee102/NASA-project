@@ -200,8 +200,15 @@
     ) / model.iceIndex;
     const intersectionX = sx(0);
     const intersectionY = sy(model.targetDepthKm);
-    const pointClass = overlapsTarget ? 'check-overlap-point' : 'check-delay-point';
     const stateLabel = overlapsTarget ? 'same delay + folded Doppler' : 'same delay; Doppler separated';
+    const aliasFraction = Math.max(-1, Math.min(1, foldingReturn.aliasedDopplerHz / (model.dopplerToleranceHz * 1.15)));
+    const motionHalfWidthKm = Math.min(Math.abs(foldingReturn.xKm), 24);
+    const movingXKm = aliasFraction * motionHalfWidthKm;
+    const movingX = sx(movingXKm);
+    const movingY = sy(clutterTraceDepth(movingXKm));
+    const movingLabelAnchor = movingXKm >= 0 ? 'start' : 'end';
+    const movingLabelX = movingX + (movingXKm >= 0 ? 10 : -10);
+    const movingLabelY = movingY + (overlapsTarget ? 20 : -9);
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Selected clutter trace and fixed target trace crossing at 6.74 kilometers apparent depth">
       <defs><clipPath id="trace-check-clip"><rect x="${margin.left}" y="${margin.top}" width="${width - margin.left - margin.right}" height="${height - margin.top - margin.bottom}"></rect></clipPath></defs>`;
 
@@ -227,7 +234,10 @@
     svg += `<path class="check-clutter-curve selected" d="${pathFor(clutterTraceDepth)}"><title>Selected clutter ${foldingReturn.index + 1} range trace</title></path>`;
     svg += `<path class="check-target-curve" d="${pathFor(targetTraceDepth)}"><title>Fixed subsurface target range trace</title></path>`;
     svg += '</g>';
-    svg += `<circle class="${pointClass}" cx="${intersectionX}" cy="${intersectionY}" r="6"></circle>`;
+    svg += `<line class="check-motion-guide" x1="${intersectionX}" y1="${intersectionY}" x2="${movingX}" y2="${movingY}"></line>`;
+    svg += `<rect class="check-trace-target-marker" x="${intersectionX - 5}" y="${intersectionY - 5}" width="10" height="10" transform="rotate(45 ${intersectionX} ${intersectionY})"><title>Fixed subsurface target crossing</title></rect>`;
+    svg += `<circle class="check-moving-clutter${overlapsTarget ? ' overlap' : ''}" cx="${movingX}" cy="${movingY}" r="6"><title>Selected clutter ${foldingReturn.index + 1}: ${signed(foldingReturn.aliasedDopplerHz, 1)} Hz folded Doppler</title></circle>`;
+    svg += `<text class="${overlapsTarget ? 'check-danger' : 'check-title'}" x="${movingLabelX}" y="${movingLabelY}" text-anchor="${movingLabelAnchor}">moving clutter dot</text>`;
     svg += `<text class="${overlapsTarget ? 'check-danger' : 'check-title'}" x="${intersectionX + 10}" y="${intersectionY - 9}">${fmt(model.targetDepthKm, 2)} km crossing</text>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
