@@ -1,7 +1,7 @@
 /* Geometry and transmitted PRF stay fixed. The range control changes only the
    effective along-track sampling PRF used by the alias calculation. */
 
-.simple-lab { width: min(1180px, 100%); margin: 0 auto; padding: 0 32px 52px; }
+.simple-lab { width: min(1260px, 100%); margin: 0 auto; padding: 0 24px 52px; }
 .simple-header { margin-bottom: 28px; }
 .simple-header h1 { max-width: none; margin: 10px 0 0; font-size: 4.4rem; }
 .lab-back-link { display: inline-flex; min-height: 40px; align-items: center; color: var(--accent-2); font-size: .82rem; font-weight: 800; text-decoration: none; }
@@ -26,15 +26,15 @@
 .model-boundary { margin: 12px 0 0; padding: 9px 11px; border-left: 3px solid var(--copper); background: #f7efe3; color: var(--muted); font-size: .76rem; line-height: 1.45; }
 .model-boundary strong { color: var(--ink-soft); }
 
-.visual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 18px; margin-top: 18px; }
-.horizontal-map { display: grid; min-width: 0; grid-template-rows: auto 1fr; align-self: stretch; padding: 22px; }
+.visual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 20px; margin-top: 18px; }
+.horizontal-map { display: grid; min-width: 0; grid-template-rows: auto 1fr; align-self: stretch; padding: 18px; }
 .blur-map { margin-top: 0; }
-.map-heading { min-height: 112px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.map-heading h2, .map-heading h3 { max-width: 650px; margin: 0; font-size: 2.15rem; }
+.map-heading { min-height: 58px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.map-heading h2, .map-heading h3 { max-width: 650px; margin: 0; font-size: 1.9rem; }
 .map-heading p { margin: 7px 0 0; color: var(--muted); font-size: .84rem; }
-.horizontal-plot, .blur-plot, .diagnostic-plot { min-height: 0; aspect-ratio: 560 / 350; padding-top: 10px; overflow: hidden; }
+.horizontal-plot, .blur-plot, .diagnostic-plot { min-height: 0; aspect-ratio: 560 / 390; padding-top: 8px; overflow: hidden; }
 .horizontal-plot svg, .blur-plot svg, .diagnostic-plot svg { display: block; width: 100%; height: 100%; }
-.checks-section { margin-top: 30px; }
+.checks-section { margin-top: 24px; }
 .checks-heading { max-width: 780px; }
 .checks-heading h2 { margin: 7px 0 0; font-size: 2.8rem; }
 .checks-heading > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: .88rem; }
@@ -92,7 +92,7 @@
 .check-trace-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.7; }
 
 @media (max-width: 700px) {
-  .simple-lab { padding: 0 16px 44px; }
+  .simple-lab { padding: 0 12px 44px; }
   .simple-header h1 { font-size: 2.6rem; }
   .prf-control, .horizontal-map { padding: 16px; }
   .prf-label-row { display: block; }
@@ -104,5 +104,5 @@
   .map-heading { min-height: 0; }
   .checks-heading h2 { font-size: 2.05rem; }
   .visual-grid { grid-template-columns: 1fr; }
-  .horizontal-plot, .blur-plot, .diagnostic-plot { min-height: 0; aspect-ratio: 560 / 350; }
+  .horizontal-plot, .blur-plot, .diagnostic-plot { min-height: 0; aspect-ratio: 560 / 390; }
 }
