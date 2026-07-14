@@ -27,14 +27,16 @@
 .model-boundary strong { color: var(--ink-soft); }
 
 .visual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 20px; margin-top: 18px; }
+.full-span { grid-column: 1 / -1; }
 .horizontal-map { display: grid; min-width: 0; grid-template-rows: auto 1fr; align-self: stretch; padding: 18px; }
 .blur-map { margin-top: 0; }
 .map-heading { min-height: 58px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .map-heading h2, .map-heading h3 { max-width: 650px; margin: 0; font-size: 1.9rem; }
 .map-heading p { margin: 7px 0 0; color: var(--muted); font-size: .84rem; }
-.horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot { min-height: 0; aspect-ratio: 560 / 405; padding-top: 8px; overflow: hidden; }
-.horizontal-plot svg, .blur-plot svg, .diagnostic-plot svg, .processing-plot svg { display: block; width: 100%; height: 100%; }
+.horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot, .synthetic-radargram-plot { min-height: 0; aspect-ratio: 560 / 405; padding-top: 8px; overflow: hidden; }
+.horizontal-plot svg, .blur-plot svg, .diagnostic-plot svg, .processing-plot svg, .synthetic-radargram-plot svg { display: block; width: 100%; height: 100%; }
 .processing-plot { aspect-ratio: 560 / 455; }
+.synthetic-radargram-plot { aspect-ratio: 820 / 315; }
 .checks-section, .processing-section { margin-top: 24px; }
 .checks-heading { max-width: 780px; }
 .checks-heading h2 { margin: 7px 0 0; font-size: 2.8rem; }
@@ -105,6 +107,21 @@
 .processing-marker { fill: var(--danger); stroke: #6d2023; stroke-width: 1.8; }
 .processing-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.6; }
 .processing-cell { shape-rendering: crispEdges; }
+.fake-radargram-bg { fill: #fffefa; }
+.fake-radargram-frame { fill: none; stroke: #9a907f; stroke-width: 1.1; }
+.fake-radargram-grid { stroke: #e4dcca; stroke-width: 1; }
+.fake-radargram-label { fill: #645f56; font-size: 10px; }
+.fake-radargram-title { fill: #17494d; font-size: 11px; font-weight: 850; }
+.fake-danger { fill: var(--danger); font-size: 11px; font-weight: 850; }
+.fake-layer { fill: var(--accent-2); }
+.fake-trace-column { fill: rgba(47, 111, 115, .035); }
+.fake-fold-smear { fill: url(#alias-radargram-smear); }
+.fake-fold-core { fill: rgba(155, 61, 63, .17); }
+.fake-fold-blob { fill: rgba(155, 61, 63, .30); }
+.fake-fold-line { stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 7 5; }
+.fake-target-glow { fill: url(#alias-target-glow); }
+.fake-target-line { stroke: var(--accent-2); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.fake-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.8; }
 
 @media (max-width: 700px) {
   .simple-lab { padding: 0 12px 44px; }
@@ -119,6 +136,7 @@
   .map-heading { min-height: 0; }
   .checks-heading h2 { font-size: 2.05rem; }
   .visual-grid { grid-template-columns: 1fr; }
-  .horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot { min-height: 0; aspect-ratio: 560 / 405; }
+  .horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot, .synthetic-radargram-plot { min-height: 0; aspect-ratio: 560 / 405; }
   .processing-plot { aspect-ratio: 560 / 455; }
+  .synthetic-radargram-plot { aspect-ratio: 820 / 315; }
 }

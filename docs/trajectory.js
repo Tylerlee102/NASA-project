@@ -44,6 +44,7 @@
   const foldPlot = document.getElementById('fold-plot');
   const tracePlot = document.getElementById('trace-plot');
   const dopplerPlot = document.getElementById('doppler-plot');
+  const flybyRadargramPlot = document.getElementById('flyby-radargram-plot');
 
   const mod = (value, divisor) => ((value % divisor) + divisor) % divisor;
   const alias = (frequencyHz, prfHz) => mod(frequencyHz + prfHz / 2, prfHz) - prfHz / 2;
@@ -397,6 +398,85 @@
     dopplerPlot.innerHTML = svg;
   }
 
+  function renderFlybyRadargram(state) {
+    const width = 720;
+    const height = 340;
+    const margin = { left: 66, right: 25, top: 38, bottom: 48 };
+    const radarDepthValues = timeline.flatMap((row) => [
+      row.target.apparentDepthKm,
+      ...(row.band ? [row.band.minDepthKm, row.band.maxDepthKm] : []),
+      ...row.foldingPair.map((point) => point.apparentDepthKm)
+    ]).filter(Number.isFinite);
+    const depthMinKm = Math.max(0, Math.floor((Math.min(...radarDepthValues) - 0.6) * 10) / 10);
+    const depthMaxKm = Math.ceil((Math.max(...radarDepthValues) + 0.8) * 10) / 10;
+    const scales = chartScales(width, height, margin, model.timeMinS, model.timeMaxS, depthMinKm, depthMaxKm);
+    const yTicks = Array.from({ length: 5 }, (_, index) => depthMinKm + ((depthMaxKm - depthMinKm) * index) / 4);
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const nearestBandSegments = [];
+    let active = [];
+    let previousBand = null;
+    timeline.forEach((row) => {
+      if (!row.band) {
+        if (active.length) nearestBandSegments.push(active);
+        active = [];
+        previousBand = null;
+        return;
+      }
+      const discontinuity = previousBand
+        && (previousBand.foldOrder !== row.band.foldOrder
+          || Math.abs(previousBand.centerDepthKm - row.band.centerDepthKm) > 1.7);
+      if (discontinuity && active.length) {
+        nearestBandSegments.push(active);
+        active = [];
+      }
+      active.push(row);
+      previousBand = row.band;
+    });
+    if (active.length) nearestBandSegments.push(active);
+
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Simplified synthetic flyby radargram with target trace and folded clutter blur">
+      <defs>
+        <filter id="flyby-radargram-soften" x="-8%" y="-80%" width="116%" height="260%"><feGaussianBlur stdDeviation="5"></feGaussianBlur></filter>
+        <linearGradient id="flyby-radargram-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#285f64" stop-opacity=".035"></stop>
+          <stop offset=".5" stop-color="#285f64" stop-opacity=".015"></stop>
+          <stop offset="1" stop-color="#974143" stop-opacity=".035"></stop>
+        </linearGradient>
+      </defs>`;
+    svg += `<rect class="radargram-bg" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    svg += `<rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" fill="url(#flyby-radargram-bg)"></rect>`;
+    for (let timeS = model.timeMinS; timeS <= model.timeMaxS + 1e-9; timeS += 1) {
+      const x = scales.x(timeS);
+      svg += `<rect class="radargram-trace-column" x="${x - 1}" y="${margin.top}" width="2" height="${plotHeight}"></rect>`;
+    }
+    [state.target.apparentDepthKm - 0.6, state.target.apparentDepthKm + 0.5, depthMinKm + 0.25, depthMaxKm - 0.3]
+      .filter((depthKm) => depthKm > depthMinKm && depthKm < depthMaxKm)
+      .forEach((depthKm, index) => {
+        svg += `<rect class="radargram-layer" x="${margin.left}" y="${scales.y(depthKm) - 3}" width="${plotWidth}" height="6" opacity="${index < 2 ? 0.16 : 0.10}"></rect>`;
+      });
+    svg += axes(width, height, margin, scales, [-10, -5, 0, 5, 10], yTicks, 'time from closest approach (s)', 'apparent depth / fast time (km)', signed, (v) => fmt(v, 1));
+    svg += `<path class="target-cell" d="${areaPath(timeline, scales, (row) => row.target.apparentDepthKm - model.depthToleranceKm, (row) => row.target.apparentDepthKm + model.depthToleranceKm)}"></path>`;
+    nearestBandSegments.forEach((segment) => {
+      svg += `<path class="radargram-fold-smear" filter="url(#flyby-radargram-soften)" d="${areaPath(segment, scales, (row) => row.band.minDepthKm - 0.10, (row) => row.band.maxDepthKm + 0.10)}"></path>`;
+      svg += `<path class="radargram-fold-core" d="${areaPath(segment, scales, (row) => row.band.minDepthKm, (row) => row.band.maxDepthKm)}"></path>`;
+      svg += `<path class="radargram-fold-line" d="${linePath(segment, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.band.centerDepthKm }))}"></path>`;
+    });
+    svg += `<path class="target-trace" d="${linePath(timeline, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.target.apparentDepthKm }))}"></path>`;
+    svg += `<line class="current-guide" x1="${scales.x(state.timeS)}" y1="${margin.top}" x2="${scales.x(state.timeS)}" y2="${height - margin.bottom}"></line>`;
+    if (state.band) {
+      const bandY = scales.y(state.band.centerDepthKm);
+      svg += `<ellipse class="radargram-current-blur" cx="${scales.x(state.timeS)}" cy="${bandY}" rx="34" ry="13" filter="url(#flyby-radargram-soften)"></ellipse>`;
+      svg += `<circle class="response-center" cx="${scales.x(state.timeS)}" cy="${bandY}" r="5"></circle>`;
+      svg += `<text class="${state.overlap ? 'label-danger' : 'label'}" x="${Math.min(width - margin.right - 120, scales.x(state.timeS) + 10)}" y="${bandY - 11}">folded clutter blur</text>`;
+    }
+    svg += `<rect class="target" x="${scales.x(state.timeS) - 5}" y="${scales.y(state.target.apparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(state.timeS)} ${scales.y(state.target.apparentDepthKm)})"></rect>`;
+    svg += `<text class="label-danger" x="${margin.left + 8}" y="22">red: simplified folded-clutter smear</text>`;
+    svg += `<text class="label-strong" x="${width - margin.right}" y="22" text-anchor="end">teal dashed: fixed subsurface target trace</text>`;
+    svg += '</svg>';
+    flybyRadargramPlot.innerHTML = svg;
+  }
+
   function draw(timeS) {
     const state = stateAt(timeS);
     timeOutput.textContent = `${signed(timeS, 2)} s`;
@@ -416,6 +496,7 @@
     renderFoldTimeline(state);
     renderTraceTimeline(state);
     renderDopplerDepth(state);
+    renderFlybyRadargram(state);
   }
 
   let animationTimer = null;
