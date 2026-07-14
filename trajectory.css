@@ -219,6 +219,8 @@ a:focus-visible {
   padding: 22px;
 }
 
+.graph-panel-wide { grid-column: 1 / -1; }
+
 .graph-heading {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
@@ -260,6 +262,8 @@ a:focus-visible {
   overflow: hidden;
 }
 
+.radargram-plot { aspect-ratio: 720 / 340; }
+
 .plot svg {
   display: block;
   width: 100%;
@@ -289,6 +293,13 @@ a:focus-visible {
 .response-tail { fill: var(--red-soft); stroke: var(--red); stroke-width: 1.8; }
 .response-center { fill: var(--red); stroke: var(--panel); stroke-width: 1.5; }
 .target-tail { fill: var(--teal-soft); stroke: var(--teal); stroke-width: 1.8; }
+.radargram-bg { fill: var(--panel); stroke: #7c715f; stroke-width: 1.1; }
+.radargram-trace-column { fill: rgba(40, 95, 100, .035); }
+.radargram-layer { fill: var(--teal); }
+.radargram-fold-smear { fill: rgba(151, 65, 67, .34); stroke: none; }
+.radargram-fold-core { fill: rgba(151, 65, 67, .18); stroke: none; }
+.radargram-fold-line { fill: none; stroke: var(--red); stroke-width: 2; stroke-dasharray: 7 5; }
+.radargram-current-blur { fill: rgba(151, 65, 67, .48); stroke: none; }
 .label {
   fill: #6f6352;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;

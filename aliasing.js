@@ -26,6 +26,7 @@
   const status = document.getElementById('trace-status');
   const plot = document.getElementById('horizontal-plot');
   const blurPlot = document.getElementById('blur-plot');
+  const liveRadargramPlot = document.getElementById('live-radargram-plot');
   const traceCheckPlot = document.getElementById('trace-check-plot');
   const dopplerCheckPlot = document.getElementById('doppler-check-plot');
   const radargramPlot = document.getElementById('radargram-plot');
@@ -191,6 +192,86 @@
     svg += `<text class="blur-title-text" transform="translate(17 ${margin.top + (height - margin.top - margin.bottom) / 2}) rotate(-90)" text-anchor="middle">apparent depth (km, downward)</text>`;
     svg += '</svg>';
     blurPlot.innerHTML = svg;
+  }
+
+  function renderLiveRadargram(effectivePrfHz, foldBand, overlapsTarget) {
+    const width = 820;
+    const height = 315;
+    const margin = { left: 70, right: 26, top: 36, bottom: 45 };
+    const traceMin = 0;
+    const traceMax = 63;
+    const depthMinKm = Math.max(0, Math.floor((foldDepthScaleKm.min - 0.45) * 10) / 10);
+    const depthMaxKm = Math.ceil((foldDepthScaleKm.max + 0.45) * 10) / 10;
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const sx = (value) => margin.left + ((value - traceMin) / (traceMax - traceMin)) * plotWidth;
+    const sy = (value) => margin.top + ((value - depthMinKm) / (depthMaxKm - depthMinKm)) * plotHeight;
+    const xTicks = [0, 16, 32, 48, 63];
+    const yTicks = Array.from({ length: 5 }, (_, index) => depthMinKm + ((depthMaxKm - depthMinKm) * index) / 4);
+    const aliasHz = alias(selectedFoldingPoint.trueDopplerHz, effectivePrfHz);
+    const blurOpacity = overlapsTarget ? 0.58 : 0.32;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Simplified synthetic radargram showing a folded surface-clutter blur moving with PRF">
+      <defs>
+        <filter id="alias-radargram-soften" x="-12%" y="-80%" width="124%" height="260%"><feGaussianBlur stdDeviation="6"></feGaussianBlur></filter>
+        <linearGradient id="alias-radargram-smear" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#974143" stop-opacity="0"></stop>
+          <stop offset=".5" stop-color="#974143" stop-opacity="${blurOpacity}"></stop>
+          <stop offset="1" stop-color="#974143" stop-opacity="0"></stop>
+        </linearGradient>
+        <radialGradient id="alias-target-glow">
+          <stop offset="0" stop-color="#285f64" stop-opacity=".35"></stop>
+          <stop offset=".62" stop-color="#285f64" stop-opacity=".12"></stop>
+          <stop offset="1" stop-color="#285f64" stop-opacity="0"></stop>
+        </radialGradient>
+      </defs>`;
+
+    svg += `<rect class="fake-radargram-bg" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    xTicks.forEach((value) => {
+      const x = sx(value);
+      svg += `<line class="fake-radargram-grid" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
+      svg += `<text class="fake-radargram-label" x="${x}" y="${height - margin.bottom + 18}" text-anchor="middle">${fmt(value, 0)}</text>`;
+    });
+    yTicks.forEach((value) => {
+      const y = sy(value);
+      svg += `<line class="fake-radargram-grid" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+      svg += `<text class="fake-radargram-label" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${fmt(value, 2)}</text>`;
+    });
+    [model.targetDepthKm - 0.55, model.targetDepthKm + 0.42, depthMinKm + 0.18, depthMaxKm - 0.20]
+      .filter((depthKm) => depthKm > depthMinKm && depthKm < depthMaxKm)
+      .forEach((depthKm, index) => {
+        const y = sy(depthKm);
+        const opacity = index < 2 ? 0.18 : 0.11;
+        svg += `<rect class="fake-layer" x="${margin.left}" y="${y - 3}" width="${plotWidth}" height="6" opacity="${opacity}"></rect>`;
+      });
+    for (let trace = 0; trace <= 63; trace += 4) {
+      const x = sx(trace);
+      svg += `<rect class="fake-trace-column" x="${x - 1.2}" y="${margin.top}" width="2.4" height="${plotHeight}"></rect>`;
+    }
+
+    if (foldBand) {
+      const centerY = sy(foldBand.centerDepthKm);
+      const bandPixelHeight = Math.max(22, Math.abs(sy(foldBand.maxDepthKm) - sy(foldBand.minDepthKm)) * 1.7);
+      svg += `<rect class="fake-fold-smear" x="${margin.left + 4}" y="${centerY - bandPixelHeight / 2}" width="${plotWidth - 8}" height="${bandPixelHeight}" filter="url(#alias-radargram-soften)"></rect>`;
+      svg += `<rect class="fake-fold-core" x="${margin.left + 4}" y="${centerY - Math.max(6, bandPixelHeight * 0.16)}" width="${plotWidth - 8}" height="${Math.max(12, bandPixelHeight * 0.32)}"></rect>`;
+      [18, 32, 46].forEach((trace, index) => {
+        const localY = centerY + Math.sin((trace + effectivePrfHz) * 0.08) * 4;
+        svg += `<ellipse class="fake-fold-blob" cx="${sx(trace)}" cy="${localY}" rx="${index === 1 ? 38 : 30}" ry="${index === 1 ? 13 : 10}" filter="url(#alias-radargram-soften)"></ellipse>`;
+      });
+      svg += `<line class="fake-fold-line" x1="${margin.left}" y1="${centerY}" x2="${width - margin.right}" y2="${centerY}"></line>`;
+      svg += `<text class="${overlapsTarget ? 'fake-danger' : 'fake-radargram-title'}" x="${margin.left + 8}" y="${centerY - bandPixelHeight / 2 - 8}">folded clutter blur: ${fmt(foldBand.centerDepthKm, 2)} km, alias ${signed(aliasHz, 1)} Hz</text>`;
+    }
+
+    const targetY = sy(model.targetDepthKm);
+    svg += `<ellipse class="fake-target-glow" cx="${sx(32)}" cy="${targetY}" rx="62" ry="24"></ellipse>`;
+    svg += `<line class="fake-target-line" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}"></line>`;
+    svg += `<rect class="fake-target-marker" x="${sx(32) - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${sx(32)} ${targetY})"></rect>`;
+    svg += `<text class="fake-radargram-title" x="${width - margin.right}" y="${targetY - 8}" text-anchor="end">fixed target ${fmt(model.targetDepthKm, 2)} km</text>`;
+    svg += `<rect class="fake-radargram-frame" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    svg += `<text class="fake-radargram-title" x="${margin.left}" y="17">current PRF ${fmt(effectivePrfHz, 1)} Hz; synthetic repeated-trace radargram</text>`;
+    svg += `<text class="fake-radargram-label" x="${margin.left + plotWidth / 2}" y="${height - 7}" text-anchor="middle">trace number</text>`;
+    svg += `<text class="fake-radargram-label" transform="translate(18 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km, downward)</text>`;
+    svg += '</svg>';
+    liveRadargramPlot.innerHTML = svg;
   }
 
   // Check 1: compare only the selected clutter trace against the fixed target
@@ -794,6 +875,7 @@
     plot.innerHTML = svg;
 
     renderFoldDepthBlock(effectivePrfHz, foldBand, targetOverlap);
+    renderLiveRadargram(effectivePrfHz, foldBand, targetOverlap);
     renderTraceCheck(foldingReturn, targetOverlap);
     renderFastTimeDopplerCheck(effectivePrfHz, foldingReturn, targetOverlap);
     if (!processingRendered) {
