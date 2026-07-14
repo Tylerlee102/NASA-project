@@ -12,7 +12,7 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=trimmed-aliasing-header-20260713">
+    <link rel="stylesheet" href="aliasing.css?v=bigger-clean-graphs-20260713">
     <script defer src="aliasing.js?v=moving-trace-dot-20260713"></script>
   </head>
   <body>
@@ -52,7 +52,6 @@
         <section class="horizontal-map" aria-labelledby="map-title">
           <div class="map-heading">
             <h2 id="map-title">Fixed geometry</h2>
-            <p>One fixed satellite, 12 fixed surface clutter points, and one fixed target.</p>
           </div>
           <div id="horizontal-plot" class="horizontal-plot" aria-live="polite"></div>
         </section>
@@ -60,7 +59,6 @@
         <section class="horizontal-map blur-map" aria-labelledby="blur-title">
           <div class="map-heading">
             <h2 id="blur-title">Selected fold band</h2>
-            <p>The band width is calculated from the +/-25 Hz Doppler tolerance. It shows where the selected surface fold can interfere.</p>
           </div>
           <div id="blur-plot" class="blur-plot" aria-live="polite"></div>
         </section>
@@ -70,14 +68,12 @@
         <div class="checks-heading">
           <p class="section-kicker">Independent sanity checks</p>
           <h2 id="checks-title">Trace and fast-time checks</h2>
-          <p>Both checks use one selected surface clutter point and the fixed subsurface target. The other surface dots remain visible only as geometry context.</p>
         </div>
 
         <div class="visual-grid checks-grid">
           <section class="horizontal-map" aria-labelledby="trace-check-title">
             <div class="map-heading">
               <h3 id="trace-check-title">1. Selected clutter trace</h3>
-              <p>The selected clutter dot moves with PRF and lands on the fixed target marker at the fold.</p>
             </div>
             <div id="trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
           </section>
@@ -85,7 +81,6 @@
           <section class="horizontal-map" aria-labelledby="doppler-check-title">
             <div class="map-heading">
               <h3 id="doppler-check-title">2. Fast-time x Doppler tails</h3>
-              <p>Checks whether the one aliased clutter response folds into the target's 0 Hz, 6.74 km resolution cell.</p>
             </div>
             <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
           </section>
