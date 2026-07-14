@@ -524,7 +524,7 @@
   function renderStackedProcessingHeatmaps(container, options) {
     const width = 560;
     const height = 365;
-    const margin = { left: 80, right: 25, top: 32, bottom: 45 };
+    const margin = { left: 66, right: 25, top: 34, bottom: 45 };
     const gap = 13;
     const plotWidth = width - margin.left - margin.right;
     const panelHeight = (height - margin.top - margin.bottom - gap * (options.panels.length - 1)) / options.panels.length;
@@ -542,7 +542,7 @@
       const columnCount = panel.visibleRows[0].row.length;
       const cellWidth = plotWidth / columnCount;
       const cellHeight = panelHeight / panel.visibleRows.length;
-      svg += `<text class="${panel.danger ? 'processing-danger' : 'processing-title'}" x="${margin.left - 12}" y="${top + 13}" text-anchor="end">${panel.label}</text>`;
+      svg += `<text class="${panel.danger ? 'processing-danger' : 'processing-title'}" x="${margin.left + 7}" y="${top + 13}" text-anchor="start">${panel.label}</text>`;
       options.yTicks.forEach((value) => {
         const y = sy(value, top);
         svg += `<line class="processing-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
@@ -610,8 +610,8 @@
       depthMinKm: 0,
       depthMaxKm: processingModel.maxDepthKm,
       xMin: 0,
-      xMax: 1,
-      xTicks: [0, 0.25, 0.5, 0.75, 1],
+      xMax: processingModel.traceCount - 1,
+      xTicks: [0, 16, 32, 48, 63],
       yTicks: [0, 6, 12, 18, 24],
       tint: 'teal',
       title: '64 complex traces: 12 surface points + one target',
@@ -694,8 +694,8 @@
       depthMinKm: processingModel.zoomDepthMinKm,
       depthMaxKm: processingModel.zoomDepthMaxKm,
       xMin: 0,
-      xMax: processingModel.traceCount - 1,
-      xTicks: [0, 16, 32, 48, 63],
+      xMax: 1,
+      xTicks: [0, 0.25, 0.5, 0.75, 1],
       yTicks: [6.0, model.targetDepthKm, 7.5],
       tint: 'teal',
       title: `0-Hz inverse FFT; every-4 alias = ${signed(selectedAliasEveryFour, 1)} Hz`,
