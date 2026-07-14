@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Radargram PRF Demo</title>
+    <script>
+      if (window.top === window.self) {
+        const fullSiteUrl = new URL('index.html', window.location.href);
+        fullSiteUrl.searchParams.set('page', 'radargram-lab');
+        window.location.replace(fullSiteUrl.href);
+      }
+    </script>
+    <link rel="stylesheet" href="styles.css?v=bigger-clean-graphs-20260713">
+    <link rel="stylesheet" href="radargram.css?v=real-radargram-prf-20260714">
+    <script defer src="radargram.js?v=real-radargram-prf-20260714"></script>
+  </head>
+  <body>
+    <main class="radargram-lab">
+      <header class="radargram-header">
+        <a class="lab-back-link" href="index.html?page=aliasing-lab" target="_top">Back to aliasing simulator</a>
+        <p class="section-kicker">Real radargram reference + PRF folding overlay</p>
+        <h1>Radargram flyby with bad PRF vs four-PRF switching</h1>
+        <p class="radargram-lede">The grayscale background is a public NASA Operation IceBridge/CReSIS Greenland radargram. The red overlays are a straight-line flyby aliasing experiment placed on top of it to show how a wrong fixed PRF can make one continuous blur layer, while a four-PRF schedule moves the folded clutter into separate blur dots.</p>
+      </header>
+
+      <section class="radargram-controls" aria-label="Radargram PRF case controls">
+        <div>
+          <h2>Flyby case</h2>
+          <p id="case-summary">Choose whether the flyby uses one bad PRF or four PRFs cycled by trace block.</p>
+        </div>
+        <div class="case-buttons" role="group" aria-label="PRF case">
+          <button id="fixed-case" class="case-button is-active" type="button" aria-pressed="true">Fixed bad PRF</button>
+          <button id="staggered-case" class="case-button" type="button" aria-pressed="false">Four-PRF switching</button>
+        </div>
+        <label class="trace-slider-label" for="trace-position">
+          <span>Position along straight flyby</span>
+          <output id="trace-position-output">20.9 km</output>
+        </label>
+        <input id="trace-position" class="trace-slider" type="range" min="0" max="41.73" step="0.1" value="20.9" aria-label="Position along the radargram flyby in kilometers">
+      </section>
+
+      <div class="radargram-grid">
+        <section class="radargram-card wide" aria-labelledby="real-radargram-title">
+          <div class="radargram-card-heading">
+            <h2 id="real-radargram-title">1. Reference radargram with PRF-fold overlay</h2>
+            <p>Fixed PRF creates a continuous red blur layer; four PRFs split it into separated depth dots.</p>
+          </div>
+          <div id="radargram-overlay" class="radargram-plot" aria-live="polite"></div>
+        </section>
+
+        <section class="radargram-card" aria-labelledby="prf-schedule-title">
+          <div class="radargram-card-heading">
+            <h2 id="prf-schedule-title">2. PRF schedule through the flyby</h2>
+            <p>The four-PRF case switches by trace block, not every nanosecond.</p>
+          </div>
+          <div id="prf-schedule-plot" class="small-plot" aria-live="polite"></div>
+        </section>
+
+        <section class="radargram-card" aria-labelledby="fold-depth-title">
+          <div class="radargram-card-heading">
+            <h2 id="fold-depth-title">3. Folded clutter depth</h2>
+            <p>Depth is computed from the same zero-Doppler fold idea used in the aliasing lab.</p>
+          </div>
+          <div id="fold-depth-plot" class="small-plot" aria-live="polite"></div>
+        </section>
+
+        <section class="radargram-card" aria-labelledby="current-cell-title">
+          <div class="radargram-card-heading">
+            <h2 id="current-cell-title">4. Current trace cell</h2>
+            <p>For one reading, clutter is a dot/blob. A layer appears only when many readings stack.</p>
+          </div>
+          <div id="current-cell-plot" class="small-plot" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <section class="source-panel" aria-labelledby="source-title">
+        <h2 id="source-title">Source and boundary</h2>
+        <p>This section uses CReSIS/Open Polar Radar public Operation IceBridge radar depth sounder imagery as a known Earth radargram reference. The PRF folding overlay is a synthetic straight-line teaching model, not a claim that this specific Greenland radargram contains the shown aliasing artifact.</p>
+        <p><a href="https://data.cresis.ku.edu/data/rds/2011_Greenland_P3/images/20110329_01/20110329_01_033_1echo.jpg" target="_blank" rel="noreferrer">Source radargram image</a> · <a href="https://data.cresis.ku.edu/data/rds/" target="_blank" rel="noreferrer">CReSIS/Open Polar Radar RDS data products</a></p>
+      </section>
+    </main>
+  </body>
+</html>

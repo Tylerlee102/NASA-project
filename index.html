@@ -8,7 +8,7 @@
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=restore-tabs-20260713"></script>
+    <script defer src="app.js?v=radargram-lab-20260714"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -20,6 +20,7 @@
           <div class="hero-actions" aria-label="Project actions">
             <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
             <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run NASA-reference flyby</a>
+            <a class="secondary-link" href="?page=radargram-lab" data-tab-jump="radargram-lab">Compare radargram PRFs</a>
             <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
           </div>
           <dl class="dossier-meta" aria-label="Project summary">
@@ -41,6 +42,7 @@
             <nav class="tabs" aria-label="Section pages">
               <a class="tab is-active" href="?page=aliasing-lab" data-target="aliasing-lab">Doppler Aliasing Lab</a>
               <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">NASA Trajectory Lab</a>
+              <a class="tab" href="?page=radargram-lab" data-target="radargram-lab">Radargram PRF Demo</a>
               <a class="tab" href="?page=owner-access" data-target="owner-access">Owner Archive</a>
               <div id="owner-tabs" class="owner-tabs" hidden>
                 <a class="tab" href="?page=overview" data-target="overview">Overview</a>
@@ -77,6 +79,12 @@
         <p class="section-intro">Move through closest approach while the plot tracks every nonzero PRF fold order produced by the modeled surface clutter.</p>
         <div class="trajectory-embed-shell">
           <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=matching-graph-stack-20260713" title="NASA-reference Europa flyby folding simulator" loading="eager" scrolling="no"></iframe>
+        </div>
+      </section>
+
+      <section id="radargram-lab" class="page-section embedded-lab-section">
+        <div class="aliasing-embed-shell">
+          <iframe id="radargram-frame" class="aliasing-frame" src="radargram.html?v=real-radargram-prf-20260714" title="Real radargram PRF folding comparison" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 
