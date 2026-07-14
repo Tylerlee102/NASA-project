@@ -225,7 +225,8 @@
         </radialGradient>
       </defs>`;
 
-    svg += `<rect class="fake-radargram-bg" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    svg += `<image class="matlab-radargram-texture" href="assets/fake_radargram_aliasing_texture.png?v=matlab-radargram-20260714" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none"></image>`;
+    svg += `<rect class="fake-radargram-vignette" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
     xTicks.forEach((value) => {
       const x = sx(value);
       svg += `<line class="fake-radargram-grid" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
@@ -236,18 +237,6 @@
       svg += `<line class="fake-radargram-grid" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
       svg += `<text class="fake-radargram-label" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${fmt(value, 2)}</text>`;
     });
-    [model.targetDepthKm - 0.55, model.targetDepthKm + 0.42, depthMinKm + 0.18, depthMaxKm - 0.20]
-      .filter((depthKm) => depthKm > depthMinKm && depthKm < depthMaxKm)
-      .forEach((depthKm, index) => {
-        const y = sy(depthKm);
-        const opacity = index < 2 ? 0.18 : 0.11;
-        svg += `<rect class="fake-layer" x="${margin.left}" y="${y - 3}" width="${plotWidth}" height="6" opacity="${opacity}"></rect>`;
-      });
-    for (let trace = 0; trace <= 63; trace += 4) {
-      const x = sx(trace);
-      svg += `<rect class="fake-trace-column" x="${x - 1.2}" y="${margin.top}" width="2.4" height="${plotHeight}"></rect>`;
-    }
-
     if (foldBand) {
       const centerY = sy(foldBand.centerDepthKm);
       const bandPixelHeight = Math.max(22, Math.abs(sy(foldBand.maxDepthKm) - sy(foldBand.minDepthKm)) * 1.7);

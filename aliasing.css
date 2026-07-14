@@ -108,6 +108,8 @@
 .processing-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.6; }
 .processing-cell { shape-rendering: crispEdges; }
 .fake-radargram-bg { fill: #fffefa; }
+.matlab-radargram-texture { opacity: .98; }
+.fake-radargram-vignette { fill: rgba(255, 253, 248, .10); stroke: none; }
 .fake-radargram-frame { fill: none; stroke: #9a907f; stroke-width: 1.1; }
 .fake-radargram-grid { stroke: #e4dcca; stroke-width: 1; }
 .fake-radargram-label { fill: #645f56; font-size: 10px; }

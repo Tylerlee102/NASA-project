@@ -438,23 +438,10 @@
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Simplified synthetic flyby radargram with target trace and folded clutter blur">
       <defs>
         <filter id="flyby-radargram-soften" x="-8%" y="-80%" width="116%" height="260%"><feGaussianBlur stdDeviation="5"></feGaussianBlur></filter>
-        <linearGradient id="flyby-radargram-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#285f64" stop-opacity=".035"></stop>
-          <stop offset=".5" stop-color="#285f64" stop-opacity=".015"></stop>
-          <stop offset="1" stop-color="#974143" stop-opacity=".035"></stop>
-        </linearGradient>
       </defs>`;
     svg += `<rect class="radargram-bg" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
-    svg += `<rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" fill="url(#flyby-radargram-bg)"></rect>`;
-    for (let timeS = model.timeMinS; timeS <= model.timeMaxS + 1e-9; timeS += 1) {
-      const x = scales.x(timeS);
-      svg += `<rect class="radargram-trace-column" x="${x - 1}" y="${margin.top}" width="2" height="${plotHeight}"></rect>`;
-    }
-    [state.target.apparentDepthKm - 0.6, state.target.apparentDepthKm + 0.5, depthMinKm + 0.25, depthMaxKm - 0.3]
-      .filter((depthKm) => depthKm > depthMinKm && depthKm < depthMaxKm)
-      .forEach((depthKm, index) => {
-        svg += `<rect class="radargram-layer" x="${margin.left}" y="${scales.y(depthKm) - 3}" width="${plotWidth}" height="6" opacity="${index < 2 ? 0.16 : 0.10}"></rect>`;
-      });
+    svg += `<image class="matlab-radargram-texture" href="assets/fake_radargram_flyby_texture.png?v=matlab-radargram-20260714" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none"></image>`;
+    svg += `<rect class="radargram-vignette" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
     svg += axes(width, height, margin, scales, [-10, -5, 0, 5, 10], yTicks, 'time from closest approach (s)', 'apparent depth / fast time (km)', signed, (v) => fmt(v, 1));
     svg += `<path class="target-cell" d="${areaPath(timeline, scales, (row) => row.target.apparentDepthKm - model.depthToleranceKm, (row) => row.target.apparentDepthKm + model.depthToleranceKm)}"></path>`;
     nearestBandSegments.forEach((segment) => {

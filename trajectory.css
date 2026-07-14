@@ -294,6 +294,8 @@ a:focus-visible {
 .response-center { fill: var(--red); stroke: var(--panel); stroke-width: 1.5; }
 .target-tail { fill: var(--teal-soft); stroke: var(--teal); stroke-width: 1.8; }
 .radargram-bg { fill: var(--panel); stroke: #7c715f; stroke-width: 1.1; }
+.matlab-radargram-texture { opacity: .98; }
+.radargram-vignette { fill: rgba(255, 253, 248, .08); stroke: none; }
 .radargram-trace-column { fill: rgba(40, 95, 100, .035); }
 .radargram-layer { fill: var(--teal); }
 .radargram-fold-smear { fill: rgba(151, 65, 67, .34); stroke: none; }
