@@ -1,9 +1,14 @@
 /* Geometry and transmitted PRF stay fixed. The range control changes only the
    effective along-track sampling PRF used by the alias calculation. */
 
-.simple-lab { width: 100%; margin: 0 auto; padding: 0 0 54px; }
-.prf-control, .horizontal-map { border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); box-shadow: 0 12px 28px rgba(58, 44, 28, .08); }
-.prf-control { margin-bottom: 24px; padding: 22px; }
+.simple-lab { width: min(1180px, 100%); margin: 0 auto; padding: 38px 32px 52px; }
+.simple-header { margin-bottom: 28px; }
+.simple-header h1 { max-width: none; margin: 10px 0 0; font-size: 4.4rem; }
+.lab-back-link { display: inline-flex; min-height: 40px; align-items: center; color: var(--accent-2); font-size: .82rem; font-weight: 800; text-decoration: none; }
+.lab-back-link:hover, .lab-back-link:focus-visible { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+.prf-control, .horizontal-map { border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); }
+.prf-control { padding: 20px 22px 17px; }
 .prf-label-row { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
 .prf-label-row h2 { margin: 0; font-family: inherit; font-size: 1rem; font-weight: 800; }
 .prf-label-row p { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
@@ -21,16 +26,19 @@
 .model-boundary { margin: 12px 0 0; padding: 9px 11px; border-left: 3px solid var(--copper); background: #f7efe3; color: var(--muted); font-size: .76rem; line-height: 1.45; }
 .model-boundary strong { color: var(--ink-soft); }
 
-.visual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 18px; }
+.visual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 18px; margin-top: 18px; }
 .horizontal-map { display: grid; min-width: 0; grid-template-rows: auto 1fr; align-self: stretch; padding: 22px; }
 .blur-map { margin-top: 0; }
-.map-heading { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 12px; min-height: 112px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.map-heading h2, .map-heading h3 { max-width: 650px; margin: 0 0 7px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.45rem, 3vw, 2.15rem); font-weight: 500; line-height: 1.05; }
-.map-heading div > p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
-.map-heading .graph-formula { margin-top: 7px; color: var(--accent-2); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .72rem; line-height: 1.35; }
-.map-heading .graph-number { margin: -5px 0 0; color: var(--accent); font-family: Georgia, "Times New Roman", serif; font-size: 2.7rem; line-height: 1; }
+.map-heading { min-height: 112px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.map-heading h2, .map-heading h3 { max-width: 650px; margin: 0; font-size: 2.15rem; }
+.map-heading p { margin: 7px 0 0; color: var(--muted); font-size: .84rem; }
 .horizontal-plot, .blur-plot, .diagnostic-plot { min-height: 0; aspect-ratio: 560 / 350; padding-top: 10px; overflow: hidden; }
 .horizontal-plot svg, .blur-plot svg, .diagnostic-plot svg { display: block; width: 100%; height: 100%; }
+.checks-section { margin-top: 30px; }
+.checks-heading { max-width: 780px; }
+.checks-heading h2 { margin: 7px 0 0; font-size: 2.8rem; }
+.checks-heading > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: .88rem; }
+.checks-grid { margin-top: 14px; }
 
 .geometry-surface { stroke: #6f6a60; stroke-width: 2.2; }
 .geometry-depth-guide { stroke: #d7ccbb; stroke-width: 1; stroke-dasharray: 5 5; }
@@ -57,9 +65,6 @@
 .blur-target-window { fill: rgba(47, 111, 115, .10); }
 .blur-layer-block { fill: url(#blur-block); }
 .blur-layer-edge { stroke: var(--danger); stroke-width: 1.6; stroke-dasharray: 6 4; }
-.depth-clutter-band { fill: rgba(155, 61, 63, .20); stroke: var(--danger); stroke-width: 1.6; }
-.depth-clutter-band.overlap { fill: rgba(155, 61, 63, .42); stroke-width: 2.2; }
-.depth-clutter-center { stroke: var(--danger); stroke-width: 2; stroke-dasharray: 6 4; }
 .blur-label { fill: #645f56; font-size: 11px; }
 .blur-title-text { fill: #17494d; font-size: 11px; font-weight: 850; }
 .check-grid-line { stroke: #e4dcca; stroke-width: 1; }
@@ -80,15 +85,10 @@
 .check-target-tail { fill: url(#target-tail); stroke: var(--accent-2); stroke-width: 1.3; }
 .check-clutter-center { fill: var(--danger); stroke: #6d2023; stroke-width: 1.8; }
 .check-target-center { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.7; }
-.prf-trace-window { fill: rgba(47, 111, 115, .10); }
-.prf-trace-surface { fill: none; stroke: var(--danger); stroke-width: 2.5; }
-.prf-trace-target { fill: none; stroke: var(--accent-2); stroke-width: 2; stroke-dasharray: 7 4; }
-.prf-trace-current { stroke: #8a5a16; stroke-width: 1.5; stroke-dasharray: 5 4; }
-.prf-trace-surface-point { fill: var(--danger); stroke: #6d2023; stroke-width: 2; }
-.prf-trace-target-point { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.7; }
 
 @media (max-width: 700px) {
-  .simple-lab { width: min(100% - 18px, 1500px); padding: 16px 0 44px; }
+  .simple-lab { padding: 32px 16px 44px; }
+  .simple-header h1 { font-size: 2.6rem; }
   .prf-control, .horizontal-map { padding: 16px; }
   .prf-label-row { display: block; }
   .prf-label-row output { display: block; margin-top: 8px; font-size: 1.2rem; }
@@ -97,6 +97,7 @@
   .lab-givens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .map-heading h2, .map-heading h3 { font-size: 1.65rem; }
   .map-heading { min-height: 0; }
+  .checks-heading h2 { font-size: 2.05rem; }
   .visual-grid { grid-template-columns: 1fr; }
   .horizontal-plot, .blur-plot, .diagnostic-plot { min-height: 0; aspect-ratio: 560 / 350; }
 }
