@@ -2,21 +2,27 @@
   'use strict';
 
   const C = 299792458;
+  const PROCESSING_TRACE_COUNT = 64;
+  const PROCESSING_DEPTH_BINS = 96;
+  const PROCESSING_MAX_DEPTH_KM = 24;
+  const LISTEN_GUARD_US = 25;
   const model = {
     altitudeKm: 25,
-    velocityKmS: 4.6,
+    velocityKmS: 3.0,
     frequencyMhz: 60,
     targetDepthKm: 6.74,
     iceIndex: 1.78,
     pointCount: 12,
     spreadKm: 60,
-    dopplerToleranceHz: 25,
-    depthToleranceKm: 0.15
+    dopplerToleranceHz: 0,
+    depthToleranceKm: 0
   };
 
   const prfSlider = document.getElementById('effective-prf-slider');
   const output = document.getElementById('effective-prf-output');
   const originalPrfText = document.getElementById('original-prf');
+  const prfMinLabel = document.getElementById('prf-min-label');
+  const prfMaxLabel = document.getElementById('prf-max-label');
   const status = document.getElementById('trace-status');
   const plot = document.getElementById('horizontal-plot');
   const blurPlot = document.getElementById('blur-plot');
@@ -57,6 +63,21 @@
   })[0];
   const foldingIndexes = new Set([selectedFoldingPoint.index]);
   const originalPrfHz = 4 * Math.abs(selectedFoldingPoint.trueDopplerHz);
+  const targetEchoUs = (2 * (model.altitudeKm * 1000 + model.iceIndex * model.targetDepthKm * 1000) / C) * 1e6;
+  const basePriUs = 1e6 / originalPrfHz;
+  const safePrfMaxHz = 1e6 / (targetEchoUs + LISTEN_GUARD_US);
+  model.dopplerToleranceHz = originalPrfHz / PROCESSING_TRACE_COUNT;
+  model.depthToleranceKm = PROCESSING_MAX_DEPTH_KM / (PROCESSING_DEPTH_BINS - 1);
+
+  const selectedFoldPrfHz = Math.abs(selectedFoldingPoint.trueDopplerHz);
+  const sliderHalfWindowHz = Math.max(28, model.dopplerToleranceHz * 0.55);
+  const sliderMinHz = Math.floor(selectedFoldPrfHz - sliderHalfWindowHz);
+  const sliderMaxHz = Math.ceil(selectedFoldPrfHz + sliderHalfWindowHz);
+  prfSlider.min = String(sliderMinHz);
+  prfSlider.max = String(sliderMaxHz);
+  prfSlider.value = selectedFoldPrfHz.toFixed(1);
+  if (prfMinLabel) prfMinLabel.textContent = `${fmt(sliderMinHz, 0)} Hz`;
+  if (prfMaxLabel) prfMaxLabel.textContent = `${fmt(sliderMaxHz, 0)} Hz`;
 
   document.getElementById('given-altitude').textContent = `${fmt(model.altitudeKm, 0)} km`;
   document.getElementById('given-speed').textContent = `${fmt(model.velocityKmS, 1)} km/s`;
@@ -307,9 +328,9 @@
   }
 
   const processingModel = {
-    traceCount: 64,
-    depthBins: 96,
-    maxDepthKm: 24,
+    traceCount: PROCESSING_TRACE_COUNT,
+    depthBins: PROCESSING_DEPTH_BINS,
+    maxDepthKm: PROCESSING_MAX_DEPTH_KM,
     depthSigmaKm: 0.14,
     zoomDepthMinKm: 5.95,
     zoomDepthMaxKm: 7.55,
@@ -393,12 +414,14 @@
     return fixedPoints.map((point) => {
       const selected = foldingIndexes.has(point.index);
       const mirrorOfSelected = !selected && Math.abs(point.trueDopplerHz + selectedFoldingPoint.trueDopplerHz) < 2;
+      const angleWeight = 0.24 + 0.46 * Math.exp(-0.5 * ((Math.abs(point.xKm) - Math.abs(selectedFoldingPoint.xKm)) / 20) ** 2);
       return {
         kind: 'surface',
         label: selected ? `selected surface ${point.index + 1}` : `surface ${point.index + 1}`,
         depthKm: point.apparentDepthKm,
         dopplerHz: point.trueDopplerHz,
-        amplitude: selected ? 1.35 : (mirrorOfSelected ? 0.05 : 0.08),
+        amplitude: selected || mirrorOfSelected ? 1.0 : angleWeight,
+        depthSigmaKm: processingModel.depthSigmaKm,
         phase: selected ? 0 : point.index * 0.71
       };
     });
@@ -414,6 +437,7 @@
         depthKm: model.targetDepthKm,
         dopplerHz: 0,
         amplitude: 0.32,
+        depthSigmaKm: 0.08,
         phase: 0
       }
     ];
@@ -423,7 +447,7 @@
         let re = 0;
         let im = 0;
         scatterers.forEach((scatterer) => {
-          const envelope = Math.exp(-0.5 * ((depthKm - scatterer.depthKm) / processingModel.depthSigmaKm) ** 2);
+          const envelope = Math.exp(-0.5 * ((depthKm - scatterer.depthKm) / scatterer.depthSigmaKm) ** 2);
           if (envelope < 1e-4) return;
           const phase = 2 * Math.PI * (scatterer.dopplerHz / samplePrfHz) * traceIndex + scatterer.phase;
           const amplitude = scatterer.amplitude * envelope;
@@ -523,9 +547,9 @@
 
   function renderStackedProcessingHeatmaps(container, options) {
     const width = 560;
-    const height = 365;
+    const height = 430;
     const margin = { left: 66, right: 25, top: 34, bottom: 45 };
-    const gap = 13;
+    const gap = 10;
     const plotWidth = width - margin.left - margin.right;
     const panelHeight = (height - margin.top - margin.bottom - gap * (options.panels.length - 1)) / options.panels.length;
     const panels = options.panels.map((panel) => ({
@@ -584,10 +608,13 @@
 
   function processingExperiment() {
     const rawMatrix = buildTraceMatrix(originalPrfHz);
+    const nonTunedOriginalPrfHz = originalPrfHz * 0.93;
+    const nonTunedMatrix = buildTraceMatrix(nonTunedOriginalPrfHz);
     const cases = [
       { label: 'all', step: 1, prfHz: originalPrfHz, matrix: rawMatrix },
       { label: 'every 2nd', step: 2, prfHz: originalPrfHz / 2, matrix: downsampleMatrix(rawMatrix, 2) },
-      { label: 'every 4th', step: 4, prfHz: originalPrfHz / 4, matrix: downsampleMatrix(rawMatrix, 4) }
+      { label: '4th tuned', step: 4, prfHz: originalPrfHz / 4, matrix: downsampleMatrix(rawMatrix, 4) },
+      { label: '4th non-tuned', step: 4, prfHz: nonTunedOriginalPrfHz / 4, matrix: downsampleMatrix(nonTunedMatrix, 4) }
     ].map((entry) => ({
       ...entry,
       spectrum: transformRows(entry.matrix)
@@ -595,7 +622,8 @@
     return {
       rawMatrix,
       rawMagnitude: magnitudeRows(rawMatrix),
-      cases
+      cases,
+      nonTunedOriginalPrfHz
     };
   }
 
@@ -615,7 +643,7 @@
       yTicks: [0, 6, 12, 18, 24],
       tint: 'teal',
       title: '64 complex traces: 12 surface points + one target',
-      note: 'selected surface point is bright; other surface points are weak background',
+      note: 'selected and mirror surface points are comparable; other points use angle weighting',
       xLabel: 'trace number',
       ariaLabel: 'Generated complex radargram with twelve surface scatterers and one fixed subsurface target',
       formatX: (value) => fmt(value, 0),
@@ -669,7 +697,7 @@
       xTicks: [-200, -100, 0, 100, 200],
       yTicks: [6.0, model.targetDepthKm, 7.5],
       tint: 'red',
-      title: 'same data after numerical trace deletion',
+      title: 'constructed trace deletion plus a non-tuned check',
       xLabel: 'aliased Doppler near target cell (Hz)',
       ariaLabel: 'Recalculated FFTs after keeping all traces every second trace and every fourth trace',
       formatX: (value) => signed(value, 0),
@@ -698,7 +726,7 @@
       xTicks: [0, 0.25, 0.5, 0.75, 1],
       yTicks: [6.0, model.targetDepthKm, 7.5],
       tint: 'teal',
-      title: `0-Hz inverse FFT; every-4 alias = ${signed(selectedAliasEveryFour, 1)} Hz`,
+      title: `0-Hz inverse FFT; tuned every-4 alias = ${signed(selectedAliasEveryFour, 1)} Hz`,
       xLabel: 'normalized along-track aperture',
       ariaLabel: 'Inverse FFT reconstruction of the zero Doppler cell after trace deletion',
       formatX: (value) => `${fmt(value * 100, 0)}%`,
@@ -772,7 +800,7 @@
       renderProcessingExperiment();
       processingRendered = true;
     }
-    originalPrfText.textContent = `Fixed transmitted/trace PRF: ${fmt(originalPrfHz, 1)} Hz. Only the effective Doppler sampling rate moves.`;
+    originalPrfText.textContent = `Base trace PRF: ${fmt(originalPrfHz, 1)} Hz; PRI ${fmt(basePriUs, 1)} µs > echo ${fmt(targetEchoUs, 1)} µs + ${fmt(LISTEN_GUARD_US, 0)} µs guard. Max safe PRF ≈ ${fmt(safePrfMaxHz, 0)} Hz.`;
     output.textContent = `${fmt(effectivePrfHz, 1)} Hz`;
     status.className = `prf-status${targetOverlap ? ' is-overlap' : ''}`;
     if (targetOverlap) {

@@ -34,6 +34,7 @@
 .map-heading p { margin: 7px 0 0; color: var(--muted); font-size: .84rem; }
 .horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot { min-height: 0; aspect-ratio: 560 / 405; padding-top: 8px; overflow: hidden; }
 .horizontal-plot svg, .blur-plot svg, .diagnostic-plot svg, .processing-plot svg { display: block; width: 100%; height: 100%; }
+.processing-plot { aspect-ratio: 560 / 455; }
 .checks-section, .processing-section { margin-top: 24px; }
 .checks-heading { max-width: 780px; }
 .checks-heading h2 { margin: 7px 0 0; font-size: 2.8rem; }
@@ -119,4 +120,5 @@
   .checks-heading h2 { font-size: 2.05rem; }
   .visual-grid { grid-template-columns: 1fr; }
   .horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot { min-height: 0; aspect-ratio: 560 / 405; }
+  .processing-plot { aspect-ratio: 560 / 455; }
 }
