@@ -4,6 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>NASA-Reference Europa Flyby Folding</title>
+    <script>
+      if (window.top === window.self) {
+        const fullSiteUrl = new URL('index.html', window.location.href);
+        fullSiteUrl.searchParams.set('page', 'trajectory-lab');
+        window.location.replace(fullSiteUrl.href);
+      }
+    </script>
     <link rel="stylesheet" href="trajectory.css?v=matching-graph-stack-20260713">
     <script defer src="trajectory.js?v=matching-graph-stack-20260713"></script>
   </head>
