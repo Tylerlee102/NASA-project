@@ -45,15 +45,13 @@
       apparentDepthKm: (rangeKm - model.altitudeKm) / model.iceIndex
     };
   });
-  const foldingIndexes = new Set(
-    [...fixedPoints]
-      .sort((a, b) => Math.abs(a.apparentDepthKm - model.targetDepthKm) - Math.abs(b.apparentDepthKm - model.targetDepthKm))
-      .slice(0, 2)
-      .map((point) => point.index)
-  );
-  const fixedFoldingPair = fixedPoints.filter((point) => foldingIndexes.has(point.index));
-  const sameDelayDopplerHz = fixedFoldingPair.reduce((sum, point) => sum + Math.abs(point.trueDopplerHz), 0) / fixedFoldingPair.length;
-  const originalPrfHz = 4 * sameDelayDopplerHz;
+  const selectedFoldingPoint = [...fixedPoints].sort((a, b) => {
+    const depthDelta = Math.abs(a.apparentDepthKm - model.targetDepthKm) - Math.abs(b.apparentDepthKm - model.targetDepthKm);
+    if (Math.abs(depthDelta) > 1e-9) return depthDelta;
+    return b.xKm - a.xKm;
+  })[0];
+  const foldingIndexes = new Set([selectedFoldingPoint.index]);
+  const originalPrfHz = 4 * Math.abs(selectedFoldingPoint.trueDopplerHz);
 
   document.getElementById('given-altitude').textContent = `${fmt(model.altitudeKm, 0)} km`;
   document.getElementById('given-speed').textContent = `${fmt(model.velocityKmS, 1)} km/s`;
@@ -117,12 +115,14 @@
       ...point,
       aliasedDopplerHz: alias(point.trueDopplerHz, effectivePrfHz)
     }));
-    const foldingPair = points.filter((point) => foldingIndexes.has(point.index));
-    const pairOverlaps = foldingPair.filter((point) => Math.abs(point.aliasedDopplerHz) <= model.dopplerToleranceHz);
+    const foldingReturn = points.find((point) => foldingIndexes.has(point.index));
+    const selectedOverlaps = Math.abs(foldingReturn.aliasedDopplerHz) <= model.dopplerToleranceHz
+      ? [foldingReturn]
+      : [];
     return {
       points,
-      foldingPair,
-      pairOverlaps,
+      foldingReturn,
+      selectedOverlaps,
       effectivePrfHz,
       foldBand: continuousFoldBand(effectivePrfHz)
     };
@@ -167,11 +167,10 @@
     blurPlot.innerHTML = svg;
   }
 
-  // Check 1: show intentionally asymmetric schematic trace curvature. Each
-  // curve receives a different effective curvature height, then its baseline
-  // is solved so both still meet the target at along-track position 0 km.
-  // This changes only the displayed trace shape, not the delay/Doppler model.
-  function renderTraceCheck(foldingPair, overlapsTarget) {
+  // Check 1: compare only the selected clutter trace against the fixed target
+  // trace. The clutter curve is solved so it crosses the target at the same
+  // apparent depth; PRF decides whether the Doppler cell also matches.
+  function renderTraceCheck(foldingReturn, overlapsTarget) {
     const width = 560;
     const height = 350;
     const margin = { left: 62, right: 24, top: 55, bottom: 42 };
@@ -185,21 +184,14 @@
       const xKm = xMinKm + ((xMaxKm - xMinKm) * index) / 180;
       return `${index ? 'L' : 'M'} ${sx(xKm).toFixed(2)} ${sy(depthAtX(xKm)).toFixed(2)}`;
     }).join(' ');
-    const traceProfiles = foldingPair.map((point, index) => ({
-      point,
-      effectiveHeightKm: index === 0 ? model.altitudeKm : model.altitudeKm + 20,
-      sizeLabel: index === 0 ? 'larger' : 'smaller',
-      cssClass: index === 0 ? 'larger' : 'smaller'
-    }));
-    const asymmetricTraceDepth = (platformXKm, profile) => {
-      const point = profile.point;
-      const curvatureHeightKm = profile.effectiveHeightKm;
+    const clutterTraceDepth = (platformXKm) => {
+      const curvatureHeightKm = model.altitudeKm;
       const depthRiseAtCrossingKm = (
-        Math.hypot(curvatureHeightKm, point.xKm) - curvatureHeightKm
+        Math.hypot(curvatureHeightKm, foldingReturn.xKm) - curvatureHeightKm
       ) / model.iceIndex;
       const apexDepthKm = model.targetDepthKm - depthRiseAtCrossingKm;
       return apexDepthKm + (
-        Math.hypot(curvatureHeightKm, platformXKm - point.xKm) - curvatureHeightKm
+        Math.hypot(curvatureHeightKm, platformXKm - foldingReturn.xKm) - curvatureHeightKm
       ) / model.iceIndex;
     };
     const targetEquivalentRangeKm = model.altitudeKm + model.iceIndex * model.targetDepthKm;
@@ -210,16 +202,13 @@
     const intersectionY = sy(model.targetDepthKm);
     const pointClass = overlapsTarget ? 'check-overlap-point' : 'check-delay-point';
     const stateLabel = overlapsTarget ? 'same delay + folded Doppler' : 'same delay; Doppler separated';
-    const pairLabel = foldingPair.map((point) => point.index + 1).join(' and ');
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Asymmetric individual trace check for clutter points ${pairLabel}; one hyperbola is larger, but both cross the target at 6.74 kilometers apparent depth">
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Selected clutter trace and fixed target trace crossing at 6.74 kilometers apparent depth">
       <defs><clipPath id="trace-check-clip"><rect x="${margin.left}" y="${margin.top}" width="${width - margin.left - margin.right}" height="${height - margin.top - margin.bottom}"></rect></clipPath></defs>`;
 
-    svg += `<line class="check-clutter-curve larger" x1="${margin.left}" y1="16" x2="${margin.left + 28}" y2="16"></line>`;
-    svg += `<text class="check-title" x="${margin.left + 35}" y="20">clutter ${traceProfiles[0].point.index + 1}: larger</text>`;
-    svg += `<line class="check-clutter-curve smaller" x1="${margin.left + 170}" y1="16" x2="${margin.left + 198}" y2="16"></line>`;
-    svg += `<text class="check-title" x="${margin.left + 205}" y="20">clutter ${traceProfiles[1].point.index + 1}: smaller</text>`;
-    svg += `<line class="check-target-curve" x1="${margin.left + 350}" y1="16" x2="${margin.left + 378}" y2="16"></line>`;
-    svg += `<text class="check-title" x="${margin.left + 385}" y="20">target</text>`;
+    svg += `<line class="check-clutter-curve selected" x1="${margin.left}" y1="16" x2="${margin.left + 28}" y2="16"></line>`;
+    svg += `<text class="check-title" x="${margin.left + 35}" y="20">selected clutter ${foldingReturn.index + 1}</text>`;
+    svg += `<line class="check-target-curve" x1="${margin.left + 230}" y1="16" x2="${margin.left + 258}" y2="16"></line>`;
+    svg += `<text class="check-title" x="${margin.left + 265}" y="20">subsurface target</text>`;
     svg += `<text class="${overlapsTarget ? 'check-danger' : 'check-title'}" x="${margin.left}" y="40">trace 0: ${stateLabel}</text>`;
 
     [0, 3, 6, 9, 12].forEach((value) => {
@@ -235,9 +224,7 @@
     svg += `<rect class="check-target-window" x="${margin.left}" y="${sy(model.targetDepthKm - model.depthToleranceKm)}" width="${width - margin.left - margin.right}" height="${sy(model.targetDepthKm + model.depthToleranceKm) - sy(model.targetDepthKm - model.depthToleranceKm)}"></rect>`;
     svg += `<line class="check-guide" x1="${intersectionX}" y1="${margin.top}" x2="${intersectionX}" y2="${height - margin.bottom}"></line>`;
     svg += `<g clip-path="url(#trace-check-clip)">`;
-    traceProfiles.forEach((profile) => {
-      svg += `<path class="check-clutter-curve ${profile.cssClass}" d="${pathFor((xKm) => asymmetricTraceDepth(xKm, profile))}"><title>Clutter ${profile.point.index + 1}: ${profile.sizeLabel} schematic range trace</title></path>`;
-    });
+    svg += `<path class="check-clutter-curve selected" d="${pathFor(clutterTraceDepth)}"><title>Selected clutter ${foldingReturn.index + 1} range trace</title></path>`;
     svg += `<path class="check-target-curve" d="${pathFor(targetTraceDepth)}"><title>Fixed subsurface target range trace</title></path>`;
     svg += '</g>';
     svg += `<circle class="${pointClass}" cx="${intersectionX}" cy="${intersectionY}" r="6"></circle>`;
@@ -251,8 +238,8 @@
   }
 
   // Check 2: show the target resolution cell in fast-time × Doppler space.
-  // The clutter ellipses move horizontally as their true Dopplers alias.
-  function renderFastTimeDopplerCheck(effectivePrfHz, foldingPair, overlapsTarget) {
+  // The selected clutter ellipse moves horizontally as its true Doppler aliases.
+  function renderFastTimeDopplerCheck(effectivePrfHz, foldingReturn, overlapsTarget) {
     const width = 560;
     const height = 350;
     const margin = { left: 68, right: 25, top: 55, bottom: 48 };
@@ -266,7 +253,7 @@
     // tails touch exactly when the center-to-center tolerance is reached.
     const tailRadiusX = Math.abs(sx(model.dopplerToleranceHz / 2) - sx(0));
     const tailRadiusY = Math.abs(sy(model.targetDepthKm + model.depthToleranceKm / 2) - sy(model.targetDepthKm));
-    const aliases = foldingPair.map((point) => signed(point.aliasedDopplerHz, 1));
+    const aliasLabel = signed(foldingReturn.aliasedDopplerHz, 1);
     const stateLabel = overlapsTarget ? 'folded tails overlap the target response' : 'folded tails remain separated from the target response';
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Fast-time by aliased Doppler check at ${fmt(effectivePrfHz, 1)} hertz; ${stateLabel}">
       <defs>
@@ -275,7 +262,7 @@
         <radialGradient id="target-tail"><stop offset="0" stop-color="#2f6f73" stop-opacity=".50"></stop><stop offset=".58" stop-color="#2f6f73" stop-opacity=".20"></stop><stop offset="1" stop-color="#2f6f73" stop-opacity=".03"></stop></radialGradient>
       </defs>`;
 
-    svg += `<text class="check-title" x="${margin.left}" y="18">clutter aliases: ${aliases.join(' Hz, ')} Hz</text>`;
+    svg += `<text class="check-title" x="${margin.left}" y="18">selected clutter alias: ${aliasLabel} Hz</text>`;
     svg += `<text class="${overlapsTarget ? 'check-danger' : 'check-title'}" x="${margin.left}" y="39">${stateLabel}</text>`;
     [-50, -25, 0, 25, 50].forEach((value) => {
       const x = sx(value);
@@ -292,13 +279,9 @@
     svg += `<line class="check-target-line" x1="${sx(0)}" y1="${margin.top}" x2="${sx(0)}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="check-target-line" x1="${margin.left}" y1="${sy(model.targetDepthKm)}" x2="${width - margin.right}" y2="${sy(model.targetDepthKm)}"></line>`;
     svg += `<ellipse class="check-target-tail" cx="${sx(0)}" cy="${sy(model.targetDepthKm)}" rx="${tailRadiusX}" ry="${tailRadiusY}"></ellipse>`;
-    foldingPair.forEach((point) => {
-      svg += `<ellipse class="check-clutter-tail" cx="${sx(point.aliasedDopplerHz)}" cy="${sy(point.apparentDepthKm)}" rx="${tailRadiusX}" ry="${tailRadiusY}"><title>Clutter ${point.index + 1}: ${signed(point.aliasedDopplerHz, 1)} Hz at ${fmt(point.apparentDepthKm, 2)} km</title></ellipse>`;
-    });
+    svg += `<ellipse class="check-clutter-tail" cx="${sx(foldingReturn.aliasedDopplerHz)}" cy="${sy(foldingReturn.apparentDepthKm)}" rx="${tailRadiusX}" ry="${tailRadiusY}"><title>Selected clutter ${foldingReturn.index + 1}: ${aliasLabel} Hz at ${fmt(foldingReturn.apparentDepthKm, 2)} km</title></ellipse>`;
     svg += '</g>';
-    foldingPair.forEach((point) => {
-      svg += `<circle class="check-clutter-center" cx="${sx(point.aliasedDopplerHz)}" cy="${sy(point.apparentDepthKm)}" r="5"></circle>`;
-    });
+    svg += `<circle class="check-clutter-center" cx="${sx(foldingReturn.aliasedDopplerHz)}" cy="${sy(foldingReturn.apparentDepthKm)}" r="5"></circle>`;
     svg += `<rect class="check-target-center" x="${sx(0) - 5}" y="${sy(model.targetDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${sx(0)} ${sy(model.targetDepthKm)})"></rect>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
@@ -309,8 +292,8 @@
   }
 
   function draw(effectivePrfHz) {
-    const { points, foldingPair, pairOverlaps, foldBand } = calculate(effectivePrfHz);
-    const discreteTargetOverlap = pairOverlaps.some((point) => Math.abs(point.apparentDepthKm - model.targetDepthKm) <= model.depthToleranceKm);
+    const { points, foldingReturn, selectedOverlaps, foldBand } = calculate(effectivePrfHz);
+    const discreteTargetOverlap = selectedOverlaps.some((point) => Math.abs(point.apparentDepthKm - model.targetDepthKm) <= model.depthToleranceKm);
     const continuousBandOverlapsTarget = Boolean(foldBand)
       && foldBand.maxDepthKm >= model.targetDepthKm - model.depthToleranceKm
       && foldBand.minDepthKm <= model.targetDepthKm + model.depthToleranceKm;
@@ -338,9 +321,7 @@
     svg += `<line class="geometry-surface" x1="${left}" y1="${surfaceY}" x2="${width - right}" y2="${surfaceY}"></line>`;
     svg += `<line class="geometry-depth-guide" x1="${satelliteX}" y1="${surfaceY}" x2="${satelliteX}" y2="${targetY}"></line>`;
     svg += `<line class="geometry-nadir" x1="${satelliteX}" y1="${satelliteY + 9}" x2="${satelliteX}" y2="${targetY - 10}"></line>`;
-    foldingPair.forEach((point) => {
-      svg += `<line class="geometry-ray ${targetOverlap ? 'overlap' : ''}" x1="${satelliteX}" y1="${satelliteY + 9}" x2="${sx(point.xKm)}" y2="${surfaceY - 7}"></line>`;
-    });
+    svg += `<line class="geometry-ray ${targetOverlap ? 'overlap' : ''}" x1="${satelliteX}" y1="${satelliteY + 9}" x2="${sx(foldingReturn.xKm)}" y2="${surfaceY - 7}"></line>`;
     if (foldIsVisible) {
       svg += `<rect class="geometry-fold-band" x="${left}" y="${blurTopY}" width="${width - left - right}" height="${Math.max(1, blurBottomY - blurTopY)}"></rect>`;
       svg += `<line class="geometry-fold-line" x1="${left}" y1="${depthToY(foldBand.centerDepthKm)}" x2="${width - right}" y2="${depthToY(foldBand.centerDepthKm)}"></line>`;
@@ -370,13 +351,13 @@
     plot.innerHTML = svg;
 
     renderFoldDepthBlock(effectivePrfHz, foldBand, targetOverlap);
-    renderTraceCheck(foldingPair, targetOverlap);
-    renderFastTimeDopplerCheck(effectivePrfHz, foldingPair, targetOverlap);
+    renderTraceCheck(foldingReturn, targetOverlap);
+    renderFastTimeDopplerCheck(effectivePrfHz, foldingReturn, targetOverlap);
     originalPrfText.textContent = `Fixed transmitted/trace PRF: ${fmt(originalPrfHz, 1)} Hz. Only the effective Doppler sampling rate moves.`;
     output.textContent = `${fmt(effectivePrfHz, 1)} Hz`;
     status.className = `prf-status${targetOverlap ? ' is-overlap' : ''}`;
     if (targetOverlap) {
-      status.textContent = `Overlap at ${fmt(effectivePrfHz, 1)} Hz: the continuous order-${foldBand.order} band and clutter points ${foldingPair.map((point) => point.index + 1).join(' and ')} both satisfy the Doppler-plus-depth tolerance rule.`;
+      status.textContent = `Overlap at ${fmt(effectivePrfHz, 1)} Hz: the selected clutter point ${foldingReturn.index + 1} satisfies the Doppler-plus-depth tolerance rule with the fixed target.`;
     } else if (!foldBand) {
       status.textContent = `No overlap at ${fmt(effectivePrfHz, 1)} Hz: no zero-Doppler fold order reaches the modeled surface.`;
     } else {

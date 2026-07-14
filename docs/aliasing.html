@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=restore-tabs-20260713">
-    <script defer src="aliasing.js?v=restore-tabs-20260713"></script>
+    <link rel="stylesheet" href="aliasing.css?v=one-alias-point-20260713">
+    <script defer src="aliasing.js?v=one-alias-point-20260713"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -44,7 +44,7 @@
           <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
           <div><dt>Ice index</dt><dd id="given-index"></dd></div>
         </dl>
-        <p class="model-boundary"><strong>Model boundary:</strong> the slider changes the effective Doppler sampling PRF, while the transmitted radar PRF and geometry stay fixed. The moving red band is a continuous-surface approximation; the 12 dots are the discrete clutter points checked for target overlap.</p>
+        <p class="model-boundary"><strong>Model boundary:</strong> the slider changes the effective Doppler sampling PRF, while the transmitted radar PRF and geometry stay fixed. The moving red band is a continuous-surface reference; only one selected surface dot is checked as the clutter return that aliases onto the target.</p>
         <p id="trace-status" class="prf-status" aria-live="polite"></p>
       </section>
 
@@ -59,8 +59,8 @@
 
         <section class="horizontal-map blur-map" aria-labelledby="blur-title">
           <div class="map-heading">
-            <h2 id="blur-title">Continuous-surface fold band</h2>
-            <p>The band width is calculated from the ±25 Hz Doppler tolerance. It is not merely a decorative blur width.</p>
+            <h2 id="blur-title">Selected fold band</h2>
+            <p>The band width is calculated from the +/-25 Hz Doppler tolerance. It shows where the selected surface fold can interfere.</p>
           </div>
           <div id="blur-plot" class="blur-plot" aria-live="polite"></div>
         </section>
@@ -70,22 +70,22 @@
         <div class="checks-heading">
           <p class="section-kicker">Independent sanity checks</p>
           <h2 id="checks-title">Trace and fast-time checks</h2>
-          <p>Both checks use only clutter points 4 and 9—the fixed pair responsible for the target-depth fold. Their unequal trace shapes are schematic; the delay and Doppler calculations are unchanged.</p>
+          <p>Both checks use one selected surface clutter point and the fixed subsurface target. The other surface dots remain visible only as geometry context.</p>
         </div>
 
         <div class="visual-grid checks-grid">
           <section class="horizontal-map" aria-labelledby="trace-check-title">
             <div class="map-heading">
-              <h3 id="trace-check-title">1. Asymmetric trace hyperbolas</h3>
-              <p>One trace is intentionally larger, while both remain constrained to the same 6.74 km target crossing.</p>
+              <h3 id="trace-check-title">1. Selected clutter trace</h3>
+              <p>Only the selected surface trace is compared with the fixed subsurface target trace.</p>
             </div>
             <div id="trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
           </section>
 
           <section class="horizontal-map" aria-labelledby="doppler-check-title">
             <div class="map-heading">
-              <h3 id="doppler-check-title">2. Fast-time × Doppler tails</h3>
-              <p>Checks whether the aliased clutter responses fold into the target's 0 Hz, 6.74 km resolution cell.</p>
+              <h3 id="doppler-check-title">2. Fast-time x Doppler tails</h3>
+              <p>Checks whether the one aliased clutter response folds into the target's 0 Hz, 6.74 km resolution cell.</p>
             </div>
             <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
           </section>
