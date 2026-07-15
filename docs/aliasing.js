@@ -223,72 +223,157 @@
     blurPlot.innerHTML = svg;
   }
 
-  function sampleMagnitudeGrid(grid, depthKm, traceIndexFloat) {
-    const depthPosition = (depthKm / processingModel.maxDepthKm) * (grid.length - 1);
-    const y0 = Math.max(0, Math.min(grid.length - 1, Math.floor(depthPosition)));
-    const y1 = Math.max(0, Math.min(grid.length - 1, y0 + 1));
-    const x0 = Math.max(0, Math.min(grid[0].length - 1, Math.floor(traceIndexFloat)));
-    const x1 = Math.max(0, Math.min(grid[0].length - 1, x0 + 1));
-    const tx = traceIndexFloat - x0;
-    const ty = depthPosition - y0;
-    const top = grid[y0][x0] * (1 - tx) + grid[y0][x1] * tx;
-    const bottom = grid[y1][x0] * (1 - tx) + grid[y1][x1] * tx;
-    return top * (1 - ty) + bottom * ty;
+  function deterministicUnit(seedA, seedB = 0) {
+    const value = Math.sin(seedA * 12.9898 + seedB * 78.233) * 43758.5453;
+    return value - Math.floor(value);
   }
 
-  function maxMagnitudeInDepthWindow(grid, depthMinKm, depthMaxKm) {
-    const minIndex = Math.max(0, Math.floor((depthMinKm / processingModel.maxDepthKm) * (grid.length - 1)));
-    const maxIndex = Math.min(grid.length - 1, Math.ceil((depthMaxKm / processingModel.maxDepthKm) * (grid.length - 1)));
-    let maximum = 0;
-    for (let rowIndex = minIndex; rowIndex <= maxIndex; rowIndex += 1) {
-      for (let columnIndex = 0; columnIndex < grid[rowIndex].length; columnIndex += 1) {
-        maximum = Math.max(maximum, grid[rowIndex][columnIndex]);
+  function rickerWavelet(depthOffsetKm, widthKm) {
+    const normalized = depthOffsetKm / widthKm;
+    return (1 - normalized ** 2) * Math.exp(-0.5 * normalized ** 2);
+  }
+
+  function addRadarEcho(rows, traceIndex, depthKm, amplitude, widthKm, depthMinKm, depthMaxKm) {
+    if (depthKm < depthMinKm - 4 * widthKm || depthKm > depthMaxKm + 4 * widthKm) return;
+    const depthStepKm = (depthMaxKm - depthMinKm) / (rows.length - 1);
+    const centerIndex = (depthKm - depthMinKm) / depthStepKm;
+    const radius = Math.max(2, Math.ceil((4 * widthKm) / depthStepKm));
+    const firstIndex = Math.max(0, Math.floor(centerIndex) - radius);
+    const lastIndex = Math.min(rows.length - 1, Math.ceil(centerIndex) + radius);
+    for (let depthIndex = firstIndex; depthIndex <= lastIndex; depthIndex += 1) {
+      const sampleDepthKm = depthMinKm + depthIndex * depthStepKm;
+      rows[depthIndex][traceIndex] += amplitude * rickerWavelet(sampleDepthKm - depthKm, widthKm);
+    }
+  }
+
+  // Build a variable-density B-scan from trace-by-trace slant-range delays.
+  // The target and every surface cell generate a band-limited radar pulse. The
+  // surface-cell amplitude is the response of the target's zero-Doppler filter,
+  // evaluated after that cell's Doppler has been folded by the selected PRF.
+  // Several neighboring cells pass together, so their coherent range responses
+  // form a thick, speckled clutter tail instead of a decorative horizontal band.
+  function buildLiveBScan(options) {
+    const traceCount = 193;
+    const depthBins = 361;
+    const xMinKm = -40;
+    const xMaxKm = 40;
+    const rows = Array.from({ length: depthBins }, () => new Float32Array(traceCount));
+    const dopplerBinHz = Math.max(model.dopplerToleranceHz, options.effectivePrfHz / PROCESSING_TRACE_COUNT);
+    const filterSigmaHz = Math.max(12, dopplerBinHz * 0.48);
+    const targetOpticalHeightKm = model.altitudeKm + model.iceIndex * model.targetDepthKm;
+    const surfaceCellCount = 81;
+
+    for (let traceIndex = 0; traceIndex < traceCount; traceIndex += 1) {
+      const alongTrackKm = xMinKm + (traceIndex / (traceCount - 1)) * (xMaxKm - xMinKm);
+
+      // A strong surface reflection and three weak interfaces give the B-scan
+      // normal radargram context without determining the alias result.
+      const surfaceDepthKm = 0.12 + 0.025 * Math.sin(alongTrackKm * 0.24);
+      addRadarEcho(rows, traceIndex, surfaceDepthKm, 0.95, 0.055, options.depthMinKm, options.depthMaxKm);
+      [
+        { depthKm: 1.75 + 0.08 * Math.sin(alongTrackKm * 0.12), amplitude: 0.10, widthKm: 0.075 },
+        { depthKm: 3.55 + 0.13 * Math.sin(alongTrackKm * 0.08 + 1.2), amplitude: -0.075, widthKm: 0.085 },
+        { depthKm: 9.65 + 0.16 * Math.sin(alongTrackKm * 0.07 - 0.8), amplitude: 0.065, widthKm: 0.10 }
+      ].forEach((layer) => {
+        addRadarEcho(rows, traceIndex, layer.depthKm, layer.amplitude, layer.widthKm, options.depthMinKm, options.depthMaxKm);
+      });
+
+      // One fixed subsurface point target. Its delay migrates with platform
+      // position, so it appears as a localized hyperbola with a 6.74 km apex.
+      const targetOpticalRangeKm = Math.hypot(targetOpticalHeightKm, alongTrackKm);
+      const targetApparentDepthKm = (targetOpticalRangeKm - model.altitudeKm) / model.iceIndex;
+      const targetBeamWeight = Math.exp(-0.5 * (alongTrackKm / 18) ** 2);
+      addRadarEcho(
+        rows,
+        traceIndex,
+        targetApparentDepthKm,
+        0.62 * targetBeamWeight,
+        0.085,
+        options.depthMinKm,
+        options.depthMaxKm
+      );
+
+      // Positive-Doppler continuous surface cells. Only cells whose aliased
+      // Doppler falls inside the target cell contribute strongly. Their slant-
+      // range histories create the moving clutter hyperbola/blur seen below.
+      for (let cellIndex = 0; cellIndex < surfaceCellCount; cellIndex += 1) {
+        const surfaceXKm = 5 + (cellIndex / (surfaceCellCount - 1)) * (model.spreadKm - 5);
+        const centerRangeKm = Math.hypot(model.altitudeKm, surfaceXKm);
+        const trueDopplerHz = (2 * model.velocityKmS * 1000 / wavelengthM) * (surfaceXKm / centerRangeKm);
+        const aliasedDopplerHz = alias(trueDopplerHz, options.effectivePrfHz);
+        const dopplerCellWeight = Math.exp(-0.5 * (aliasedDopplerHz / filterSigmaHz) ** 2);
+        if (dopplerCellWeight < 0.008) continue;
+
+        const slantRangeKm = Math.hypot(model.altitudeKm, surfaceXKm - alongTrackKm);
+        const apparentDepthKm = (slantRangeKm - model.altitudeKm) / model.iceIndex;
+        const reflectivity = 0.58 + 0.42 * deterministicUnit(cellIndex + 1, 7);
+        const footprintWeight = 1 / (1 + 0.0016 * (surfaceXKm - alongTrackKm) ** 2);
+        const polarity = deterministicUnit(cellIndex + 3, 11) > 0.34 ? 1 : -0.72;
+        const amplitude = 0.58 * reflectivity * footprintWeight * dopplerCellWeight * polarity;
+        for (let facetIndex = 0; facetIndex < 3; facetIndex += 1) {
+          const facetSeed = cellIndex * 3 + facetIndex + 1;
+          const depthJitterKm = (deterministicUnit(facetSeed, 31) - 0.5) * 0.20;
+          const facetScale = 0.24 + 0.20 * deterministicUnit(facetSeed, 37);
+          const facetPolarity = deterministicUnit(facetSeed, 41) > 0.22 ? 1 : -0.65;
+          const pulseWidthKm = 0.085 + 0.045 * deterministicUnit(facetSeed, 43);
+          addRadarEcho(
+            rows,
+            traceIndex,
+            apparentDepthKm + depthJitterKm,
+            amplitude * facetScale * facetPolarity,
+            pulseWidthKm,
+            options.depthMinKm,
+            options.depthMaxKm
+          );
+        }
+      }
+
+      // Weak distributed point returns make the background recognizably
+      // radar-like. They are deterministic synthetic scatterers, not a visual
+      // texture painted after the signal is formed.
+      for (let scattererIndex = 0; scattererIndex < 18; scattererIndex += 1) {
+        const scattererXKm = -36 + 72 * deterministicUnit(scattererIndex + 1, 19);
+        const scattererDepthKm = 1.0 + 10.0 * deterministicUnit(scattererIndex + 1, 23);
+        const opticalHeightKm = model.altitudeKm + model.iceIndex * scattererDepthKm;
+        const opticalRangeKm = Math.hypot(opticalHeightKm, alongTrackKm - scattererXKm);
+        const apparentDepthKm = (opticalRangeKm - model.altitudeKm) / model.iceIndex;
+        const amplitude = (deterministicUnit(scattererIndex + 1, 29) - 0.5) * 0.09;
+        addRadarEcho(rows, traceIndex, apparentDepthKm, amplitude, 0.065, options.depthMinKm, options.depthMaxKm);
       }
     }
-    return maximum || 1;
+
+    return { rows, traceCount, depthBins, xMinKm, xMaxKm };
   }
 
-  function signalProcessedRadargramTextureUrl(options) {
-    const pixelWidth = 960;
-    const pixelHeight = 285;
+  function liveBScanTextureUrl(options) {
+    const bScan = buildLiveBScan(options);
+    const pixelWidth = bScan.traceCount;
+    const pixelHeight = bScan.depthBins;
     const canvas = document.createElement('canvas');
     canvas.width = pixelWidth;
     canvas.height = pixelHeight;
     const context = canvas.getContext('2d', { willReadFrequently: true });
     const image = context.createImageData(pixelWidth, pixelHeight);
     const data = image.data;
-    const depthSpan = options.depthMaxKm - options.depthMinKm;
-    const rawMatrix = buildTraceMatrix(options.effectivePrfHz);
-    const rawMagnitude = magnitudeRows(rawMatrix);
-    const spectrum = transformRows(rawMatrix);
-    const passbandSigmaHz = Math.max(
-      options.effectivePrfHz / PROCESSING_TRACE_COUNT,
-      model.dopplerToleranceHz * 0.45
-    );
-    const targetCellSpectrum = targetDopplerCellOnly(spectrum, options.effectivePrfHz, passbandSigmaHz);
-    const reconstructedMagnitude = magnitudeRows(transformRows(targetCellSpectrum, true));
-    const signalMax = maxMagnitudeInDepthWindow(reconstructedMagnitude, options.depthMinKm, options.depthMaxKm);
-    const rawMax = maxMagnitudeInDepthWindow(rawMagnitude, options.depthMinKm, options.depthMaxKm);
+    const absoluteSamples = [];
 
-    for (let py = 0; py < pixelHeight; py += 1) {
-      const yn = py / (pixelHeight - 1);
-      const depthKm = options.depthMinKm + yn * depthSpan;
-      for (let px = 0; px < pixelWidth; px += 1) {
-        const traceIndexFloat = (px / (pixelWidth - 1)) * (processingModel.traceCount - 1);
-        const processedValue = sampleMagnitudeGrid(reconstructedMagnitude, depthKm, traceIndexFloat);
-        const rawValue = sampleMagnitudeGrid(rawMagnitude, depthKm, traceIndexFloat);
-        const processedNorm = Math.log1p(processedValue * 5.0) / Math.log1p(signalMax * 5.0);
-        const rawNorm = Math.log1p(rawValue * 2.0) / Math.log1p(rawMax * 2.0);
-        let darkness = 0.05 + 0.84 * processedNorm + 0.16 * rawNorm;
-        darkness = Math.max(0, Math.min(1, darkness));
-        const r = 247 * (1 - darkness) + 42 * darkness;
-        const g = 239 * (1 - darkness) + 39 * darkness;
-        const b = 220 * (1 - darkness) + 35 * darkness;
-        const i = (py * pixelWidth + px) * 4;
-        data[i] = r;
-        data[i + 1] = g;
-        data[i + 2] = b;
-        data[i + 3] = 255;
+    bScan.rows.forEach((row) => row.forEach((value) => absoluteSamples.push(Math.abs(value))));
+    absoluteSamples.sort((a, b) => a - b);
+    const clipValue = Math.max(0.08, absoluteSamples[Math.floor(absoluteSamples.length * 0.985)] || 1);
+
+    for (let depthIndex = 0; depthIndex < bScan.depthBins; depthIndex += 1) {
+      const timeGain = 0.92 + 0.34 * (depthIndex / (bScan.depthBins - 1));
+      for (let traceIndex = 0; traceIndex < bScan.traceCount; traceIndex += 1) {
+        const coherentNoise = 0.018 * (deterministicUnit(depthIndex + 1, traceIndex + 37) - 0.5);
+        const traceStripe = 0.008 * Math.sin(traceIndex * 0.93 + depthIndex * 0.03);
+        const sample = bScan.rows[depthIndex][traceIndex] * timeGain + coherentNoise + traceStripe;
+        const normalized = Math.tanh(sample / (clipValue * 0.72));
+        const gray = Math.max(18, Math.min(248, Math.round(199 - normalized * 112)));
+        const pixelIndex = (depthIndex * pixelWidth + traceIndex) * 4;
+        data[pixelIndex] = gray;
+        data[pixelIndex + 1] = gray;
+        data[pixelIndex + 2] = gray;
+        data[pixelIndex + 3] = 255;
       }
     }
 
@@ -297,21 +382,21 @@
   }
 
   function renderLiveRadargram(effectivePrfHz, foldBand, overlapsTarget) {
-    const width = 820;
-    const height = 315;
-    const margin = { left: 70, right: 26, top: 36, bottom: 45 };
-    const traceMin = 0;
-    const traceMax = 63;
-    const depthMinKm = Math.max(0, Math.floor((foldDepthScaleKm.min - 0.45) * 10) / 10);
-    const depthMaxKm = Math.ceil((foldDepthScaleKm.max + 0.45) * 10) / 10;
+    const width = 900;
+    const height = 455;
+    const margin = { left: 72, right: 24, top: 42, bottom: 52 };
+    const xMinKm = -40;
+    const xMaxKm = 40;
+    const depthMinKm = 0;
+    const depthMaxKm = Math.max(12, Math.ceil(model.targetDepthKm + 4));
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
-    const sx = (value) => margin.left + ((value - traceMin) / (traceMax - traceMin)) * plotWidth;
+    const sx = (value) => margin.left + ((value - xMinKm) / (xMaxKm - xMinKm)) * plotWidth;
     const sy = (value) => margin.top + ((value - depthMinKm) / (depthMaxKm - depthMinKm)) * plotHeight;
-    const xTicks = [0, 16, 32, 48, 63];
-    const yTicks = Array.from({ length: 5 }, (_, index) => depthMinKm + ((depthMaxKm - depthMinKm) * index) / 4);
+    const xTicks = [-40, -20, 0, 20, 40];
+    const yTicks = [0, 3, 6, 9, 12].filter((value) => value <= depthMaxKm);
     const aliasHz = alias(selectedFoldingPoint.trueDopplerHz, effectivePrfHz);
-    const textureUrl = signalProcessedRadargramTextureUrl({
+    const textureUrl = liveBScanTextureUrl({
       depthMinKm,
       depthMaxKm,
       foldBand,
@@ -319,41 +404,26 @@
       aliasHz,
       overlapsTarget
     });
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Simplified synthetic radargram showing a folded surface-clutter blur moving with PRF">
-      <defs>
-        <radialGradient id="alias-target-glow">
-          <stop offset="0" stop-color="#285f64" stop-opacity=".18"></stop>
-          <stop offset=".62" stop-color="#285f64" stop-opacity=".06"></stop>
-          <stop offset="1" stop-color="#285f64" stop-opacity="0"></stop>
-        </radialGradient>
-      </defs>`;
+    const foldReadout = foldBand
+      ? `surface fold ${fmt(foldBand.centerDepthKm, 2)} km at center trace`
+      : 'no surface fold in modeled depth';
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Synthetic variable-density B-scan with a surface return, a fixed subsurface target hyperbola, and a PRF-selected surface-clutter tail">`;
 
-    svg += `<image class="matlab-radargram-texture" href="${textureUrl}" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none"></image>`;
-    svg += `<rect class="fake-radargram-vignette" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    svg += `<image class="bscan-radargram-texture" href="${textureUrl}" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none"></image>`;
     xTicks.forEach((value) => {
       const x = sx(value);
-      svg += `<line class="fake-radargram-grid" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
-      svg += `<text class="fake-radargram-label" x="${x}" y="${height - margin.bottom + 18}" text-anchor="middle">${fmt(value, 0)}</text>`;
+      svg += `<line class="bscan-tick" x1="${x}" y1="${height - margin.bottom}" x2="${x}" y2="${height - margin.bottom + 6}"></line>`;
+      svg += `<text class="bscan-label" x="${x}" y="${height - margin.bottom + 22}" text-anchor="middle">${signed(value, 0)}</text>`;
     });
     yTicks.forEach((value) => {
       const y = sy(value);
-      svg += `<line class="fake-radargram-grid" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
-      svg += `<text class="fake-radargram-label" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${fmt(value, 2)}</text>`;
+      svg += `<line class="bscan-tick" x1="${margin.left - 6}" y1="${y}" x2="${margin.left}" y2="${y}"></line>`;
+      svg += `<text class="bscan-label" x="${margin.left - 11}" y="${y + 4}" text-anchor="end">${fmt(value, 0)}</text>`;
     });
-    if (foldBand) {
-      const centerY = sy(foldBand.centerDepthKm);
-      svg += `<text class="fake-fold-label" x="${margin.left + 8}" y="${Math.max(18, centerY - 15)}">folded clutter echo: ${fmt(foldBand.centerDepthKm, 2)} km, alias ${signed(aliasHz, 1)} Hz</text>`;
-    }
-
-    const targetY = sy(model.targetDepthKm);
-    svg += `<ellipse class="fake-target-glow" cx="${sx(32)}" cy="${targetY}" rx="62" ry="24"></ellipse>`;
-    svg += `<line class="fake-target-line" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}"></line>`;
-    svg += `<rect class="fake-target-marker" x="${sx(32) - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${sx(32)} ${targetY})"></rect>`;
-    svg += `<text class="fake-radargram-title" x="${width - margin.right}" y="${targetY - 8}" text-anchor="end">fixed target ${fmt(model.targetDepthKm, 2)} km</text>`;
-    svg += `<rect class="fake-radargram-frame" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
-    svg += `<text class="fake-radargram-title" x="${margin.left}" y="17">current PRF ${fmt(effectivePrfHz, 1)} Hz; target-cell inverse FFT from synthetic traces</text>`;
-    svg += `<text class="fake-radargram-label" x="${margin.left + plotWidth / 2}" y="${height - 7}" text-anchor="middle">trace number</text>`;
-    svg += `<text class="fake-radargram-label" transform="translate(18 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km, downward)</text>`;
+    svg += `<rect class="bscan-frame" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
+    svg += `<text class="bscan-title" x="${margin.left}" y="18">PRF ${fmt(effectivePrfHz, 1)} Hz · selected clutter alias ${signed(aliasHz, 1)} Hz · ${foldReadout}</text>`;
+    svg += `<text class="bscan-label" x="${margin.left + plotWidth / 2}" y="${height - 8}" text-anchor="middle">along-track position (km)</text>`;
+    svg += `<text class="bscan-label" transform="translate(18 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km, downward)</text>`;
     svg += '</svg>';
     liveRadargramPlot.innerHTML = svg;
   }
@@ -634,19 +704,6 @@
     return specRows.map((row) => row.map((value, index) => (
       index === 0 ? { re: value.re, im: value.im } : { re: 0, im: 0 }
     )));
-  }
-
-  function targetDopplerCellOnly(specRows, samplePrfHz, sigmaHz) {
-    const length = specRows[0].length;
-    return specRows.map((row) => row.map((value, index) => {
-      const wrappedIndex = index <= length / 2 ? index : index - length;
-      const frequencyHz = wrappedIndex * samplePrfHz / length;
-      const weight = Math.exp(-0.5 * (frequencyHz / sigmaHz) ** 2);
-      return {
-        re: value.re * weight,
-        im: value.im * weight
-      };
-    }));
   }
 
   function heatColor(value, maxValue, tint = 'red') {
