@@ -2609,7 +2609,6 @@
 
   function initEmbeddedFrames() {
     document.querySelectorAll('.aliasing-frame').forEach((frame) => {
-      let observer = null;
       const resize = () => {
         try {
           const doc = frame.contentDocument;
@@ -2626,15 +2625,11 @@
       };
       const connect = () => {
         resize();
-        observer?.disconnect();
-        if (window.ResizeObserver && frame.contentDocument?.body) {
-          observer = new ResizeObserver(resize);
-          observer.observe(frame.contentDocument.body);
-          if (frame.contentDocument.documentElement) {
-            observer.observe(frame.contentDocument.documentElement);
-          }
-        }
-        window.requestAnimationFrame(resize);
+        // The embedded graph layouts keep a fixed document height while their
+        // SVG contents update. Two animation frames allow fonts and images to
+        // settle without attaching a cross-document observer that can race a
+        // frame navigation.
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resize));
       };
       frame.addEventListener('load', connect);
       if (frame.contentDocument?.readyState === 'complete') connect();

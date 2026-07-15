@@ -5,10 +5,12 @@
   const PROCESSING_TRACE_COUNT = 64;
   const PROCESSING_DEPTH_BINS = 96;
   const PROCESSING_MAX_DEPTH_KM = 24;
-  const LISTEN_GUARD_US = 25;
+  const SIMPLE_LISTEN_MARGIN_US = 25;
+  const REASON_PRF_MIN_HZ = 50;
+  const REASON_PRF_MAX_HZ = 3000;
   const model = {
     altitudeKm: 25,
-    velocityKmS: 3.0,
+    velocityKmS: 2.5,
     frequencyMhz: 60,
     targetDepthKm: 6.74,
     iceIndex: 1.78,
@@ -56,6 +58,7 @@
   let originalPrfHz = 0;
   let targetEchoUs = 0;
   let basePriUs = 0;
+  let simpleTimingPrfMaxHz = 0;
   let safePrfMaxHz = 0;
   let selectedFoldPrfHz = 0;
   let foldDepthScaleKm = { min: 0, max: 1 };
@@ -134,9 +137,12 @@
     originalPrfHz = 4 * Math.abs(selectedFoldingPoint.trueDopplerHz);
     targetEchoUs = (2 * (model.altitudeKm * 1000 + model.iceIndex * model.targetDepthKm * 1000) / C) * 1e6;
     basePriUs = 1e6 / originalPrfHz;
-    safePrfMaxHz = 1e6 / (targetEchoUs + LISTEN_GUARD_US);
-    model.dopplerToleranceHz = originalPrfHz / PROCESSING_TRACE_COUNT;
-    model.depthToleranceKm = PROCESSING_MAX_DEPTH_KM / (PROCESSING_DEPTH_BINS - 1);
+    simpleTimingPrfMaxHz = 1e6 / (targetEchoUs + SIMPLE_LISTEN_MARGIN_US);
+    safePrfMaxHz = Math.min(REASON_PRF_MAX_HZ, simpleTimingPrfMaxHz);
+    // A resolution cell is one FFT/range-bin wide, so coincidence is tested
+    // against the half width on either side of the cell center.
+    model.dopplerToleranceHz = originalPrfHz / PROCESSING_TRACE_COUNT / 2;
+    model.depthToleranceKm = PROCESSING_MAX_DEPTH_KM / (PROCESSING_DEPTH_BINS - 1) / 2;
 
     selectedFoldPrfHz = Math.abs(selectedFoldingPoint.trueDopplerHz);
     const sliderHalfWindowHz = Math.max(28, model.dopplerToleranceHz * 0.55);
@@ -500,12 +506,14 @@
       aliasHz,
       overlapsTarget
     });
-    const maximumSurfaceDopplerHz = 2 * model.velocityKmS * 1000 / wavelengthM;
+    const referenceRangeText = effectivePrfHz <= REASON_PRF_MAX_HZ
+      ? 'within published PRF range'
+      : 'reference only: above published PRF range';
     const readout = options.reference
-      ? `Correct PRF ${fmt(effectivePrfHz, 1)} Hz · Nyquist ±${fmt(effectivePrfHz / 2, 1)} Hz · max surface Doppler ±${fmt(maximumSurfaceDopplerHz, 1)} Hz · no fold`
+      ? `Doppler-unaliased reference ${fmt(effectivePrfHz, 1)} Hz · Nyquist ±${fmt(effectivePrfHz / 2, 1)} Hz · ${referenceRangeText}`
       : `Aliased PRF ${fmt(effectivePrfHz, 1)} Hz · clutter alias ${signed(aliasHz, 1)} Hz · fold depth ${foldBand ? `${fmt(foldBand.centerDepthKm, 2)} km` : 'outside model'}`;
     const ariaLabel = options.reference
-      ? 'Synthetic variable-density B-scan at an unaliased reference PRF, showing a clear fixed subsurface target hyperbola without a folded surface-clutter tail'
+      ? 'Synthetic variable-density B-scan at a Doppler-unaliased reference sampling rate, showing a clear fixed subsurface target hyperbola without a folded surface-clutter tail'
       : 'Synthetic variable-density B-scan with a surface return, a fixed subsurface target hyperbola, and a PRF-selected surface-clutter tail';
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${ariaLabel}">`;
 
@@ -1157,10 +1165,12 @@
       renderProcessingExperiment();
       processingRendered = true;
     }
-    const listenWindowUs = targetEchoUs + LISTEN_GUARD_US;
+    const listenWindowUs = targetEchoUs + SIMPLE_LISTEN_MARGIN_US;
     const timingIsSafe = basePriUs > listenWindowUs;
-    originalPrfText.className = timingIsSafe ? '' : 'is-warning';
-    originalPrfText.textContent = `Base trace PRF: ${fmt(originalPrfHz, 1)} Hz; PRI ${fmt(basePriUs, 1)} µs ${timingIsSafe ? '>' : '<'} echo ${fmt(targetEchoUs, 1)} µs + ${fmt(LISTEN_GUARD_US, 0)} µs guard (${timingIsSafe ? 'listening window clear' : 'range-ambiguous at this speed'}). Max safe PRF ≈ ${fmt(safePrfMaxHz, 0)} Hz.`;
+    const prfWithinPublishedRange = originalPrfHz >= REASON_PRF_MIN_HZ && originalPrfHz <= REASON_PRF_MAX_HZ;
+    const baseCaseIsValid = timingIsSafe && prfWithinPublishedRange;
+    originalPrfText.className = baseCaseIsValid ? '' : 'is-warning';
+    originalPrfText.textContent = `Base trace PRF: ${fmt(originalPrfHz, 1)} Hz (${prfWithinPublishedRange ? 'within' : 'outside'} published 50–3,000 Hz range); PRI ${fmt(basePriUs, 1)} µs ${timingIsSafe ? '>' : '<'} echo ${fmt(targetEchoUs, 1)} µs + ${fmt(SIMPLE_LISTEN_MARGIN_US, 0)} µs assumed margin. Combined teaching ceiling ≈ ${fmt(safePrfMaxHz, 0)} Hz.`;
     output.textContent = `${fmt(effectivePrfHz, 1)} Hz`;
     status.className = `prf-status${targetOverlap ? ' is-overlap' : ''}`;
     if (targetOverlap) {
