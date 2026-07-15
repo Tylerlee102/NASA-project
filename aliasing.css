@@ -42,7 +42,7 @@
 .horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot, .synthetic-radargram-plot { min-height: 0; aspect-ratio: 560 / 405; padding-top: 8px; overflow: hidden; }
 .horizontal-plot svg, .blur-plot svg, .diagnostic-plot svg, .processing-plot svg, .synthetic-radargram-plot svg { display: block; width: 100%; height: 100%; }
 .processing-plot { aspect-ratio: 560 / 455; }
-.synthetic-radargram-plot { aspect-ratio: 820 / 315; }
+.synthetic-radargram-plot { aspect-ratio: 900 / 455; }
 .checks-section, .processing-section { margin-top: 24px; }
 .checks-heading { max-width: 780px; }
 .checks-heading h2 { margin: 7px 0 0; font-size: 2.8rem; }
@@ -113,21 +113,11 @@
 .processing-marker { fill: var(--danger); stroke: #6d2023; stroke-width: 1.8; }
 .processing-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.6; }
 .processing-cell { shape-rendering: crispEdges; }
-.fake-radargram-bg { fill: #fffefa; }
-.matlab-radargram-texture { opacity: .98; }
-.fake-radargram-vignette { fill: rgba(255, 253, 248, .10); stroke: none; }
-.fake-radargram-frame { fill: none; stroke: #9a907f; stroke-width: 1.1; }
-.fake-radargram-grid { stroke: #e4dcca; stroke-width: 1; }
-.fake-radargram-label { fill: #645f56; font-size: 10px; }
-.fake-radargram-title { fill: #17494d; font-size: 11px; font-weight: 850; }
-.fake-danger { fill: var(--danger); font-size: 11px; font-weight: 850; }
-.fake-layer { fill: var(--accent-2); }
-.fake-trace-column { fill: rgba(47, 111, 115, .035); }
-.fake-fold-line { stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 7 5; }
-.fake-fold-label { fill: #35291f; font-size: 11px; font-weight: 850; }
-.fake-target-glow { fill: url(#alias-target-glow); }
-.fake-target-line { stroke: var(--accent-2); stroke-width: 1.5; stroke-dasharray: 6 4; }
-.fake-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.8; }
+.bscan-radargram-texture { image-rendering: auto; }
+.bscan-frame { fill: none; stroke: #776f62; stroke-width: 1.1; }
+.bscan-tick { stroke: #776f62; stroke-width: 1.1; }
+.bscan-label { fill: #645f56; font-size: 10px; }
+.bscan-title { fill: #17494d; font-size: 11px; font-weight: 850; }
 
 @media (max-width: 700px) {
   .simple-lab { padding: 0 12px 44px; }
@@ -145,5 +135,5 @@
   .visual-grid { grid-template-columns: 1fr; }
   .horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot, .synthetic-radargram-plot { min-height: 0; aspect-ratio: 560 / 405; }
   .processing-plot { aspect-ratio: 560 / 455; }
-  .synthetic-radargram-plot { aspect-ratio: 820 / 315; }
+  .synthetic-radargram-plot { aspect-ratio: 900 / 455; }
 }
