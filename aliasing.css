@@ -33,6 +33,11 @@
 .map-heading { min-height: 58px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .map-heading h2, .map-heading h3 { max-width: 650px; margin: 0; font-size: 1.9rem; }
 .map-heading p { margin: 7px 0 0; color: var(--muted); font-size: .84rem; }
+.radargram-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.radargram-control { display: grid; gap: 5px; min-width: 0; color: var(--ink-soft); font-size: .72rem; font-weight: 800; }
+.radargram-control span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.radargram-control output { color: var(--accent-2); font-variant-numeric: tabular-nums; }
+.radargram-control input { width: 100%; accent-color: var(--accent-2); }
 .horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot, .synthetic-radargram-plot { min-height: 0; aspect-ratio: 560 / 405; padding-top: 8px; overflow: hidden; }
 .horizontal-plot svg, .blur-plot svg, .diagnostic-plot svg, .processing-plot svg, .synthetic-radargram-plot svg { display: block; width: 100%; height: 100%; }
 .processing-plot { aspect-ratio: 560 / 455; }
@@ -117,10 +122,11 @@
 .fake-danger { fill: var(--danger); font-size: 11px; font-weight: 850; }
 .fake-layer { fill: var(--accent-2); }
 .fake-trace-column { fill: rgba(47, 111, 115, .035); }
-.fake-fold-smear { fill: url(#alias-radargram-smear); }
-.fake-fold-core { fill: rgba(155, 61, 63, .17); }
-.fake-fold-blob { fill: rgba(155, 61, 63, .30); }
+.fake-fold-smear { fill: url(#alias-radargram-echo); mix-blend-mode: multiply; }
+.fake-fold-core { fill: #211912; mix-blend-mode: multiply; }
+.fake-fold-blob { fill: #211912; mix-blend-mode: multiply; }
 .fake-fold-line { stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 7 5; }
+.fake-fold-label { fill: #35291f; font-size: 11px; font-weight: 850; }
 .fake-target-glow { fill: url(#alias-target-glow); }
 .fake-target-line { stroke: var(--accent-2); stroke-width: 1.5; stroke-dasharray: 6 4; }
 .fake-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.8; }
@@ -136,6 +142,7 @@
   .lab-givens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .map-heading h2, .map-heading h3 { font-size: 1.65rem; }
   .map-heading { min-height: 0; }
+  .radargram-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .checks-heading h2 { font-size: 2.05rem; }
   .visual-grid { grid-template-columns: 1fr; }
   .horizontal-plot, .blur-plot, .diagnostic-plot, .processing-plot, .synthetic-radargram-plot { min-height: 0; aspect-ratio: 560 / 405; }
