@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=live-bscan-sync4-20260714">
-    <script defer src="aliasing.js?v=live-bscan-sync4-20260714"></script>
+    <link rel="stylesheet" href="aliasing.css?v=matlab-validated5-20260714">
+    <script defer src="aliasing.js?v=matlab-validated5-20260714"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -39,8 +39,8 @@
         </div>
         <div class="model-controls" aria-label="Live model parameters">
           <label class="model-control" for="model-speed-slider">
-            <span>Satellite speed <output id="model-speed-output" for="model-speed-slider">3.0 km/s</output></span>
-            <input id="model-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="3.0">
+            <span>Satellite speed <output id="model-speed-output" for="model-speed-slider">2.5 km/s</output></span>
+            <input id="model-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="2.5">
           </label>
           <label class="model-control" for="model-altitude-slider">
             <span>Altitude <output id="model-altitude-output" for="model-altitude-slider">25 km</output></span>
@@ -58,7 +58,7 @@
           <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
           <div><dt>Ice index</dt><dd id="given-index"></dd></div>
         </dl>
-        <p class="model-boundary"><strong>Model boundary:</strong> this synthetic case slides the effective Doppler sampling PRF near the selected fold. The base trace PRI is checked against the echo listening window, so high-speed settings show when the case becomes range-ambiguous.</p>
+        <p class="model-boundary"><strong>Model boundary:</strong> 60 MHz and the 50–3,000 Hz PRF range follow the <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11211191/" target="_blank" rel="noreferrer">published REASON instrument description</a>. The single-pulse listening check is a teaching constraint; REASON operations may use more than one pulse in flight.</p>
         <p id="trace-status" class="prf-status" aria-live="polite"></p>
       </section>
 
@@ -79,16 +79,16 @@
 
         <section class="horizontal-map full-span" aria-labelledby="live-radargram-title">
           <div class="map-heading">
-            <h2 id="live-radargram-title">Aliased-PRF B-scan radargram</h2>
-            <p>Each column is a radar trace. Slant-range delays form the surface return, target hyperbola, and the clutter tail selected by the current aliased-Doppler cell.</p>
+            <h2 id="live-radargram-title">Processed aliased-PRF B-scan (synthetic)</h2>
+            <p>Each column is a generated radar trace. Range-compressed echoes form the surface return and target hyperbola; the current zero-Doppler gate supplies the moving folded-clutter patch.</p>
           </div>
           <div id="live-radargram-plot" class="synthetic-radargram-plot" aria-live="polite"></div>
         </section>
 
         <section class="horizontal-map full-span" aria-labelledby="reference-radargram-title">
           <div class="map-heading">
-            <h2 id="reference-radargram-title">Correct-PRF reference radargram</h2>
-            <p>The same scene at the full base PRF. Its Nyquist interval contains every modeled surface Doppler, so the target remains visible without a folded clutter tail.</p>
+            <h2 id="reference-radargram-title">Doppler-unaliased reference B-scan (synthetic)</h2>
+            <p>The same generated scene at a sampling rate whose Nyquist interval contains every modeled surface Doppler. This isolates the aliasing effect; the readout flags rates above REASON's published PRF range.</p>
           </div>
           <div id="reference-radargram-plot" class="synthetic-radargram-plot" aria-live="polite"></div>
         </section>
@@ -121,7 +121,7 @@
         <div class="checks-heading">
           <p class="section-kicker">Radar-processing check</p>
           <h2 id="processing-title">Trace-matrix processing check</h2>
-          <p class="processing-caveat">Fixed sanity check: these four plots use all/every-2/every-4 trace deletion, so they do not move with the PRF slider. The every-4 case is intentionally constructed; the non-tuned row shows a nearby case that does not land exactly at 0 Hz. The trace matrix is a local constant-Doppler approximation, not full range-migration focusing.</p>
+          <p class="processing-caveat">MATLAB R2026a numerical cross-check: geometry, fold depth, FFT bins, and zero-Doppler reconstruction agree. These fixed plots use all/every-2/every-4 trace deletion, so they do not move with the PRF slider. The every-4 case is intentionally constructed; the trace matrix is a local constant-Doppler approximation, not full range-migration focusing.</p>
         </div>
 
         <div class="visual-grid processing-grid">
