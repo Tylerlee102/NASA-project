@@ -30,6 +30,7 @@
   const plot = document.getElementById('horizontal-plot');
   const blurPlot = document.getElementById('blur-plot');
   const liveRadargramPlot = document.getElementById('live-radargram-plot');
+  const referenceRadargramPlot = document.getElementById('reference-radargram-plot');
   const traceCheckPlot = document.getElementById('trace-check-plot');
   const dopplerCheckPlot = document.getElementById('doppler-check-plot');
   const radargramPlot = document.getElementById('radargram-plot');
@@ -381,7 +382,7 @@
     return canvas.toDataURL('image/png');
   }
 
-  function renderLiveRadargram(effectivePrfHz, foldBand, overlapsTarget) {
+  function renderBScanRadargram(container, effectivePrfHz, foldBand, overlapsTarget, options = {}) {
     const width = 900;
     const height = 455;
     const margin = { left: 72, right: 24, top: 42, bottom: 52 };
@@ -404,10 +405,14 @@
       aliasHz,
       overlapsTarget
     });
-    const foldReadout = foldBand
-      ? `surface fold ${fmt(foldBand.centerDepthKm, 2)} km at center trace`
-      : 'no surface fold in modeled depth';
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Synthetic variable-density B-scan with a surface return, a fixed subsurface target hyperbola, and a PRF-selected surface-clutter tail">`;
+    const maximumSurfaceDopplerHz = 2 * model.velocityKmS * 1000 / wavelengthM;
+    const readout = options.reference
+      ? `Correct PRF ${fmt(effectivePrfHz, 1)} Hz · Nyquist ±${fmt(effectivePrfHz / 2, 1)} Hz · max surface Doppler ±${fmt(maximumSurfaceDopplerHz, 1)} Hz · no fold`
+      : `Aliased PRF ${fmt(effectivePrfHz, 1)} Hz · clutter alias ${signed(aliasHz, 1)} Hz · fold depth ${foldBand ? `${fmt(foldBand.centerDepthKm, 2)} km` : 'outside model'}`;
+    const ariaLabel = options.reference
+      ? 'Synthetic variable-density B-scan at an unaliased reference PRF, showing a clear fixed subsurface target hyperbola without a folded surface-clutter tail'
+      : 'Synthetic variable-density B-scan with a surface return, a fixed subsurface target hyperbola, and a PRF-selected surface-clutter tail';
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${ariaLabel}">`;
 
     svg += `<image class="bscan-radargram-texture" href="${textureUrl}" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none"></image>`;
     xTicks.forEach((value) => {
@@ -421,11 +426,22 @@
       svg += `<text class="bscan-label" x="${margin.left - 11}" y="${y + 4}" text-anchor="end">${fmt(value, 0)}</text>`;
     });
     svg += `<rect class="bscan-frame" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
-    svg += `<text class="bscan-title" x="${margin.left}" y="18">PRF ${fmt(effectivePrfHz, 1)} Hz · selected clutter alias ${signed(aliasHz, 1)} Hz · ${foldReadout}</text>`;
+    svg += `<text class="bscan-title" x="${margin.left}" y="18">${readout}</text>`;
     svg += `<text class="bscan-label" x="${margin.left + plotWidth / 2}" y="${height - 8}" text-anchor="middle">along-track position (km)</text>`;
     svg += `<text class="bscan-label" transform="translate(18 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km, downward)</text>`;
     svg += '</svg>';
-    liveRadargramPlot.innerHTML = svg;
+    container.innerHTML = svg;
+  }
+
+  function renderLiveRadargram(effectivePrfHz, foldBand, overlapsTarget) {
+    renderBScanRadargram(liveRadargramPlot, effectivePrfHz, foldBand, overlapsTarget);
+  }
+
+  function renderReferenceRadargram() {
+    const maximumSurfaceDopplerHz = 2 * model.velocityKmS * 1000 / wavelengthM;
+    const noFoldPrfHz = maximumSurfaceDopplerHz * 2.1;
+    const referencePrfHz = Math.max(originalPrfHz, noFoldPrfHz);
+    renderBScanRadargram(referenceRadargramPlot, referencePrfHz, null, false, { reference: true });
   }
 
   // Check 1: compare only the selected clutter trace against the fixed target
@@ -1030,6 +1046,7 @@
 
     renderFoldDepthBlock(effectivePrfHz, foldBand, targetOverlap);
     renderLiveRadargram(effectivePrfHz, foldBand, targetOverlap);
+    renderReferenceRadargram();
     renderTraceCheck(foldingReturn, targetOverlap);
     renderFastTimeDopplerCheck(effectivePrfHz, foldingReturn, targetOverlap);
     if (!processingRendered) {
