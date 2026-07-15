@@ -223,16 +223,32 @@
     blurPlot.innerHTML = svg;
   }
 
-  function noise2D(x, y, seed = 0) {
-    const value = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
-    return value - Math.floor(value);
+  function sampleMagnitudeGrid(grid, depthKm, traceIndexFloat) {
+    const depthPosition = (depthKm / processingModel.maxDepthKm) * (grid.length - 1);
+    const y0 = Math.max(0, Math.min(grid.length - 1, Math.floor(depthPosition)));
+    const y1 = Math.max(0, Math.min(grid.length - 1, y0 + 1));
+    const x0 = Math.max(0, Math.min(grid[0].length - 1, Math.floor(traceIndexFloat)));
+    const x1 = Math.max(0, Math.min(grid[0].length - 1, x0 + 1));
+    const tx = traceIndexFloat - x0;
+    const ty = depthPosition - y0;
+    const top = grid[y0][x0] * (1 - tx) + grid[y0][x1] * tx;
+    const bottom = grid[y1][x0] * (1 - tx) + grid[y1][x1] * tx;
+    return top * (1 - ty) + bottom * ty;
   }
 
-  function gaussian(value, center, sigma) {
-    return Math.exp(-((value - center) ** 2) / (2 * sigma ** 2));
+  function maxMagnitudeInDepthWindow(grid, depthMinKm, depthMaxKm) {
+    const minIndex = Math.max(0, Math.floor((depthMinKm / processingModel.maxDepthKm) * (grid.length - 1)));
+    const maxIndex = Math.min(grid.length - 1, Math.ceil((depthMaxKm / processingModel.maxDepthKm) * (grid.length - 1)));
+    let maximum = 0;
+    for (let rowIndex = minIndex; rowIndex <= maxIndex; rowIndex += 1) {
+      for (let columnIndex = 0; columnIndex < grid[rowIndex].length; columnIndex += 1) {
+        maximum = Math.max(maximum, grid[rowIndex][columnIndex]);
+      }
+    }
+    return maximum || 1;
   }
 
-  function liveRadargramTextureUrl(options) {
+  function signalProcessedRadargramTextureUrl(options) {
     const pixelWidth = 960;
     const pixelHeight = 285;
     const canvas = document.createElement('canvas');
@@ -242,59 +258,37 @@
     const image = context.createImageData(pixelWidth, pixelHeight);
     const data = image.data;
     const depthSpan = options.depthMaxKm - options.depthMinKm;
-    const targetY = ((model.targetDepthKm - options.depthMinKm) / depthSpan) * (pixelHeight - 1);
-    const foldY = options.foldBand
-      ? ((options.foldBand.centerDepthKm - options.depthMinKm) / depthSpan) * (pixelHeight - 1)
-      : null;
-    const foldSigma = options.foldBand
-      ? Math.max(8, Math.abs((options.foldBand.maxDepthKm - options.foldBand.minDepthKm) / depthSpan) * pixelHeight * 1.25)
-      : 0;
-    const overlapBoost = options.overlapsTarget ? 1.18 : 0.92;
-    const speedTextureShift = model.velocityKmS * 17.3 + model.altitudeKm * 0.41 + model.targetDepthKm * 2.7;
-    const layerCenters = [0.08, 0.21, 0.39, 0.58, 0.78, 0.91];
+    const rawMatrix = buildTraceMatrix(options.effectivePrfHz);
+    const rawMagnitude = magnitudeRows(rawMatrix);
+    const spectrum = transformRows(rawMatrix);
+    const passbandSigmaHz = Math.max(
+      options.effectivePrfHz / PROCESSING_TRACE_COUNT,
+      model.dopplerToleranceHz * 0.45
+    );
+    const targetCellSpectrum = targetDopplerCellOnly(spectrum, options.effectivePrfHz, passbandSigmaHz);
+    const reconstructedMagnitude = magnitudeRows(transformRows(targetCellSpectrum, true));
+    const signalMax = maxMagnitudeInDepthWindow(reconstructedMagnitude, options.depthMinKm, options.depthMaxKm);
+    const rawMax = maxMagnitudeInDepthWindow(rawMagnitude, options.depthMinKm, options.depthMaxKm);
 
     for (let py = 0; py < pixelHeight; py += 1) {
       const yn = py / (pixelHeight - 1);
       const depthKm = options.depthMinKm + yn * depthSpan;
       for (let px = 0; px < pixelWidth; px += 1) {
-        const xn = px / (pixelWidth - 1);
-        const fine = noise2D(px, py, speedTextureShift);
-        const coarse = noise2D(Math.floor(px / 7), Math.floor(py / 5), speedTextureShift + 13);
-        const traceStripe = 0.026 * Math.sin(px * 0.42 + speedTextureShift) + 0.014 * Math.sin(px * 0.11);
-        let darkness = 0.36 + 0.085 * (fine - 0.5) + 0.11 * (coarse - 0.5) + traceStripe;
-
-        layerCenters.forEach((center, index) => {
-          const waviness = 0.010 * Math.sin(2 * Math.PI * (xn * (1.1 + index * 0.18) + index * 0.17));
-          darkness += (0.12 - index * 0.007) * gaussian(yn, center + waviness, 0.010 + index * 0.002);
-        });
-
-        darkness += 0.20 * gaussian(yn, 0.035, 0.010);
-        darkness *= 1.02 - 0.30 * yn;
-
-        const targetEcho = gaussian(py, targetY, 4.8) * gaussian(xn, 0.50, 0.045);
-        darkness += 0.26 * targetEcho;
-
-        if (foldY !== null && foldY > -foldSigma * 3 && foldY < pixelHeight + foldSigma * 3) {
-          const echoTexture = 0.80 + 0.20 * noise2D(Math.floor(px / 12), Math.floor(py / 4), speedTextureShift + 71);
-          const horizontalAperture = 0.78 + 0.22 * gaussian(xn, 0.50, 0.20);
-          const foldEcho = gaussian(py, foldY + Math.sin(px * 0.018 + options.effectivePrfHz * 0.02) * 2.0, foldSigma);
-          const aliasSharpness = 1 - Math.min(1, Math.abs(options.aliasHz) / Math.max(1, model.dopplerToleranceHz * 1.25));
-          darkness += (0.24 + 0.24 * aliasSharpness) * overlapBoost * foldEcho * horizontalAperture * echoTexture;
-          darkness += 0.11 * foldEcho * Math.abs(Math.sin(px * 0.055 + py * 0.012));
-        }
-
-        darkness = Math.max(0, Math.min(0.98, darkness));
-        const contrast = 1.14;
-        darkness = Math.max(0, Math.min(1, (darkness - 0.48) * contrast + 0.48));
-        const r = 244 * (1 - darkness) + 56 * darkness;
-        const g = 235 * (1 - darkness) + 45 * darkness;
-        const b = 213 * (1 - darkness) + 33 * darkness;
+        const traceIndexFloat = (px / (pixelWidth - 1)) * (processingModel.traceCount - 1);
+        const processedValue = sampleMagnitudeGrid(reconstructedMagnitude, depthKm, traceIndexFloat);
+        const rawValue = sampleMagnitudeGrid(rawMagnitude, depthKm, traceIndexFloat);
+        const processedNorm = Math.log1p(processedValue * 5.0) / Math.log1p(signalMax * 5.0);
+        const rawNorm = Math.log1p(rawValue * 2.0) / Math.log1p(rawMax * 2.0);
+        let darkness = 0.05 + 0.84 * processedNorm + 0.16 * rawNorm;
+        darkness = Math.max(0, Math.min(1, darkness));
+        const r = 247 * (1 - darkness) + 42 * darkness;
+        const g = 239 * (1 - darkness) + 39 * darkness;
+        const b = 220 * (1 - darkness) + 35 * darkness;
         const i = (py * pixelWidth + px) * 4;
         data[i] = r;
         data[i + 1] = g;
         data[i + 2] = b;
         data[i + 3] = 255;
-        if (!Number.isFinite(depthKm)) data[i + 3] = 0;
       }
     }
 
@@ -317,7 +311,7 @@
     const xTicks = [0, 16, 32, 48, 63];
     const yTicks = Array.from({ length: 5 }, (_, index) => depthMinKm + ((depthMaxKm - depthMinKm) * index) / 4);
     const aliasHz = alias(selectedFoldingPoint.trueDopplerHz, effectivePrfHz);
-    const textureUrl = liveRadargramTextureUrl({
+    const textureUrl = signalProcessedRadargramTextureUrl({
       depthMinKm,
       depthMaxKm,
       foldBand,
@@ -357,7 +351,7 @@
     svg += `<rect class="fake-target-marker" x="${sx(32) - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${sx(32)} ${targetY})"></rect>`;
     svg += `<text class="fake-radargram-title" x="${width - margin.right}" y="${targetY - 8}" text-anchor="end">fixed target ${fmt(model.targetDepthKm, 2)} km</text>`;
     svg += `<rect class="fake-radargram-frame" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
-    svg += `<text class="fake-radargram-title" x="${margin.left}" y="17">current PRF ${fmt(effectivePrfHz, 1)} Hz; synthetic repeated-trace radargram</text>`;
+    svg += `<text class="fake-radargram-title" x="${margin.left}" y="17">current PRF ${fmt(effectivePrfHz, 1)} Hz; target-cell inverse FFT from synthetic traces</text>`;
     svg += `<text class="fake-radargram-label" x="${margin.left + plotWidth / 2}" y="${height - 7}" text-anchor="middle">trace number</text>`;
     svg += `<text class="fake-radargram-label" transform="translate(18 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth (km, downward)</text>`;
     svg += '</svg>';
@@ -640,6 +634,19 @@
     return specRows.map((row) => row.map((value, index) => (
       index === 0 ? { re: value.re, im: value.im } : { re: 0, im: 0 }
     )));
+  }
+
+  function targetDopplerCellOnly(specRows, samplePrfHz, sigmaHz) {
+    const length = specRows[0].length;
+    return specRows.map((row) => row.map((value, index) => {
+      const wrappedIndex = index <= length / 2 ? index : index - length;
+      const frequencyHz = wrappedIndex * samplePrfHz / length;
+      const weight = Math.exp(-0.5 * (frequencyHz / sigmaHz) ** 2);
+      return {
+        re: value.re * weight,
+        im: value.im * weight
+      };
+    }));
   }
 
   function heatColor(value, maxValue, tint = 'red') {
