@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=matlab-radargram-20260714">
-    <script defer src="aliasing.js?v=matlab-radargram-20260714"></script>
+    <link rel="stylesheet" href="aliasing.css?v=radargram-parameters-20260714">
+    <script defer src="aliasing.js?v=radargram-parameters-20260714"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -66,7 +66,25 @@
         <section class="horizontal-map full-span" aria-labelledby="live-radargram-title">
           <div class="map-heading">
             <h2 id="live-radargram-title">MATLAB-generated fake radargram blur</h2>
-            <p>Zoomed near the target depth. The MATLAB texture gives the fake radargram speckle/layers; the red smear still moves live with PRF.</p>
+            <p>Zoomed near the target depth. The folded clutter is drawn as a dark radar echo, so the blur is visible without a colored highlight.</p>
+            <div class="radargram-controls" aria-label="Fake radargram parameters">
+              <label class="radargram-control" for="radargram-clutter-strength">
+                <span>Folded clutter strength <output id="radargram-clutter-strength-output" for="radargram-clutter-strength">100%</output></span>
+                <input id="radargram-clutter-strength" type="range" min="0.20" max="1.80" step="0.05" value="1.00">
+              </label>
+              <label class="radargram-control" for="radargram-blur-thickness">
+                <span>Blur thickness <output id="radargram-blur-thickness-output" for="radargram-blur-thickness">100%</output></span>
+                <input id="radargram-blur-thickness" type="range" min="0.50" max="2.00" step="0.05" value="1.00">
+              </label>
+              <label class="radargram-control" for="radargram-contrast">
+                <span>Radargram contrast <output id="radargram-contrast-output" for="radargram-contrast">110%</output></span>
+                <input id="radargram-contrast" type="range" min="0.75" max="1.55" step="0.05" value="1.10">
+              </label>
+              <label class="radargram-control" for="radargram-target-echo">
+                <span>Target echo guide <output id="radargram-target-echo-output" for="radargram-target-echo">85%</output></span>
+                <input id="radargram-target-echo" type="range" min="0.00" max="1.30" step="0.05" value="0.85">
+              </label>
+            </div>
           </div>
           <div id="live-radargram-plot" class="synthetic-radargram-plot" aria-live="polite"></div>
         </section>

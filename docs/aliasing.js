@@ -27,6 +27,10 @@
   const plot = document.getElementById('horizontal-plot');
   const blurPlot = document.getElementById('blur-plot');
   const liveRadargramPlot = document.getElementById('live-radargram-plot');
+  const radargramClutterStrength = document.getElementById('radargram-clutter-strength');
+  const radargramBlurThickness = document.getElementById('radargram-blur-thickness');
+  const radargramContrast = document.getElementById('radargram-contrast');
+  const radargramTargetEcho = document.getElementById('radargram-target-echo');
   const traceCheckPlot = document.getElementById('trace-check-plot');
   const dopplerCheckPlot = document.getElementById('doppler-check-plot');
   const radargramPlot = document.getElementById('radargram-plot');
@@ -45,6 +49,37 @@
     const cleaned = Math.abs(value) < 0.05 ? 0 : value;
     return `${cleaned > 0 ? '+' : ''}${fmt(cleaned, digits)}`;
   };
+  const percent = (value) => `${fmt(value * 100, 0)}%`;
+  const readSlider = (input, fallback) => (input ? Number(input.value) : fallback);
+  const radargramInputs = [
+    radargramClutterStrength,
+    radargramBlurThickness,
+    radargramContrast,
+    radargramTargetEcho
+  ].filter(Boolean);
+
+  function radargramSettings() {
+    return {
+      clutterStrength: readSlider(radargramClutterStrength, 1),
+      blurThickness: readSlider(radargramBlurThickness, 1),
+      contrast: readSlider(radargramContrast, 1.1),
+      targetEcho: readSlider(radargramTargetEcho, 0.85)
+    };
+  }
+
+  function updateRadargramControlOutputs() {
+    const settings = radargramSettings();
+    const outputs = {
+      'radargram-clutter-strength-output': percent(settings.clutterStrength),
+      'radargram-blur-thickness-output': percent(settings.blurThickness),
+      'radargram-contrast-output': percent(settings.contrast),
+      'radargram-target-echo-output': percent(settings.targetEcho)
+    };
+    Object.entries(outputs).forEach(([id, text]) => {
+      const outputEl = document.getElementById(id);
+      if (outputEl) outputEl.textContent = text;
+    });
+  }
 
   const fixedPoints = Array.from({ length: model.pointCount }, (_, index) => {
     const xKm = -model.spreadKm + (2 * model.spreadKm * index) / (model.pointCount - 1);
@@ -209,23 +244,28 @@
     const xTicks = [0, 16, 32, 48, 63];
     const yTicks = Array.from({ length: 5 }, (_, index) => depthMinKm + ((depthMaxKm - depthMinKm) * index) / 4);
     const aliasHz = alias(selectedFoldingPoint.trueDopplerHz, effectivePrfHz);
-    const blurOpacity = overlapsTarget ? 0.58 : 0.32;
+    const settings = radargramSettings();
+    const blurOpacity = Math.min(0.62, (overlapsTarget ? 0.46 : 0.30) * settings.clutterStrength);
+    const blurCoreOpacity = Math.min(0.48, 0.18 * settings.clutterStrength);
+    const blobOpacity = Math.min(0.55, 0.22 * settings.clutterStrength);
+    const targetOpacity = Math.min(1, Math.max(0, settings.targetEcho));
+    const textureBrightness = 1.02 - Math.max(0, settings.contrast - 1) * 0.05;
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Simplified synthetic radargram showing a folded surface-clutter blur moving with PRF">
       <defs>
-        <filter id="alias-radargram-soften" x="-12%" y="-80%" width="124%" height="260%"><feGaussianBlur stdDeviation="6"></feGaussianBlur></filter>
-        <linearGradient id="alias-radargram-smear" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#974143" stop-opacity="0"></stop>
-          <stop offset=".5" stop-color="#974143" stop-opacity="${blurOpacity}"></stop>
-          <stop offset="1" stop-color="#974143" stop-opacity="0"></stop>
+        <filter id="alias-radargram-soften" x="-12%" y="-90%" width="124%" height="280%"><feGaussianBlur stdDeviation="${(5.5 * settings.blurThickness).toFixed(2)}"></feGaussianBlur></filter>
+        <linearGradient id="alias-radargram-echo" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3b3026" stop-opacity="0"></stop>
+          <stop offset=".50" stop-color="#211912" stop-opacity="${blurOpacity.toFixed(3)}"></stop>
+          <stop offset="1" stop-color="#3b3026" stop-opacity="0"></stop>
         </linearGradient>
         <radialGradient id="alias-target-glow">
-          <stop offset="0" stop-color="#285f64" stop-opacity=".35"></stop>
-          <stop offset=".62" stop-color="#285f64" stop-opacity=".12"></stop>
+          <stop offset="0" stop-color="#285f64" stop-opacity="${(0.26 * targetOpacity).toFixed(3)}"></stop>
+          <stop offset=".62" stop-color="#285f64" stop-opacity="${(0.10 * targetOpacity).toFixed(3)}"></stop>
           <stop offset="1" stop-color="#285f64" stop-opacity="0"></stop>
         </radialGradient>
       </defs>`;
 
-    svg += `<image class="matlab-radargram-texture" href="assets/fake_radargram_aliasing_texture.png?v=matlab-radargram-20260714" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none"></image>`;
+    svg += `<image class="matlab-radargram-texture" href="assets/fake_radargram_aliasing_texture.png?v=matlab-radargram-20260714" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none" style="filter: contrast(${settings.contrast.toFixed(2)}) brightness(${textureBrightness.toFixed(2)});"></image>`;
     svg += `<rect class="fake-radargram-vignette" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
     xTicks.forEach((value) => {
       const x = sx(value);
@@ -239,22 +279,21 @@
     });
     if (foldBand) {
       const centerY = sy(foldBand.centerDepthKm);
-      const bandPixelHeight = Math.max(22, Math.abs(sy(foldBand.maxDepthKm) - sy(foldBand.minDepthKm)) * 1.7);
+      const bandPixelHeight = Math.max(18, Math.abs(sy(foldBand.maxDepthKm) - sy(foldBand.minDepthKm)) * 1.7 * settings.blurThickness);
       svg += `<rect class="fake-fold-smear" x="${margin.left + 4}" y="${centerY - bandPixelHeight / 2}" width="${plotWidth - 8}" height="${bandPixelHeight}" filter="url(#alias-radargram-soften)"></rect>`;
-      svg += `<rect class="fake-fold-core" x="${margin.left + 4}" y="${centerY - Math.max(6, bandPixelHeight * 0.16)}" width="${plotWidth - 8}" height="${Math.max(12, bandPixelHeight * 0.32)}"></rect>`;
+      svg += `<rect class="fake-fold-core" x="${margin.left + 4}" y="${centerY - Math.max(5, bandPixelHeight * 0.13)}" width="${plotWidth - 8}" height="${Math.max(10, bandPixelHeight * 0.26)}" opacity="${blurCoreOpacity.toFixed(3)}"></rect>`;
       [18, 32, 46].forEach((trace, index) => {
         const localY = centerY + Math.sin((trace + effectivePrfHz) * 0.08) * 4;
-        svg += `<ellipse class="fake-fold-blob" cx="${sx(trace)}" cy="${localY}" rx="${index === 1 ? 38 : 30}" ry="${index === 1 ? 13 : 10}" filter="url(#alias-radargram-soften)"></ellipse>`;
+        svg += `<ellipse class="fake-fold-blob" cx="${sx(trace)}" cy="${localY}" rx="${(index === 1 ? 40 : 31) * settings.blurThickness}" ry="${(index === 1 ? 13 : 10) * settings.blurThickness}" opacity="${blobOpacity.toFixed(3)}" filter="url(#alias-radargram-soften)"></ellipse>`;
       });
-      svg += `<line class="fake-fold-line" x1="${margin.left}" y1="${centerY}" x2="${width - margin.right}" y2="${centerY}"></line>`;
-      svg += `<text class="${overlapsTarget ? 'fake-danger' : 'fake-radargram-title'}" x="${margin.left + 8}" y="${centerY - bandPixelHeight / 2 - 8}">folded clutter blur: ${fmt(foldBand.centerDepthKm, 2)} km, alias ${signed(aliasHz, 1)} Hz</text>`;
+      svg += `<text class="fake-fold-label" x="${margin.left + 8}" y="${Math.max(18, centerY - bandPixelHeight / 2 - 8)}">folded clutter echo: ${fmt(foldBand.centerDepthKm, 2)} km, alias ${signed(aliasHz, 1)} Hz</text>`;
     }
 
     const targetY = sy(model.targetDepthKm);
-    svg += `<ellipse class="fake-target-glow" cx="${sx(32)}" cy="${targetY}" rx="62" ry="24"></ellipse>`;
-    svg += `<line class="fake-target-line" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}"></line>`;
-    svg += `<rect class="fake-target-marker" x="${sx(32) - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${sx(32)} ${targetY})"></rect>`;
-    svg += `<text class="fake-radargram-title" x="${width - margin.right}" y="${targetY - 8}" text-anchor="end">fixed target ${fmt(model.targetDepthKm, 2)} km</text>`;
+    svg += `<ellipse class="fake-target-glow" cx="${sx(32)}" cy="${targetY}" rx="62" ry="24" opacity="${targetOpacity.toFixed(3)}"></ellipse>`;
+    svg += `<line class="fake-target-line" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}" opacity="${(0.85 * targetOpacity).toFixed(3)}"></line>`;
+    svg += `<rect class="fake-target-marker" x="${sx(32) - 6}" y="${targetY - 6}" width="12" height="12" opacity="${targetOpacity.toFixed(3)}" transform="rotate(45 ${sx(32)} ${targetY})"></rect>`;
+    svg += `<text class="fake-radargram-title" x="${width - margin.right}" y="${targetY - 8}" text-anchor="end" opacity="${targetOpacity.toFixed(3)}">fixed target ${fmt(model.targetDepthKm, 2)} km</text>`;
     svg += `<rect class="fake-radargram-frame" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
     svg += `<text class="fake-radargram-title" x="${margin.left}" y="17">current PRF ${fmt(effectivePrfHz, 1)} Hz; synthetic repeated-trace radargram</text>`;
     svg += `<text class="fake-radargram-label" x="${margin.left + plotWidth / 2}" y="${height - 7}" text-anchor="middle">trace number</text>`;
@@ -883,6 +922,13 @@
     }
   }
 
+  radargramInputs.forEach((input) => {
+    input.addEventListener('input', () => {
+      updateRadargramControlOutputs();
+      draw(Number(prfSlider.value));
+    });
+  });
+  updateRadargramControlOutputs();
   prfSlider.addEventListener('input', () => draw(Number(prfSlider.value)));
   draw(Number(prfSlider.value));
 })();
