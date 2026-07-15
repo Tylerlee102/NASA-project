@@ -19,6 +19,9 @@
   };
 
   const prfSlider = document.getElementById('effective-prf-slider');
+  const speedSlider = document.getElementById('model-speed-slider');
+  const altitudeSlider = document.getElementById('model-altitude-slider');
+  const depthSlider = document.getElementById('model-depth-slider');
   const output = document.getElementById('effective-prf-output');
   const originalPrfText = document.getElementById('original-prf');
   const prfMinLabel = document.getElementById('prf-min-label');
@@ -27,10 +30,6 @@
   const plot = document.getElementById('horizontal-plot');
   const blurPlot = document.getElementById('blur-plot');
   const liveRadargramPlot = document.getElementById('live-radargram-plot');
-  const radargramClutterStrength = document.getElementById('radargram-clutter-strength');
-  const radargramBlurThickness = document.getElementById('radargram-blur-thickness');
-  const radargramContrast = document.getElementById('radargram-contrast');
-  const radargramTargetEcho = document.getElementById('radargram-target-echo');
   const traceCheckPlot = document.getElementById('trace-check-plot');
   const dopplerCheckPlot = document.getElementById('doppler-check-plot');
   const radargramPlot = document.getElementById('radargram-plot');
@@ -49,31 +48,21 @@
     const cleaned = Math.abs(value) < 0.05 ? 0 : value;
     return `${cleaned > 0 ? '+' : ''}${fmt(cleaned, digits)}`;
   };
-  const percent = (value) => `${fmt(value * 100, 0)}%`;
-  const readSlider = (input, fallback) => (input ? Number(input.value) : fallback);
-  const radargramInputs = [
-    radargramClutterStrength,
-    radargramBlurThickness,
-    radargramContrast,
-    radargramTargetEcho
-  ].filter(Boolean);
+  let fixedPoints = [];
+  let selectedFoldingPoint = null;
+  let foldingIndexes = new Set();
+  let originalPrfHz = 0;
+  let targetEchoUs = 0;
+  let basePriUs = 0;
+  let safePrfMaxHz = 0;
+  let selectedFoldPrfHz = 0;
+  let foldDepthScaleKm = { min: 0, max: 1 };
 
-  function radargramSettings() {
-    return {
-      clutterStrength: readSlider(radargramClutterStrength, 1),
-      blurThickness: readSlider(radargramBlurThickness, 1),
-      contrast: readSlider(radargramContrast, 1.1),
-      targetEcho: readSlider(radargramTargetEcho, 0.85)
-    };
-  }
-
-  function updateRadargramControlOutputs() {
-    const settings = radargramSettings();
+  function updateModelControlOutputs() {
     const outputs = {
-      'radargram-clutter-strength-output': percent(settings.clutterStrength),
-      'radargram-blur-thickness-output': percent(settings.blurThickness),
-      'radargram-contrast-output': percent(settings.contrast),
-      'radargram-target-echo-output': percent(settings.targetEcho)
+      'model-speed-output': `${fmt(model.velocityKmS, 1)} km/s`,
+      'model-altitude-output': `${fmt(model.altitudeKm, 0)} km`,
+      'model-depth-output': `${fmt(model.targetDepthKm, 2)} km`
     };
     Object.entries(outputs).forEach(([id, text]) => {
       const outputEl = document.getElementById(id);
@@ -81,45 +70,19 @@
     });
   }
 
-  const fixedPoints = Array.from({ length: model.pointCount }, (_, index) => {
-    const xKm = -model.spreadKm + (2 * model.spreadKm * index) / (model.pointCount - 1);
-    const rangeKm = Math.hypot(model.altitudeKm, xKm);
-    return {
-      index,
-      xKm,
-      rangeKm,
-      trueDopplerHz: (2 * model.velocityKmS * 1000 / wavelengthM) * (xKm / rangeKm),
-      apparentDepthKm: (rangeKm - model.altitudeKm) / model.iceIndex
-    };
-  });
-  const selectedFoldingPoint = [...fixedPoints].sort((a, b) => {
-    const depthDelta = Math.abs(a.apparentDepthKm - model.targetDepthKm) - Math.abs(b.apparentDepthKm - model.targetDepthKm);
-    if (Math.abs(depthDelta) > 1e-9) return depthDelta;
-    return b.xKm - a.xKm;
-  })[0];
-  const foldingIndexes = new Set([selectedFoldingPoint.index]);
-  const originalPrfHz = 4 * Math.abs(selectedFoldingPoint.trueDopplerHz);
-  const targetEchoUs = (2 * (model.altitudeKm * 1000 + model.iceIndex * model.targetDepthKm * 1000) / C) * 1e6;
-  const basePriUs = 1e6 / originalPrfHz;
-  const safePrfMaxHz = 1e6 / (targetEchoUs + LISTEN_GUARD_US);
-  model.dopplerToleranceHz = originalPrfHz / PROCESSING_TRACE_COUNT;
-  model.depthToleranceKm = PROCESSING_MAX_DEPTH_KM / (PROCESSING_DEPTH_BINS - 1);
-
-  const selectedFoldPrfHz = Math.abs(selectedFoldingPoint.trueDopplerHz);
-  const sliderHalfWindowHz = Math.max(28, model.dopplerToleranceHz * 0.55);
-  const sliderMinHz = Math.floor(selectedFoldPrfHz - sliderHalfWindowHz);
-  const sliderMaxHz = Math.ceil(selectedFoldPrfHz + sliderHalfWindowHz);
-  prfSlider.min = String(sliderMinHz);
-  prfSlider.max = String(sliderMaxHz);
-  prfSlider.value = selectedFoldPrfHz.toFixed(1);
-  if (prfMinLabel) prfMinLabel.textContent = `${fmt(sliderMinHz, 0)} Hz`;
-  if (prfMaxLabel) prfMaxLabel.textContent = `${fmt(sliderMaxHz, 0)} Hz`;
-
-  document.getElementById('given-altitude').textContent = `${fmt(model.altitudeKm, 0)} km`;
-  document.getElementById('given-speed').textContent = `${fmt(model.velocityKmS, 1)} km/s`;
-  document.getElementById('given-frequency').textContent = `${fmt(model.frequencyMhz, 0)} MHz`;
-  document.getElementById('given-depth').textContent = `${fmt(model.targetDepthKm, 2)} km`;
-  document.getElementById('given-index').textContent = fmt(model.iceIndex, 2);
+  function computeFixedPoints() {
+    return Array.from({ length: model.pointCount }, (_, index) => {
+      const xKm = -model.spreadKm + (2 * model.spreadKm * index) / (model.pointCount - 1);
+      const rangeKm = Math.hypot(model.altitudeKm, xKm);
+      return {
+        index,
+        xKm,
+        rangeKm,
+        trueDopplerHz: (2 * model.velocityKmS * 1000 / wavelengthM) * (xKm / rangeKm),
+        apparentDepthKm: (rangeKm - model.altitudeKm) / model.iceIndex
+      };
+    });
+  }
 
   function apparentDepthForDopplerHz(dopplerHz) {
     const sinTheta = Math.abs(dopplerHz) * wavelengthM / (2 * model.velocityKmS * 1000);
@@ -158,19 +121,50 @@
     ));
   }
 
-  // Keep one fixed depth scale for the entire slider range. This prevents the
-  // fixed target from appearing to move when only the folded clutter moves.
-  const foldDepthScaleKm = (() => {
+  function refreshDerivedModel(resetPrf = false) {
+    fixedPoints = computeFixedPoints();
+    selectedFoldingPoint = [...fixedPoints].sort((a, b) => {
+      const depthDelta = Math.abs(a.apparentDepthKm - model.targetDepthKm) - Math.abs(b.apparentDepthKm - model.targetDepthKm);
+      if (Math.abs(depthDelta) > 1e-9) return depthDelta;
+      return b.xKm - a.xKm;
+    })[0];
+    foldingIndexes = new Set([selectedFoldingPoint.index]);
+    originalPrfHz = 4 * Math.abs(selectedFoldingPoint.trueDopplerHz);
+    targetEchoUs = (2 * (model.altitudeKm * 1000 + model.iceIndex * model.targetDepthKm * 1000) / C) * 1e6;
+    basePriUs = 1e6 / originalPrfHz;
+    safePrfMaxHz = 1e6 / (targetEchoUs + LISTEN_GUARD_US);
+    model.dopplerToleranceHz = originalPrfHz / PROCESSING_TRACE_COUNT;
+    model.depthToleranceKm = PROCESSING_MAX_DEPTH_KM / (PROCESSING_DEPTH_BINS - 1);
+
+    selectedFoldPrfHz = Math.abs(selectedFoldingPoint.trueDopplerHz);
+    const sliderHalfWindowHz = Math.max(28, model.dopplerToleranceHz * 0.55);
+    const sliderMinHz = Math.floor(selectedFoldPrfHz - sliderHalfWindowHz);
+    const sliderMaxHz = Math.ceil(selectedFoldPrfHz + sliderHalfWindowHz);
+    prfSlider.min = String(sliderMinHz);
+    prfSlider.max = String(sliderMaxHz);
+    if (resetPrf || Number(prfSlider.value) < sliderMinHz || Number(prfSlider.value) > sliderMaxHz) {
+      prfSlider.value = selectedFoldPrfHz.toFixed(1);
+    }
+    if (prfMinLabel) prfMinLabel.textContent = `${fmt(sliderMinHz, 0)} Hz`;
+    if (prfMaxLabel) prfMaxLabel.textContent = `${fmt(sliderMaxHz, 0)} Hz`;
+
     const edgeBands = [Number(prfSlider.min), Number(prfSlider.max)]
       .map(continuousFoldBand)
       .filter(Boolean);
     const rawMin = Math.min(model.targetDepthKm - model.depthToleranceKm, ...edgeBands.map((band) => band.minDepthKm));
     const rawMax = Math.max(model.targetDepthKm + model.depthToleranceKm, ...edgeBands.map((band) => band.maxDepthKm));
-    return {
+    foldDepthScaleKm = {
       min: Math.floor((rawMin - 0.10) * 10) / 10,
       max: Math.ceil((rawMax + 0.10) * 10) / 10
     };
-  })();
+
+    document.getElementById('given-altitude').textContent = `${fmt(model.altitudeKm, 0)} km`;
+    document.getElementById('given-speed').textContent = `${fmt(model.velocityKmS, 1)} km/s`;
+    document.getElementById('given-frequency').textContent = `${fmt(model.frequencyMhz, 0)} MHz`;
+    document.getElementById('given-depth').textContent = `${fmt(model.targetDepthKm, 2)} km`;
+    document.getElementById('given-index').textContent = fmt(model.iceIndex, 2);
+    updateModelControlOutputs();
+  }
 
   function calculate(effectivePrfHz) {
     const points = fixedPoints.map((point) => ({
@@ -201,7 +195,7 @@
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Folded clutter depth produced by the effective sampling PRF">
       <defs><linearGradient id="blur-block" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b3d3f" stop-opacity=".10"></stop><stop offset=".5" stop-color="#9b3d3f" stop-opacity="${overlapsTarget ? '.50' : '.30'}"></stop><stop offset="1" stop-color="#9b3d3f" stop-opacity=".10"></stop></linearGradient></defs>`;
 
-    svg += `<text class="blur-title-text" x="${margin.left}" y="18">timing-safe trace PRF: ${fmt(originalPrfHz, 1)} Hz</text>`;
+    svg += `<text class="blur-title-text" x="${margin.left}" y="18">base trace PRF: ${fmt(originalPrfHz, 1)} Hz</text>`;
     svg += `<text class="blur-title-text" x="${margin.left}" y="35">effective sampling PRF: ${fmt(effectivePrfHz, 1)} Hz</text>`;
     for (let index = 0; index < 6; index += 1) {
       const value = depthMinKm + ((depthMaxKm - depthMinKm) * index) / 5;
@@ -229,6 +223,85 @@
     blurPlot.innerHTML = svg;
   }
 
+  function noise2D(x, y, seed = 0) {
+    const value = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
+    return value - Math.floor(value);
+  }
+
+  function gaussian(value, center, sigma) {
+    return Math.exp(-((value - center) ** 2) / (2 * sigma ** 2));
+  }
+
+  function liveRadargramTextureUrl(options) {
+    const pixelWidth = 960;
+    const pixelHeight = 285;
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    const image = context.createImageData(pixelWidth, pixelHeight);
+    const data = image.data;
+    const depthSpan = options.depthMaxKm - options.depthMinKm;
+    const targetY = ((model.targetDepthKm - options.depthMinKm) / depthSpan) * (pixelHeight - 1);
+    const foldY = options.foldBand
+      ? ((options.foldBand.centerDepthKm - options.depthMinKm) / depthSpan) * (pixelHeight - 1)
+      : null;
+    const foldSigma = options.foldBand
+      ? Math.max(8, Math.abs((options.foldBand.maxDepthKm - options.foldBand.minDepthKm) / depthSpan) * pixelHeight * 1.25)
+      : 0;
+    const overlapBoost = options.overlapsTarget ? 1.18 : 0.92;
+    const speedTextureShift = model.velocityKmS * 17.3 + model.altitudeKm * 0.41 + model.targetDepthKm * 2.7;
+    const layerCenters = [0.08, 0.21, 0.39, 0.58, 0.78, 0.91];
+
+    for (let py = 0; py < pixelHeight; py += 1) {
+      const yn = py / (pixelHeight - 1);
+      const depthKm = options.depthMinKm + yn * depthSpan;
+      for (let px = 0; px < pixelWidth; px += 1) {
+        const xn = px / (pixelWidth - 1);
+        const fine = noise2D(px, py, speedTextureShift);
+        const coarse = noise2D(Math.floor(px / 7), Math.floor(py / 5), speedTextureShift + 13);
+        const traceStripe = 0.026 * Math.sin(px * 0.42 + speedTextureShift) + 0.014 * Math.sin(px * 0.11);
+        let darkness = 0.36 + 0.085 * (fine - 0.5) + 0.11 * (coarse - 0.5) + traceStripe;
+
+        layerCenters.forEach((center, index) => {
+          const waviness = 0.010 * Math.sin(2 * Math.PI * (xn * (1.1 + index * 0.18) + index * 0.17));
+          darkness += (0.12 - index * 0.007) * gaussian(yn, center + waviness, 0.010 + index * 0.002);
+        });
+
+        darkness += 0.20 * gaussian(yn, 0.035, 0.010);
+        darkness *= 1.02 - 0.30 * yn;
+
+        const targetEcho = gaussian(py, targetY, 4.8) * gaussian(xn, 0.50, 0.045);
+        darkness += 0.26 * targetEcho;
+
+        if (foldY !== null && foldY > -foldSigma * 3 && foldY < pixelHeight + foldSigma * 3) {
+          const echoTexture = 0.80 + 0.20 * noise2D(Math.floor(px / 12), Math.floor(py / 4), speedTextureShift + 71);
+          const horizontalAperture = 0.78 + 0.22 * gaussian(xn, 0.50, 0.20);
+          const foldEcho = gaussian(py, foldY + Math.sin(px * 0.018 + options.effectivePrfHz * 0.02) * 2.0, foldSigma);
+          const aliasSharpness = 1 - Math.min(1, Math.abs(options.aliasHz) / Math.max(1, model.dopplerToleranceHz * 1.25));
+          darkness += (0.24 + 0.24 * aliasSharpness) * overlapBoost * foldEcho * horizontalAperture * echoTexture;
+          darkness += 0.11 * foldEcho * Math.abs(Math.sin(px * 0.055 + py * 0.012));
+        }
+
+        darkness = Math.max(0, Math.min(0.98, darkness));
+        const contrast = 1.14;
+        darkness = Math.max(0, Math.min(1, (darkness - 0.48) * contrast + 0.48));
+        const r = 244 * (1 - darkness) + 56 * darkness;
+        const g = 235 * (1 - darkness) + 45 * darkness;
+        const b = 213 * (1 - darkness) + 33 * darkness;
+        const i = (py * pixelWidth + px) * 4;
+        data[i] = r;
+        data[i + 1] = g;
+        data[i + 2] = b;
+        data[i + 3] = 255;
+        if (!Number.isFinite(depthKm)) data[i + 3] = 0;
+      }
+    }
+
+    context.putImageData(image, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+
   function renderLiveRadargram(effectivePrfHz, foldBand, overlapsTarget) {
     const width = 820;
     const height = 315;
@@ -244,28 +317,24 @@
     const xTicks = [0, 16, 32, 48, 63];
     const yTicks = Array.from({ length: 5 }, (_, index) => depthMinKm + ((depthMaxKm - depthMinKm) * index) / 4);
     const aliasHz = alias(selectedFoldingPoint.trueDopplerHz, effectivePrfHz);
-    const settings = radargramSettings();
-    const blurOpacity = Math.min(0.62, (overlapsTarget ? 0.46 : 0.30) * settings.clutterStrength);
-    const blurCoreOpacity = Math.min(0.48, 0.18 * settings.clutterStrength);
-    const blobOpacity = Math.min(0.55, 0.22 * settings.clutterStrength);
-    const targetOpacity = Math.min(1, Math.max(0, settings.targetEcho));
-    const textureBrightness = 1.02 - Math.max(0, settings.contrast - 1) * 0.05;
+    const textureUrl = liveRadargramTextureUrl({
+      depthMinKm,
+      depthMaxKm,
+      foldBand,
+      effectivePrfHz,
+      aliasHz,
+      overlapsTarget
+    });
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Simplified synthetic radargram showing a folded surface-clutter blur moving with PRF">
       <defs>
-        <filter id="alias-radargram-soften" x="-12%" y="-90%" width="124%" height="280%"><feGaussianBlur stdDeviation="${(5.5 * settings.blurThickness).toFixed(2)}"></feGaussianBlur></filter>
-        <linearGradient id="alias-radargram-echo" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#3b3026" stop-opacity="0"></stop>
-          <stop offset=".50" stop-color="#211912" stop-opacity="${blurOpacity.toFixed(3)}"></stop>
-          <stop offset="1" stop-color="#3b3026" stop-opacity="0"></stop>
-        </linearGradient>
         <radialGradient id="alias-target-glow">
-          <stop offset="0" stop-color="#285f64" stop-opacity="${(0.26 * targetOpacity).toFixed(3)}"></stop>
-          <stop offset=".62" stop-color="#285f64" stop-opacity="${(0.10 * targetOpacity).toFixed(3)}"></stop>
+          <stop offset="0" stop-color="#285f64" stop-opacity=".18"></stop>
+          <stop offset=".62" stop-color="#285f64" stop-opacity=".06"></stop>
           <stop offset="1" stop-color="#285f64" stop-opacity="0"></stop>
         </radialGradient>
       </defs>`;
 
-    svg += `<image class="matlab-radargram-texture" href="assets/fake_radargram_aliasing_texture.png?v=matlab-radargram-20260714" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none" style="filter: contrast(${settings.contrast.toFixed(2)}) brightness(${textureBrightness.toFixed(2)});"></image>`;
+    svg += `<image class="matlab-radargram-texture" href="${textureUrl}" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none"></image>`;
     svg += `<rect class="fake-radargram-vignette" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
     xTicks.forEach((value) => {
       const x = sx(value);
@@ -279,21 +348,14 @@
     });
     if (foldBand) {
       const centerY = sy(foldBand.centerDepthKm);
-      const bandPixelHeight = Math.max(18, Math.abs(sy(foldBand.maxDepthKm) - sy(foldBand.minDepthKm)) * 1.7 * settings.blurThickness);
-      svg += `<rect class="fake-fold-smear" x="${margin.left + 4}" y="${centerY - bandPixelHeight / 2}" width="${plotWidth - 8}" height="${bandPixelHeight}" filter="url(#alias-radargram-soften)"></rect>`;
-      svg += `<rect class="fake-fold-core" x="${margin.left + 4}" y="${centerY - Math.max(5, bandPixelHeight * 0.13)}" width="${plotWidth - 8}" height="${Math.max(10, bandPixelHeight * 0.26)}" opacity="${blurCoreOpacity.toFixed(3)}"></rect>`;
-      [18, 32, 46].forEach((trace, index) => {
-        const localY = centerY + Math.sin((trace + effectivePrfHz) * 0.08) * 4;
-        svg += `<ellipse class="fake-fold-blob" cx="${sx(trace)}" cy="${localY}" rx="${(index === 1 ? 40 : 31) * settings.blurThickness}" ry="${(index === 1 ? 13 : 10) * settings.blurThickness}" opacity="${blobOpacity.toFixed(3)}" filter="url(#alias-radargram-soften)"></ellipse>`;
-      });
-      svg += `<text class="fake-fold-label" x="${margin.left + 8}" y="${Math.max(18, centerY - bandPixelHeight / 2 - 8)}">folded clutter echo: ${fmt(foldBand.centerDepthKm, 2)} km, alias ${signed(aliasHz, 1)} Hz</text>`;
+      svg += `<text class="fake-fold-label" x="${margin.left + 8}" y="${Math.max(18, centerY - 15)}">folded clutter echo: ${fmt(foldBand.centerDepthKm, 2)} km, alias ${signed(aliasHz, 1)} Hz</text>`;
     }
 
     const targetY = sy(model.targetDepthKm);
-    svg += `<ellipse class="fake-target-glow" cx="${sx(32)}" cy="${targetY}" rx="62" ry="24" opacity="${targetOpacity.toFixed(3)}"></ellipse>`;
-    svg += `<line class="fake-target-line" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}" opacity="${(0.85 * targetOpacity).toFixed(3)}"></line>`;
-    svg += `<rect class="fake-target-marker" x="${sx(32) - 6}" y="${targetY - 6}" width="12" height="12" opacity="${targetOpacity.toFixed(3)}" transform="rotate(45 ${sx(32)} ${targetY})"></rect>`;
-    svg += `<text class="fake-radargram-title" x="${width - margin.right}" y="${targetY - 8}" text-anchor="end" opacity="${targetOpacity.toFixed(3)}">fixed target ${fmt(model.targetDepthKm, 2)} km</text>`;
+    svg += `<ellipse class="fake-target-glow" cx="${sx(32)}" cy="${targetY}" rx="62" ry="24"></ellipse>`;
+    svg += `<line class="fake-target-line" x1="${margin.left}" y1="${targetY}" x2="${width - margin.right}" y2="${targetY}"></line>`;
+    svg += `<rect class="fake-target-marker" x="${sx(32) - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${sx(32)} ${targetY})"></rect>`;
+    svg += `<text class="fake-radargram-title" x="${width - margin.right}" y="${targetY - 8}" text-anchor="end">fixed target ${fmt(model.targetDepthKm, 2)} km</text>`;
     svg += `<rect class="fake-radargram-frame" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
     svg += `<text class="fake-radargram-title" x="${margin.left}" y="17">current PRF ${fmt(effectivePrfHz, 1)} Hz; synthetic repeated-trace radargram</text>`;
     svg += `<text class="fake-radargram-label" x="${margin.left + plotWidth / 2}" y="${height - 7}" text-anchor="middle">trace number</text>`;
@@ -910,7 +972,10 @@
       renderProcessingExperiment();
       processingRendered = true;
     }
-    originalPrfText.textContent = `Base trace PRF: ${fmt(originalPrfHz, 1)} Hz; PRI ${fmt(basePriUs, 1)} µs > echo ${fmt(targetEchoUs, 1)} µs + ${fmt(LISTEN_GUARD_US, 0)} µs guard. Max safe PRF ≈ ${fmt(safePrfMaxHz, 0)} Hz.`;
+    const listenWindowUs = targetEchoUs + LISTEN_GUARD_US;
+    const timingIsSafe = basePriUs > listenWindowUs;
+    originalPrfText.className = timingIsSafe ? '' : 'is-warning';
+    originalPrfText.textContent = `Base trace PRF: ${fmt(originalPrfHz, 1)} Hz; PRI ${fmt(basePriUs, 1)} µs ${timingIsSafe ? '>' : '<'} echo ${fmt(targetEchoUs, 1)} µs + ${fmt(LISTEN_GUARD_US, 0)} µs guard (${timingIsSafe ? 'listening window clear' : 'range-ambiguous at this speed'}). Max safe PRF ≈ ${fmt(safePrfMaxHz, 0)} Hz.`;
     output.textContent = `${fmt(effectivePrfHz, 1)} Hz`;
     status.className = `prf-status${targetOverlap ? ' is-overlap' : ''}`;
     if (targetOverlap) {
@@ -922,13 +987,17 @@
     }
   }
 
-  radargramInputs.forEach((input) => {
+  [speedSlider, altitudeSlider, depthSlider].filter(Boolean).forEach((input) => {
     input.addEventListener('input', () => {
-      updateRadargramControlOutputs();
+      model.velocityKmS = Number(speedSlider.value);
+      model.altitudeKm = Number(altitudeSlider.value);
+      model.targetDepthKm = Number(depthSlider.value);
+      processingRendered = false;
+      refreshDerivedModel(true);
       draw(Number(prfSlider.value));
     });
   });
-  updateRadargramControlOutputs();
+  refreshDerivedModel(true);
   prfSlider.addEventListener('input', () => draw(Number(prfSlider.value)));
   draw(Number(prfSlider.value));
 })();
