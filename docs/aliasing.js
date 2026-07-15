@@ -39,6 +39,7 @@
   const reconstructionPlot = document.getElementById('reconstruction-plot');
   const wavelengthM = C / (model.frequencyMhz * 1e6);
   let processingRendered = false;
+  let referenceRadargramCacheKey = '';
   const mod = (value, divisor) => ((value % divisor) + divisor) % divisor;
   const alias = (dopplerHz, prfHz) => mod(dopplerHz + prfHz / 2, prfHz) - prfHz / 2;
   const fmt = (value, digits = 0) => Number(value).toLocaleString(undefined, {
@@ -263,6 +264,13 @@
     const filterSigmaHz = Math.max(12, dopplerBinHz * 0.48);
     const targetOpticalHeightKm = model.altitudeKm + model.iceIndex * model.targetDepthKm;
     const surfaceCellCount = 81;
+    const foldDopplerHz = options.foldBand ? options.foldBand.order * options.effectivePrfHz : null;
+    const foldSinTheta = Number.isFinite(foldDopplerHz)
+      ? foldDopplerHz * wavelengthM / (2 * model.velocityKmS * 1000)
+      : null;
+    const activeFoldSurfaceXKm = Number.isFinite(foldSinTheta) && foldSinTheta > 0 && foldSinTheta < 1
+      ? model.altitudeKm * foldSinTheta / Math.sqrt(1 - foldSinTheta ** 2)
+      : null;
 
     for (let traceIndex = 0; traceIndex < traceCount; traceIndex += 1) {
       const alongTrackKm = xMinKm + (traceIndex / (traceCount - 1)) * (xMaxKm - xMinKm);
@@ -323,6 +331,62 @@
             apparentDepthKm + depthJitterKm,
             amplitude * facetScale * facetPolarity,
             pulseWidthKm,
+            options.depthMinKm,
+            options.depthMaxKm
+          );
+        }
+      }
+
+      // Resolve the continuous surface cell at fD = order × PRF directly.
+      // This keeps the visible smear centered on the same fold depth reported
+      // by the analytic graph, so dragging PRF visibly moves the radargram echo.
+      if (Number.isFinite(activeFoldSurfaceXKm)) {
+        for (let facetIndex = 0; facetIndex < 17; facetIndex += 1) {
+          const normalizedFacet = (facetIndex - 8) / 8;
+          const facetSeed = facetIndex + 101;
+          const surfaceOffsetKm = normalizedFacet * 1.45
+            + (deterministicUnit(facetSeed, 47) - 0.5) * 0.16;
+          const facetXKm = activeFoldSurfaceXKm + surfaceOffsetKm;
+          const facetRangeKm = Math.hypot(model.altitudeKm, facetXKm - alongTrackKm);
+          const facetDepthKm = (facetRangeKm - model.altitudeKm) / model.iceIndex;
+          const rangeJitterKm = (deterministicUnit(facetSeed, 53) - 0.5) * 0.24;
+          const surfaceSpreadWeight = Math.exp(-0.5 * (surfaceOffsetKm / 0.78) ** 2);
+          const footprintWeight = 1 / (1 + 0.0016 * (facetXKm - alongTrackKm) ** 2);
+          const facetPolarity = deterministicUnit(facetSeed, 59) > 0.28 ? 1 : -0.70;
+          const facetAmplitude = 0.16 * surfaceSpreadWeight * footprintWeight * facetPolarity;
+          const facetWidthKm = 0.10 + 0.05 * deterministicUnit(facetSeed, 61);
+          addRadarEcho(
+            rows,
+            traceIndex,
+            facetDepthKm + rangeJitterKm,
+            facetAmplitude,
+            facetWidthKm,
+            options.depthMinKm,
+            options.depthMaxKm
+          );
+        }
+
+        // The finite synthetic aperture cannot resolve those neighboring
+        // facets individually at the center trace. Their range-compressed
+        // responses form the localized blur patch that crosses the target as
+        // PRF moves the fold depth.
+        const focusedFoldRangeKm = Math.hypot(model.altitudeKm, activeFoldSurfaceXKm - alongTrackKm);
+        const focusedFoldDepthKm = (focusedFoldRangeKm - model.altitudeKm) / model.iceIndex;
+        const apertureWeight = Math.exp(-0.5 * (alongTrackKm / 5.2) ** 2);
+        for (let blurFacetIndex = 0; blurFacetIndex < 13; blurFacetIndex += 1) {
+          const blurSeed = blurFacetIndex + 211;
+          const blurDepthJitterKm = (deterministicUnit(blurSeed, 67) - 0.5) * 0.62;
+          const blurPolarity = 0.72 + 0.28 * deterministicUnit(blurSeed, 71);
+          const blurAmplitude = 0.060 * apertureWeight
+            * (0.62 + 0.38 * deterministicUnit(blurSeed, 73))
+            * blurPolarity;
+          const blurWidthKm = 0.12 + 0.07 * deterministicUnit(blurSeed, 79);
+          addRadarEcho(
+            rows,
+            traceIndex,
+            focusedFoldDepthKm + blurDepthJitterKm,
+            blurAmplitude,
+            blurWidthKm,
             options.depthMinKm,
             options.depthMaxKm
           );
@@ -441,7 +505,16 @@
     const maximumSurfaceDopplerHz = 2 * model.velocityKmS * 1000 / wavelengthM;
     const noFoldPrfHz = maximumSurfaceDopplerHz * 2.1;
     const referencePrfHz = Math.max(originalPrfHz, noFoldPrfHz);
+    const cacheKey = [
+      model.altitudeKm,
+      model.velocityKmS,
+      model.targetDepthKm,
+      model.iceIndex,
+      referencePrfHz
+    ].join('|');
+    if (cacheKey === referenceRadargramCacheKey && referenceRadargramPlot.firstChild) return;
     renderBScanRadargram(referenceRadargramPlot, referencePrfHz, null, false, { reference: true });
+    referenceRadargramCacheKey = cacheKey;
   }
 
   // Check 1: compare only the selected clutter trace against the fixed target
