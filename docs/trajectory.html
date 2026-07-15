@@ -12,9 +12,9 @@
         window.location.replace(fullSiteUrl.href);
       }
     </script>
-    <link rel="stylesheet" href="trajectory.css?v=adaptive-prf-20260715">
-    <script defer src="data/clipper-flyby.js?v=adaptive-prf-20260715"></script>
-    <script defer src="trajectory.js?v=adaptive-prf-20260715"></script>
+    <link rel="stylesheet" href="trajectory.css?v=range-aware-prf-20260715">
+    <script defer src="data/clipper-flyby.js?v=range-aware-prf-20260715"></script>
+    <script defer src="trajectory.js?v=range-aware-prf-20260715"></script>
   </head>
   <body>
     <main class="trajectory-page">
@@ -41,15 +41,15 @@
           <div><dt>Closest approach</dt><dd id="closest-utc-value"></dd></div>
         </dl>
         <p id="trajectory-status" class="trajectory-status" role="status" aria-live="polite"></p>
-        <p class="trajectory-source-note">Trajectory states come from the public Europa Clipper reference SPK and are expressed in <code>IAU_EUROPA</code>. SPICE states are linearly interpolated to the local processing clock; that interpolation does not create new trajectory fidelity. The four PRFs, radar tick, surface footprint, clutter strength, and target remain experiment assumptions, not REASON flight settings. <a href="https://naif.jpl.nasa.gov/pub/naif/EUROPACLIPPER/kernels/spk/" target="_blank" rel="noreferrer">NAIF kernel archive</a></p>
+        <p class="trajectory-source-note">Trajectory states come from the public Europa Clipper reference SPK and are expressed in <code>IAU_EUROPA</code>. The page now computes radial altitude against Europa's supplied triaxial radii instead of subtracting one mean radius. SPICE states are linearly interpolated to the local processing clock; that interpolation does not create new trajectory fidelity. The four PRFs, radar tick, clutter strength, and target remain experiment assumptions, not REASON flight settings. <a href="https://naif.jpl.nasa.gov/pub/naif/EUROPACLIPPER/kernels/spk/" target="_blank" rel="noreferrer">NAIF kernel archive</a></p>
       </section>
 
       <section class="scheduler-panel" aria-labelledby="scheduler-heading">
         <div class="scheduler-heading">
           <div>
             <p class="kicker">Corrected PRF experiment</p>
-            <h2 id="scheduler-heading">Best of four, selected every local block</h2>
-            <p>At each decision tick, the model predicts the next nine ticks from the interpolated SPICE state, scores four candidate PRFs, and applies the PRF with the largest minimum separation from the target cell.</p>
+            <h2 id="scheduler-heading">Range-aware best of four, selected every local block</h2>
+            <p>At each decision tick, the model predicts the next nine ticks, wraps both Doppler and fast-time range for each candidate PRF, rejects candidates with more overlap ticks, and then maximizes the minimum rectangular safety margin.</p>
           </div>
           <p class="scheduler-badge">SPICE-driven schedule</p>
         </div>
@@ -62,7 +62,7 @@
               <div><dt>SPICE source interval</dt><dd id="source-interval-value"></dd></div>
               <div><dt>Decision cadence</dt><dd>Every 10th tick</dd></div>
               <div><dt>Prediction window</dt><dd>Following 9 ticks (90 ms)</dd></div>
-              <div><dt>Clutter search</dt><dd>&minus;240 to +240 km every 5 km</dd></div>
+              <div><dt>Clutter search</dt><dd>&minus;240 to +240 km every 1 km, then locally refined</dd></div>
             </dl>
           </article>
 
@@ -72,7 +72,7 @@
             <dl class="scheduler-details">
               <div><dt>Block span</dt><dd id="block-span-value"></dd></div>
               <div><dt>Selected PRF</dt><dd id="selected-prf-value"></dd></div>
-              <div><dt>Minimum joint separation</dt><dd id="selected-score-value"></dd></div>
+              <div><dt>Minimum safety margin</dt><dd id="selected-score-value"></dd></div>
               <div><dt>Fixed bad comparison</dt><dd id="fixed-prf-value"></dd></div>
             </dl>
           </article>
@@ -86,7 +86,7 @@
               <p class="telemetry-frame">Larger is safer</p>
             </div>
             <div id="candidate-score-grid" class="candidate-score-grid" aria-live="polite"></div>
-            <p class="scheduler-formula">Score = minimum normalized two-axis distance across all predicted ticks and modeled clutter points: &radic;[(aliased Doppler / 25 Hz)&sup2; + (depth offset / 0.15 km)&sup2;].</p>
+            <p class="scheduler-formula">First minimize predicted overlap ticks. Then maximize the minimum rectangular margin: max(|aliased Doppler| / 25 Hz, |PRI-wrapped depth offset| / 0.15 km). A score &le; 1 is inside the target basket. Near ties retain the previous PRF.</p>
           </article>
 
           <article class="scheduler-card scheduler-card-wide scheduler-outcome">
@@ -97,6 +97,51 @@
               <div><dt>PRF changes</dt><dd id="switch-count-value"></dd></div>
               <div><dt>Modeled radar ticks</dt><dd id="radar-tick-count-value"></dd></div>
             </dl>
+          </article>
+        </div>
+      </section>
+
+      <section class="validation-panel" aria-labelledby="validation-heading">
+        <div class="validation-heading">
+          <div>
+            <p class="kicker">MATLAB/toolbox corrections now represented</p>
+            <h2 id="validation-heading">What changed in the live website model</h2>
+            <p>This panel exposes the corrections instead of hiding them behind the radargrams. Values below are computed from the same live SPICE state and PRF candidates used by the scheduler.</p>
+          </div>
+          <p class="validation-badge">Range-aware revision</p>
+        </div>
+        <div class="validation-grid">
+          <article class="validation-card">
+            <p class="telemetry-label">Europa body shape</p>
+            <h3>Mean sphere versus triaxial surface</h3>
+            <dl class="validation-values">
+              <div><dt>Old mean-sphere altitude</dt><dd id="mean-sphere-altitude-value"></dd></div>
+              <div><dt>Corrected radial altitude</dt><dd id="ellipsoid-altitude-value"></dd></div>
+              <div><dt>Correction</dt><dd id="altitude-correction-value"></dd></div>
+            </dl>
+          </article>
+          <article class="validation-card">
+            <p class="telemetry-label">PRI range ambiguity</p>
+            <h3>Candidate unambiguous ranges</h3>
+            <p id="range-window-value" class="validation-readout"></p>
+            <p class="validation-note">Every clutter-to-target range difference is wrapped by <em>R</em><sub>u</sub> = c/(2 PRF) before the depth comparison.</p>
+          </article>
+          <article class="validation-card validation-card-wide">
+            <p class="telemetry-label">Selection rule</p>
+            <h3>Overlap-first, deterministic scheduling</h3>
+            <p id="score-rule-value" class="validation-readout"></p>
+            <p id="search-rule-value" class="validation-note"></p>
+          </article>
+          <article class="validation-card validation-card-wide">
+            <p class="telemetry-label">Hardware timing disclosure</p>
+            <h3>The 100 ms blocks are processing decisions, not a pulse-accurate transmitter schedule</h3>
+            <p id="pulse-alignment-value" class="validation-readout"></p>
+            <p class="validation-note">Fractional pulse counts mean a real transmitter must finish the current PRI before switching. The website does not pretend otherwise.</p>
+          </article>
+          <article class="validation-card validation-card-wide validation-card-caveat">
+            <p class="telemetry-label">Toolbox boundary</p>
+            <h3>Verified formulas, but not yet end-to-end I/Q processing</h3>
+            <p id="toolbox-check-value" class="validation-readout"></p>
           </article>
         </div>
       </section>
@@ -215,7 +260,7 @@
             <p class="graph-number">2</p>
             <div>
               <h2>Adaptive four-PRF schedule</h2>
-              <p>Each 100 ms block uses the candidate that maximizes the worst predicted Doppler&ndash;depth separation over its following nine 10 ms ticks.</p>
+              <p>Each 100 ms decision block prioritizes zero predicted overlaps, then maximizes the worst range-wrapped Doppler&ndash;depth margin over its following nine 10 ms ticks.</p>
             </div>
           </div>
           <div id="fold-plot" class="plot" aria-live="polite"></div>
@@ -237,7 +282,7 @@
             <p class="graph-number">4</p>
             <div>
               <h2>Selected-PRF Doppler &times; depth</h2>
-              <p>The current adaptive PRF is applied to every modeled clutter point. Interference requires entry into the target basket in both axes.</p>
+              <p>The current adaptive PRF wraps Doppler and relative fast-time range for every modeled clutter point. Interference requires entry into the rectangular target basket in both axes.</p>
             </div>
           </div>
           <div id="doppler-plot" class="plot" aria-live="polite"></div>
@@ -248,7 +293,7 @@
             <p class="graph-number">5</p>
             <div>
               <h2>Fixed bad PRF</h2>
-              <p>One closest-approach fold-tuned PRF is reused for the whole flyby. Every modeled nonzero fold branch is retained, producing the continuous curved and crossing clutter pattern.</p>
+              <p>One closest-approach fold-tuned PRF is reused for the whole flyby. Doppler and range-wrapped branches are retained, producing the continuous curved and crossing clutter pattern.</p>
             </div>
           </div>
           <div id="fixed-radargram-plot" class="plot radargram-plot" aria-live="polite"></div>
@@ -269,8 +314,8 @@
           <div class="graph-heading">
             <p class="graph-number">7</p>
             <div>
-              <h2>Illustrative multi-PRF postprocessing</h2>
-              <p>PRF-dependent clutter is attenuated as inconsistent across blocks; the PRF-independent subsurface target trace is retained. This is a processing concept, not mission-validated focusing.</p>
+              <h2>Illustrative rejection mask—not processed I/Q</h2>
+              <p>The display fades PRF-dependent branches and highlights the target to show the proposed rejection concept. It is explicitly not matched filtering, range migration, coherent integration, or mission-validated focusing.</p>
             </div>
           </div>
           <div id="postprocessed-radargram-plot" class="plot radargram-plot" aria-live="polite"></div>
