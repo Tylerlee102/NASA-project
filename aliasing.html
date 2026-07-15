@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=radargram-parameters-20260714">
-    <script defer src="aliasing.js?v=radargram-parameters-20260714"></script>
+    <link rel="stylesheet" href="aliasing.css?v=live-model-radargram-20260714">
+    <script defer src="aliasing.js?v=live-model-radargram-20260714"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -37,6 +37,20 @@
           <span>target folding neighborhood</span>
           <span id="prf-max-label">913 Hz</span>
         </div>
+        <div class="model-controls" aria-label="Live model parameters">
+          <label class="model-control" for="model-speed-slider">
+            <span>Satellite speed <output id="model-speed-output" for="model-speed-slider">3.0 km/s</output></span>
+            <input id="model-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="3.0">
+          </label>
+          <label class="model-control" for="model-altitude-slider">
+            <span>Altitude <output id="model-altitude-output" for="model-altitude-slider">25 km</output></span>
+            <input id="model-altitude-slider" type="range" min="10" max="60" step="1" value="25">
+          </label>
+          <label class="model-control" for="model-depth-slider">
+            <span>Target depth <output id="model-depth-output" for="model-depth-slider">6.74 km</output></span>
+            <input id="model-depth-slider" type="range" min="2.0" max="12.0" step="0.01" value="6.74">
+          </label>
+        </div>
         <dl class="lab-givens" aria-label="Fixed model assumptions">
           <div><dt>Altitude</dt><dd id="given-altitude"></dd></div>
           <div><dt>Speed</dt><dd id="given-speed"></dd></div>
@@ -44,7 +58,7 @@
           <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
           <div><dt>Ice index</dt><dd id="given-index"></dd></div>
         </dl>
-        <p class="model-boundary"><strong>Model boundary:</strong> this synthetic case uses a timing-safe base trace PRF, then slides only the effective Doppler sampling PRF near the selected fold. Doppler/depth tolerances are derived from the FFT and depth-bin spacing. The moving red band is a continuous-surface reference; one selected surface dot is checked as the clutter return that aliases onto the target.</p>
+        <p class="model-boundary"><strong>Model boundary:</strong> this synthetic case slides the effective Doppler sampling PRF near the selected fold. The base trace PRI is checked against the echo listening window, so high-speed settings show when the case becomes range-ambiguous.</p>
         <p id="trace-status" class="prf-status" aria-live="polite"></p>
       </section>
 
@@ -65,26 +79,8 @@
 
         <section class="horizontal-map full-span" aria-labelledby="live-radargram-title">
           <div class="map-heading">
-            <h2 id="live-radargram-title">MATLAB-generated fake radargram blur</h2>
-            <p>Zoomed near the target depth. The folded clutter is drawn as a dark radar echo, so the blur is visible without a colored highlight.</p>
-            <div class="radargram-controls" aria-label="Fake radargram parameters">
-              <label class="radargram-control" for="radargram-clutter-strength">
-                <span>Folded clutter strength <output id="radargram-clutter-strength-output" for="radargram-clutter-strength">100%</output></span>
-                <input id="radargram-clutter-strength" type="range" min="0.20" max="1.80" step="0.05" value="1.00">
-              </label>
-              <label class="radargram-control" for="radargram-blur-thickness">
-                <span>Blur thickness <output id="radargram-blur-thickness-output" for="radargram-blur-thickness">100%</output></span>
-                <input id="radargram-blur-thickness" type="range" min="0.50" max="2.00" step="0.05" value="1.00">
-              </label>
-              <label class="radargram-control" for="radargram-contrast">
-                <span>Radargram contrast <output id="radargram-contrast-output" for="radargram-contrast">110%</output></span>
-                <input id="radargram-contrast" type="range" min="0.75" max="1.55" step="0.05" value="1.10">
-              </label>
-              <label class="radargram-control" for="radargram-target-echo">
-                <span>Target echo guide <output id="radargram-target-echo-output" for="radargram-target-echo">85%</output></span>
-                <input id="radargram-target-echo" type="range" min="0.00" max="1.30" step="0.05" value="0.85">
-              </label>
-            </div>
+            <h2 id="live-radargram-title">Live MATLAB-style radargram blur</h2>
+            <p>The radargram is regenerated from the current speed, altitude, and depth model. The clutter blur is part of the dark echo texture, not a colored highlight.</p>
           </div>
           <div id="live-radargram-plot" class="synthetic-radargram-plot" aria-live="polite"></div>
         </section>
