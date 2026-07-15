@@ -2,27 +2,41 @@
   'use strict';
 
   const C = 299792458;
+  const spiceFlyby = window.CLIPPER_SPICE_FLYBY;
+  if (!spiceFlyby || !Array.isArray(spiceFlyby.samples) || spiceFlyby.samples.length < 3) {
+    const error = document.getElementById('trajectory-status');
+    if (error) {
+      error.className = 'trajectory-status is-overlap';
+      error.textContent = 'SPICE flyby data did not load. Regenerate docs/data/clipper-flyby.js and reload this page.';
+    }
+    return;
+  }
+
+  const spiceSamples = spiceFlyby.samples;
   const model = {
-    europaRadiusKm: 1560.8,
-    closestAltitudeKm: 25,
-    velocityKmS: 4.5,
+    europaRadiusKm: spiceFlyby.body.meanRadiusKm,
+    closestAltitudeKm: spiceFlyby.closestApproach.altitudeKm,
+    velocityKmS: spiceFlyby.closestApproach.speedKmS,
     frequencyMhz: 60,
     iceIndex: 1.78,
     targetDepthKm: 6.74,
     pointCount: 12,
     dopplerToleranceHz: 25,
     depthToleranceKm: 0.15,
-    timeMinS: -10,
-    timeMaxS: 10
+    timeMinS: spiceFlyby.window.startOffsetSeconds,
+    timeMaxS: spiceFlyby.window.endOffsetSeconds
   };
 
   const wavelengthM = C / (model.frequencyMhz * 1e6);
-  const tangentRadiusKm = model.europaRadiusKm + model.closestAltitudeKm;
   const targetEquivalentRadiusKm = model.europaRadiusKm - model.iceIndex * model.targetDepthKm;
   const requiredSurfaceRangeKm = model.closestAltitudeKm + model.iceIndex * model.targetDepthKm;
+  const closestCenterDistanceKm = model.europaRadiusKm + model.closestAltitudeKm;
+  const surfaceArcCosine = Math.max(-1, Math.min(1,
+    (closestCenterDistanceKm ** 2 + model.europaRadiusKm ** 2 - requiredSurfaceRangeKm ** 2)
+      / (2 * closestCenterDistanceKm * model.europaRadiusKm)
+  ));
   const targetSurfaceArcKm = model.europaRadiusKm * Math.acos(
-    (tangentRadiusKm ** 2 + model.europaRadiusKm ** 2 - requiredSurfaceRangeKm ** 2)
-      / (2 * tangentRadiusKm * model.europaRadiusKm)
+    surfaceArcCosine
   );
   // Choose the spread so points 4 and 9 land at the target's apparent depth
   // at closest approach. With 12 evenly spaced points, those points are at
@@ -31,6 +45,15 @@
   const pointArcsKm = Array.from({ length: model.pointCount }, (_, index) => (
     -clutterSpreadKm + (2 * clutterSpreadKm * index) / (model.pointCount - 1)
   ));
+  const radialBasis = spiceFlyby.localBasis.radial;
+  const alongTrackBasis = spiceFlyby.localBasis.alongTrack;
+  const crossTrackBasis = spiceFlyby.localBasis.crossTrack;
+
+  const dot3 = (left, right) => left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
+  const norm3 = (vector) => Math.hypot(vector[0], vector[1], vector[2]);
+  const mix3 = (left, right, fraction) => left.map((value, index) => (
+    value + (right[index] - value) * fraction
+  ));
 
   const slider = document.getElementById('time-slider');
   const timeOutput = document.getElementById('time-output');
@@ -38,13 +61,45 @@
   const closestButton = document.getElementById('closest-button');
   const altitudeValue = document.getElementById('altitude-value');
   const trackValue = document.getElementById('track-value');
+  const speedValue = document.getElementById('speed-value');
   const prfValue = document.getElementById('prf-value');
+  const closestUtcValue = document.getElementById('closest-utc-value');
   const status = document.getElementById('trajectory-status');
   const geometryPlot = document.getElementById('geometry-plot');
   const foldPlot = document.getElementById('fold-plot');
   const tracePlot = document.getElementById('trace-plot');
   const dopplerPlot = document.getElementById('doppler-plot');
   const flybyRadargramPlot = document.getElementById('flyby-radargram-plot');
+  const telemetryIds = [
+    'current-utc-value',
+    'center-distance-value',
+    'radial-speed-value',
+    'cross-track-value',
+    'target-range-value',
+    'target-doppler-value',
+    'nearest-alias-value',
+    'position-x-value',
+    'position-y-value',
+    'position-z-value',
+    'velocity-x-value',
+    'velocity-y-value',
+    'velocity-z-value',
+    'encounter-number-value',
+    'encounter-utc-value',
+    'encounter-altitude-value',
+    'encounter-location-value',
+    'europa-radii-value',
+    'sample-cadence-value',
+    'state-definition-value',
+    'spk-file-value',
+    'spk-coverage-value',
+    'spk-sha-value',
+    'artifact-generated-value'
+  ];
+  const telemetry = Object.fromEntries(telemetryIds.map((id) => [id, document.getElementById(id)]));
+  const sampleTableBody = document.getElementById('spice-sample-table-body');
+  const sampleTableWrap = document.getElementById('sample-table-wrap');
+  let activeSampleIndex = -1;
 
   const mod = (value, divisor) => ((value % divisor) + divisor) % divisor;
   const alias = (frequencyHz, prfHz) => mod(frequencyHz + prfHz / 2, prfHz) - prfHz / 2;
@@ -53,35 +108,56 @@
     maximumFractionDigits: digits
   });
   const signed = (value, digits = 1) => `${value > 0 ? '+' : ''}${fmt(Math.abs(value) < 0.0005 ? 0 : value, digits)}`;
+  const displayUtc = (value) => `${value.replace('T', ' ')} UTC`;
+  const closestApproachUtcMs = Date.parse(`${spiceFlyby.closestApproach.utc}Z`);
+  const utcAtOffset = (offsetSeconds) => new Date(closestApproachUtcMs + offsetSeconds * 1000)
+    .toISOString()
+    .replace('T', ' ')
+    .replace('Z', ' UTC');
   const linePath = (rows, x, y, accessor) => rows.map((row, index) => {
     const point = accessor(row);
     return `${index ? 'L' : 'M'} ${x(point.x).toFixed(2)} ${y(point.y).toFixed(2)}`;
   }).join(' ');
 
   function spacecraftAt(timeS) {
-    const xKm = model.velocityKmS * timeS;
-    const centerDistanceKm = Math.hypot(xKm, tangentRadiusKm);
+    const clampedTimeS = Math.max(model.timeMinS, Math.min(model.timeMaxS, timeS));
+    const sampleStepS = spiceFlyby.window.stepSeconds;
+    const floatingIndex = (clampedTimeS - model.timeMinS) / sampleStepS;
+    const lowerIndex = Math.max(0, Math.min(spiceSamples.length - 1, Math.floor(floatingIndex)));
+    const upperIndex = Math.min(spiceSamples.length - 1, lowerIndex + 1);
+    const fraction = Math.max(0, Math.min(1, floatingIndex - lowerIndex));
+    const lower = spiceSamples[lowerIndex];
+    const upper = spiceSamples[upperIndex];
+    const positionKm = mix3(lower.positionKm, upper.positionKm, fraction);
+    const velocityKmS = mix3(lower.velocityKmS, upper.velocityKmS, fraction);
+    const centerDistanceKm = norm3(positionKm);
     return {
-      xKm,
-      yKm: tangentRadiusKm,
-      altitudeKm: centerDistanceKm - model.europaRadiusKm
+      positionKm,
+      velocityKmS,
+      distanceKm: centerDistanceKm,
+      xKm: dot3(positionKm, alongTrackBasis),
+      crossTrackKm: dot3(positionKm, crossTrackBasis),
+      altitudeKm: centerDistanceKm - model.europaRadiusKm,
+      speedKmS: norm3(velocityKmS),
+      radialSpeedKmS: dot3(positionKm, velocityKmS) / centerDistanceKm
     };
   }
 
   function measureFixedPoint(timeS, radiusKm, surfaceArcKm) {
     const spacecraft = spacecraftAt(timeS);
     const angle = surfaceArcKm / model.europaRadiusKm;
-    const pointXKm = radiusKm * Math.sin(angle);
-    const pointYKm = radiusKm * Math.cos(angle);
-    const dxKm = pointXKm - spacecraft.xKm;
-    const dyKm = pointYKm - spacecraft.yKm;
-    const rangeKm = Math.hypot(dxKm, dyKm);
-    // Range-rate for a fixed point and a spacecraft moving along +x.
-    const rangeRateKmS = ((spacecraft.xKm - pointXKm) * model.velocityKmS) / rangeKm;
+    const pointPositionKm = radialBasis.map((radialValue, index) => (
+      radiusKm * (radialValue * Math.cos(angle) + alongTrackBasis[index] * Math.sin(angle))
+    ));
+    const lineOfSightKm = pointPositionKm.map((value, index) => value - spacecraft.positionKm[index]);
+    const rangeKm = norm3(lineOfSightKm);
+    // Points are fixed in IAU_EUROPA. Their velocity is therefore zero in this
+    // rotating frame, while the SPICE state includes the frame-rate term.
+    const rangeRateKmS = -dot3(lineOfSightKm, spacecraft.velocityKmS) / rangeKm;
     return {
       surfaceArcKm,
-      pointXKm,
-      pointYKm,
+      pointPositionKm,
+      pointXKm: dot3(pointPositionKm, alongTrackBasis),
       rangeKm,
       apparentDepthKm: (rangeKm - spacecraft.altitudeKm) / model.iceIndex,
       trueDopplerHz: -2 * rangeRateKmS * 1000 / wavelengthM
@@ -189,6 +265,13 @@
   const timeline = Array.from({ length: 121 }, (_, index) => (
     stateAt(model.timeMinS + ((model.timeMaxS - model.timeMinS) * index) / 120)
   ));
+  const geometryXAbsKm = Math.ceil(
+    Math.max(...spiceSamples.map((sample) => Math.abs(sample.alongTrackKm))) * 1.18 / 5
+  ) * 5;
+  const geometryYMaxKm = Math.max(
+    30,
+    Math.ceil(Math.max(...spiceSamples.map((sample) => sample.altitudeKm)) + 3)
+  );
 
   function chartScales(width, height, margin, xMin, xMax, yMin, yMax) {
     return {
@@ -220,25 +303,28 @@
     const width = 600;
     const height = 360;
     const margin = { left: 58, right: 24, top: 42, bottom: 46 };
-    // Geometry uses the physical sign convention: positive values are above
-    // the surface and negative values are below it. Reversing the y-domain
-    // puts positive altitude at the top of the screen while retaining the
-    // mathematical coordinates used by the model.
-    const scales = chartScales(width, height, margin, -68, 68, 30, -10);
-    // In a surface-relative frame, a straight tangent flyby appears as a
-    // shallow parabola because Europa curves away beneath the spacecraft.
-    const trajectoryRows = Array.from({ length: 137 }, (_, index) => {
-      const xKm = -68 + index;
-      return {
-        x: xKm,
-        y: Math.hypot(xKm, tangentRadiusKm) - model.europaRadiusKm
-      };
-    });
+    // Positive values are above the reference sphere and negative values are
+    // below it. Reversing the y-domain places altitude at the top of the plot.
+    const scales = chartScales(
+      width,
+      height,
+      margin,
+      -geometryXAbsKm,
+      geometryXAbsKm,
+      geometryYMaxKm,
+      -10
+    );
+    const trajectoryRows = spiceSamples.map((sample) => ({
+      x: sample.alongTrackKm,
+      y: sample.altitudeKm
+    }));
     const trajectoryPath = linePath(trajectoryRows, scales.x, scales.y, (row) => row);
     const spacecraftYKm = state.spacecraft.altitudeKm;
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Moving satellite on a locally parabolic closest-approach path above twelve fixed surface clutter points and one fixed subsurface target">`;
-    svg += axes(width, height, margin, scales, [-60, -30, 0, 30, 60], [-10, 0, 10, 20, 30], 'along-track distance (km)', 'height above (+) / depth below (-) surface (km)', signed, signed);
-    svg += `<line class="surface" x1="${scales.x(-68)}" y1="${scales.y(0)}" x2="${scales.x(68)}" y2="${scales.y(0)}"></line>`;
+    const xTicks = [-geometryXAbsKm, -geometryXAbsKm / 2, 0, geometryXAbsKm / 2, geometryXAbsKm];
+    const yTicks = [-10, 0, 10, 20, 30].filter((value) => value <= geometryYMaxKm);
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Europa Clipper SPICE reference-trajectory states above twelve fixed surface clutter points and one fixed subsurface target">`;
+    svg += axes(width, height, margin, scales, xTicks, yTicks, 'local along-track distance (km)', 'height above (+) / depth below (-) reference sphere (km)', signed, signed);
+    svg += `<line class="surface" x1="${scales.x(-geometryXAbsKm)}" y1="${scales.y(0)}" x2="${scales.x(geometryXAbsKm)}" y2="${scales.y(0)}"></line>`;
     // Keep the trajectory strictly as a stroked line. The explicit SVG
     // attribute prevents any browser or stale stylesheet from closing the open
     // path and painting a dark polygon beneath it.
@@ -257,8 +343,8 @@
     svg += `<rect class="target" x="${targetX - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${targetX} ${targetY})"></rect>`;
     svg += `<circle class="satellite" cx="${scales.x(state.spacecraft.xKm)}" cy="${scales.y(spacecraftYKm)}" r="8"><title>Moving satellite at ${signed(state.timeS, 2)} seconds</title></circle>`;
     svg += `<text class="label-strong" x="${scales.x(state.spacecraft.xKm) + 11}" y="${scales.y(spacecraftYKm) - 10}">moving satellite: t = ${signed(state.timeS, 2)} s</text>`;
-    svg += `<text class="label" x="${scales.x(-65)}" y="${scales.y(27.4)}">locally parabolic flyby path</text>`;
-    svg += `<text class="label" x="${scales.x(-65)}" y="${scales.y(0) - 8}">Europa surface: 0 km</text>`;
+    svg += `<text class="label" x="${scales.x(-geometryXAbsKm * 0.95)}" y="${scales.y(Math.min(geometryYMaxKm - 1, model.closestAltitudeKm + 3))}">SPICE reference-trajectory samples</text>`;
+    svg += `<text class="label" x="${scales.x(-geometryXAbsKm * 0.95)}" y="${scales.y(0) - 8}">Europa mean-radius sphere: 0 km</text>`;
     svg += `<text class="label-strong" x="${targetX + 12}" y="${targetY + 4}">fixed subsurface target: -${fmt(model.targetDepthKm, 2)} km</text>`;
     if (state.overlap) {
       svg += `<text class="label-danger" x="${width - margin.right}" y="24" text-anchor="end">folding overlap at closest approach</text>`;
@@ -306,7 +392,7 @@
     const margin = { left: 64, right: 24, top: 38, bottom: 48 };
     const scales = chartScales(width, height, margin, model.timeMinS, model.timeMaxS, timelineDepthMin, timelineDepthMax);
     const yTicks = Array.from({ length: 5 }, (_, index) => timelineDepthMin + ((timelineDepthMax - timelineDepthMin) * index) / 4);
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="All nonzero integer PRF fold orders and target depth through the NASA-reference flyby">`;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="All nonzero integer PRF fold orders and target depth through the SPICE reference-trajectory flyby">`;
     svg += axes(width, height, margin, scales, [-10, -5, 0, 5, 10], yTicks, 'time from closest approach (s)', 'apparent depth (km, downward)', signed, (v) => fmt(v, 1));
     svg += `<path class="target-cell" d="${areaPath(timeline, scales, (row) => row.target.apparentDepthKm - model.depthToleranceKm, (row) => row.target.apparentDepthKm + model.depthToleranceKm)}"></path>`;
     foldOrders.forEach((order) => {
@@ -464,19 +550,99 @@
     flybyRadargramPlot.innerHTML = svg;
   }
 
+  function populateStaticSpiceData() {
+    const encounter = spiceFlyby.closestApproach;
+    const search = spiceFlyby.encounterSearch;
+    const stateDefinition = spiceFlyby.stateDefinition;
+    const spkKernel = spiceFlyby.kernels.find((kernel) => kernel.kind === 'SPK');
+    telemetry['encounter-number-value'].textContent = `Encounter ${search.selectedNumber} of ${search.encounterCount}`;
+    telemetry['encounter-utc-value'].textContent = displayUtc(encounter.utc);
+    telemetry['encounter-altitude-value'].textContent = `${fmt(encounter.altitudeKm, 3)} km above the mean-radius sphere`;
+    telemetry['encounter-location-value'].textContent = `${signed(encounter.subSpacecraftLatitudeDeg, 3)}° lat · ${signed(encounter.subSpacecraftLongitudeDeg, 3)}° lon`;
+    telemetry['europa-radii-value'].textContent = `${spiceFlyby.body.radiiKm.map((value) => fmt(value, 1)).join(' × ')} km`;
+    telemetry['sample-cadence-value'].textContent = `${spiceFlyby.window.sampleCount} states · ${fmt(spiceFlyby.window.stepSeconds, 6)} s spacing`;
+    telemetry['state-definition-value'].textContent = `${spiceFlyby.spacecraft.naifId} from ${stateDefinition.observer} · ${stateDefinition.frame} · ${stateDefinition.aberrationCorrection}`;
+    telemetry['spk-file-value'].textContent = spkKernel.filename;
+    telemetry['spk-coverage-value'].textContent = `${displayUtc(spiceFlyby.spkCoverageUtc.start)} – ${displayUtc(spiceFlyby.spkCoverageUtc.end)}`;
+    telemetry['spk-sha-value'].textContent = spkKernel.sha256;
+    telemetry['artifact-generated-value'].textContent = new Date(spiceFlyby.generatedAtUtc)
+      .toISOString()
+      .replace('T', ' ')
+      .replace('Z', ' UTC');
+  }
+
+  function populateSampleTable() {
+    const fragment = document.createDocumentFragment();
+    spiceSamples.forEach((sample, index) => {
+      const row = document.createElement('tr');
+      row.dataset.sampleIndex = String(index);
+      const values = [
+        signed(sample.offsetSeconds, 3),
+        displayUtc(sample.utc),
+        fmt(sample.altitudeKm, 3),
+        signed(sample.alongTrackKm, 3),
+        signed(sample.crossTrackKm, 3),
+        fmt(sample.speedKmS, 6),
+        signed(sample.radialSpeedKmS, 9)
+      ];
+      values.forEach((value) => {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+      fragment.appendChild(row);
+    });
+    sampleTableBody.replaceChildren(fragment);
+  }
+
+  function updateActiveSampleRow(timeS, forceScroll = false) {
+    const floatingIndex = (timeS - model.timeMinS) / spiceFlyby.window.stepSeconds;
+    const nextIndex = Math.max(0, Math.min(spiceSamples.length - 1, Math.round(floatingIndex)));
+    if (nextIndex === activeSampleIndex && !forceScroll) return;
+    if (activeSampleIndex >= 0) sampleTableBody.children[activeSampleIndex]?.classList.remove('is-current');
+    const nextRow = sampleTableBody.children[nextIndex];
+    nextRow?.classList.add('is-current');
+    activeSampleIndex = nextIndex;
+    if (!nextRow || sampleTableWrap.clientHeight <= 0) return;
+
+    const headerAllowance = 34;
+    const rowTop = nextRow.offsetTop;
+    const rowBottom = rowTop + nextRow.offsetHeight;
+    const visibleTop = sampleTableWrap.scrollTop + headerAllowance;
+    const visibleBottom = sampleTableWrap.scrollTop + sampleTableWrap.clientHeight;
+    if (forceScroll || rowTop < visibleTop || rowBottom > visibleBottom) {
+      sampleTableWrap.scrollTop = Math.max(0, rowTop - sampleTableWrap.clientHeight / 2);
+    }
+  }
+
   function draw(timeS) {
     const state = stateAt(timeS);
+    const nearest = state.foldingPair.reduce((best, point) => (
+      Math.abs(point.relativeAliasHz) < Math.abs(best.relativeAliasHz) ? point : best
+    ));
     timeOutput.textContent = `${signed(timeS, 2)} s`;
     altitudeValue.textContent = `${fmt(state.spacecraft.altitudeKm, 2)} km`;
     trackValue.textContent = `${signed(state.spacecraft.xKm, 2)} km`;
+    speedValue.textContent = `${fmt(state.spacecraft.speedKmS, 3)} km/s`;
     prfValue.textContent = `${fmt(effectivePrfHz, 1)} Hz`;
+    telemetry['current-utc-value'].textContent = utcAtOffset(timeS);
+    telemetry['center-distance-value'].textContent = `${fmt(state.spacecraft.distanceKm, 3)} km`;
+    telemetry['radial-speed-value'].textContent = `${signed(state.spacecraft.radialSpeedKmS, 6)} km/s`;
+    telemetry['cross-track-value'].textContent = `${signed(state.spacecraft.crossTrackKm, 3)} km`;
+    telemetry['target-range-value'].textContent = `${fmt(state.target.rangeKm, 3)} km`;
+    telemetry['target-doppler-value'].textContent = `${signed(state.target.trueDopplerHz, 3)} Hz`;
+    telemetry['nearest-alias-value'].textContent = `${signed(nearest.relativeAliasHz, 3)} Hz`;
+    state.spacecraft.positionKm.forEach((value, index) => {
+      telemetry[`position-${'xyz'[index]}-value`].textContent = signed(value, 6);
+    });
+    state.spacecraft.velocityKmS.forEach((value, index) => {
+      telemetry[`velocity-${'xyz'[index]}-value`].textContent = signed(value, 9);
+    });
+    updateActiveSampleRow(timeS);
     status.className = `trajectory-status${state.overlap ? ' is-overlap' : ''}`;
     if (state.overlap) {
       status.textContent = `FOLDING OVERLAP: at closest approach, clutter points ${state.foldingPair.map((point) => point.index + 1).join(' and ')} occupy the target's Doppler-plus-depth cell.`;
     } else {
-      const nearest = state.foldingPair.reduce((best, point) => (
-        Math.abs(point.relativeAliasHz) < Math.abs(best.relativeAliasHz) ? point : best
-      ));
       status.textContent = `No overlap: the nearest selected clutter return is ${signed(nearest.relativeAliasHz, 1)} Hz from the target and ${signed(nearest.apparentDepthKm - state.target.apparentDepthKm, 2)} km away in apparent depth.`;
     }
     renderGeometry(state);
@@ -485,6 +651,14 @@
     renderDopplerDepth(state);
     renderFlybyRadargram(state);
   }
+
+  slider.min = String(model.timeMinS);
+  slider.max = String(model.timeMaxS);
+  slider.step = '0.01';
+  slider.value = '0';
+  closestUtcValue.textContent = displayUtc(spiceFlyby.closestApproach.utc);
+  populateSampleTable();
+  populateStaticSpiceData();
 
   let animationTimer = null;
   function stopAnimation() {
@@ -515,6 +689,7 @@
     slider.value = '0';
     draw(0);
   });
+  window.addEventListener('resize', () => updateActiveSampleRow(Number(slider.value), true));
 
   draw(0);
 })();

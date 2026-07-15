@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Doppler Aliasing Lab</title>
-    <link rel="stylesheet" href="styles.css?v=bigger-clean-graphs-20260713">
+    <link rel="stylesheet" href="styles.css?v=spice-live-data-20260715">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=radargram-blur-20260714"></script>
+    <script defer src="app.js?v=spice-live-data-20260715"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -19,7 +19,7 @@
           <p class="lead">An interactive view of how surface clutter folds into a fixed subsurface target as the effective Doppler sampling PRF changes.</p>
           <div class="hero-actions" aria-label="Project actions">
             <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
-            <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run NASA-reference flyby</a>
+            <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run SPICE-reference flyby</a>
             <a class="secondary-link" href="?page=radargram-lab" data-tab-jump="radargram-lab">Compare radargram PRFs</a>
             <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
           </div>
@@ -41,7 +41,7 @@
             <summary>Section pages</summary>
             <nav class="tabs" aria-label="Section pages">
               <a class="tab is-active" href="?page=aliasing-lab" data-target="aliasing-lab">Doppler Aliasing Lab</a>
-              <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">NASA Trajectory Lab</a>
+              <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">SPICE Trajectory Lab</a>
               <a class="tab" href="?page=radargram-lab" data-target="radargram-lab">Radargram PRF Demo</a>
               <a class="tab" href="?page=owner-access" data-target="owner-access">Owner Archive</a>
               <div id="owner-tabs" class="owner-tabs" hidden>
@@ -72,13 +72,13 @@
       <section id="trajectory-lab" class="page-section trajectory-page-section">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">NASA-reference flyby simulation</p>
+            <p class="section-kicker">SPICE reference-trajectory flyby</p>
             <h2>Europa trajectory with folding enabled</h2>
           </div>
         </div>
-        <p class="section-intro">Move through closest approach while the plot tracks every nonzero PRF fold order produced by the modeled surface clutter.</p>
+        <p class="section-intro">Move through closest approach while the plot tracks every nonzero PRF fold order. The expanded telemetry panel shows the current SPICE position, velocity, UTC, radial motion, encounter metadata, and kernel provenance.</p>
         <div class="trajectory-embed-shell">
-          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=matlab-radargram-20260714" title="NASA-reference Europa flyby folding simulator" loading="eager" scrolling="no"></iframe>
+          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=spice-live-data-20260715" title="SPICE reference-trajectory Europa flyby folding simulator" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 

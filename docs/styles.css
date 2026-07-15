@@ -69,6 +69,21 @@ input {
   padding: 46px 42px 68px;
 }
 
+body[data-active-page="trajectory-lab"] .site-frame {
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+}
+
+body[data-active-page="trajectory-lab"] .rail-sticky {
+  padding-right: 22px;
+  padding-left: 22px;
+}
+
+body[data-active-page="trajectory-lab"] .content-shell {
+  width: 100%;
+  max-width: 1800px;
+  padding: 34px 32px 68px;
+}
+
 .eyebrow,
 .section-kicker,
 .card-kicker,
@@ -1845,6 +1860,10 @@ tr:last-child td {
 @media (max-width: 920px) {
   .site-frame {
     display: block;
+  }
+
+  body[data-active-page="trajectory-lab"] .content-shell {
+    padding: 32px 22px 52px;
   }
 
   .site-rail {
