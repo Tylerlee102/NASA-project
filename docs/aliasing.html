@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=forward-playback-20260715">
-    <script defer src="aliasing.js?v=forward-playback-20260715"></script>
+    <link rel="stylesheet" href="aliasing.css?v=fold-dot-20260715">
+    <script defer src="aliasing.js?v=fold-dot-20260715"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -41,11 +41,11 @@
             <h2>Flyby time</h2>
             <output id="flyby-time-output" aria-live="polite">0.0 s</output>
           </div>
-          <input id="flyby-time-slider" class="prf-slider" type="range" min="0" max="32" step="0.05" value="0" aria-label="Flyby time in seconds">
+          <input id="flyby-time-slider" class="prf-slider" type="range" min="0" max="12" step="0.05" value="0" aria-label="Flyby time in seconds">
           <div class="prf-range-labels" aria-hidden="true">
             <span id="time-min-label">0 s</span>
             <span>forward plane motion</span>
-            <span id="time-max-label">32 s</span>
+            <span id="time-max-label">12 s</span>
           </div>
           <div class="prf-slider-row">
             <button id="prf-play-button" class="prf-play-button" type="button" aria-pressed="false">Play</button>
@@ -53,6 +53,10 @@
               <span>Play speed <output id="playback-speed-output" for="playback-speed-slider">2.0×</output></span>
               <input id="playback-speed-slider" type="range" min="0.25" max="8" step="0.25" value="2">
             </label>
+            <div id="folding-indicator" class="folding-indicator" aria-live="polite">
+              <span class="folding-dot" aria-hidden="true"></span>
+              <span id="folding-indicator-text">outside target fold</span>
+            </div>
           </div>
         </div>
         <div class="model-controls" aria-label="Live model parameters">
