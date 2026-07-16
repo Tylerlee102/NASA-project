@@ -21,7 +21,8 @@
   };
   const flyby = {
     timeS: 0,
-    halfSpanKm: 40
+    durationS: 32,
+    playbackSpeed: 2
   };
 
   const prfSlider = document.getElementById('effective-prf-slider');
@@ -30,6 +31,8 @@
   const timeOutput = document.getElementById('flyby-time-output');
   const timeMinLabel = document.getElementById('time-min-label');
   const timeMaxLabel = document.getElementById('time-max-label');
+  const playbackSpeedSlider = document.getElementById('playback-speed-slider');
+  const playbackSpeedOutput = document.getElementById('playback-speed-output');
   const speedSlider = document.getElementById('model-speed-slider');
   const altitudeSlider = document.getElementById('model-altitude-slider');
   const depthSlider = document.getElementById('model-depth-slider');
@@ -84,27 +87,30 @@
     const elapsedSeconds = Math.min(0.05, (timestamp - lastPlaybackTime) / 1000);
     lastPlaybackTime = timestamp;
 
-    const timeMin = Number(timeSlider.min);
     const timeMax = Number(timeSlider.max);
-    const sweepSecondsPerSecond = Math.max(1.2, (timeMax - timeMin) / 7.5);
-    let nextTime = flyby.timeS + playbackDirection * sweepSecondsPerSecond * elapsedSeconds;
+    let nextTime = flyby.timeS + flyby.playbackSpeed * elapsedSeconds;
 
     if (nextTime >= timeMax) {
       nextTime = timeMax;
-      playbackDirection = -1;
-    } else if (nextTime <= timeMin) {
-      nextTime = timeMin;
-      playbackDirection = 1;
     }
 
     flyby.timeS = nextTime;
     timeSlider.value = flyby.timeS.toFixed(2);
     draw(Number(prfSlider.value));
+    if (flyby.timeS >= timeMax) {
+      stopPlayback();
+      return;
+    }
     playbackFrameId = requestAnimationFrame(playbackStep);
   }
 
   function startPlayback() {
     if (playbackFrameId !== null) return;
+    if (flyby.timeS >= Number(timeSlider.max)) {
+      flyby.timeS = Number(timeSlider.min);
+      timeSlider.value = flyby.timeS.toFixed(2);
+      draw(Number(prfSlider.value));
+    }
     lastPlaybackTime = null;
     setPlaybackActive(true);
     playbackFrameId = requestAnimationFrame(playbackStep);
@@ -121,7 +127,6 @@
   let selectedFoldPrfHz = 0;
   let foldDepthScaleKm = { min: 0, max: 1 };
   let playbackFrameId = null;
-  let playbackDirection = 1;
   let lastPlaybackTime = null;
 
   function updateModelControlOutputs() {
@@ -152,20 +157,20 @@
 
   function updateFlybyControl(resetTime = false) {
     if (!timeSlider) return;
-    const halfTimeS = flyby.halfSpanKm / Math.max(model.velocityKmS, 0.1);
-    timeSlider.min = (-halfTimeS).toFixed(2);
-    timeSlider.max = halfTimeS.toFixed(2);
-    if (resetTime || flyby.timeS < -halfTimeS || flyby.timeS > halfTimeS) {
+    timeSlider.min = '0';
+    timeSlider.max = flyby.durationS.toFixed(2);
+    if (resetTime || flyby.timeS < 0 || flyby.timeS > flyby.durationS) {
       flyby.timeS = 0;
     }
     timeSlider.value = flyby.timeS.toFixed(2);
-    if (timeOutput) timeOutput.textContent = `${signed(flyby.timeS, 1)} s`;
-    if (timeMinLabel) timeMinLabel.textContent = `${signed(-halfTimeS, 0)} s`;
-    if (timeMaxLabel) timeMaxLabel.textContent = `${signed(halfTimeS, 0)} s`;
+    if (timeOutput) timeOutput.textContent = `${fmt(flyby.timeS, 1)} s`;
+    if (timeMinLabel) timeMinLabel.textContent = '0 s';
+    if (timeMaxLabel) timeMaxLabel.textContent = `${fmt(flyby.durationS, 0)} s`;
+    if (playbackSpeedOutput) playbackSpeedOutput.textContent = `${fmt(flyby.playbackSpeed, 1)}×`;
   }
 
   function movingTwoReturnState(effectivePrfHz) {
-    const planeXKm = flyby.timeS * model.velocityKmS;
+    const planeXKm = (flyby.timeS - flyby.durationS / 2) * model.velocityKmS;
     const surfaceXKm = selectedFoldingPoint.xKm;
     const surfaceDxKm = surfaceXKm - planeXKm;
     const surfaceRangeKm = Math.hypot(model.altitudeKm, surfaceDxKm);
@@ -318,7 +323,7 @@
       <defs><linearGradient id="blur-block" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b3d3f" stop-opacity=".10"></stop><stop offset=".5" stop-color="#9b3d3f" stop-opacity="${movingState.overlapsTarget ? '.50' : '.30'}"></stop><stop offset="1" stop-color="#9b3d3f" stop-opacity=".10"></stop></linearGradient></defs>`;
 
     svg += `<text class="blur-title-text" x="${margin.left}" y="18">fixed PRF: ${fmt(effectivePrfHz, 1)} Hz</text>`;
-    svg += `<text class="blur-title-text" x="${margin.left}" y="35">flyby time: ${signed(flyby.timeS, 1)} s</text>`;
+    svg += `<text class="blur-title-text" x="${margin.left}" y="35">flyby time: ${fmt(flyby.timeS, 1)} s</text>`;
     for (let index = 0; index < 6; index += 1) {
       const value = depthMinKm + ((depthMaxKm - depthMinKm) * index) / 5;
       const y = sy(value);
@@ -1364,15 +1369,19 @@
     const timingIsSafe = basePriUs > listenWindowUs;
     const prfWithinPublishedRange = originalPrfHz >= REASON_PRF_MIN_HZ && originalPrfHz <= REASON_PRF_MAX_HZ;
     const baseCaseIsValid = timingIsSafe && prfWithinPublishedRange;
-    originalPrfText.className = baseCaseIsValid ? '' : 'is-warning';
-    originalPrfText.textContent = `Play moves the plane through time; PRF stays fixed unless you move this slider. Base trace PRF: ${fmt(originalPrfHz, 1)} Hz (${prfWithinPublishedRange ? 'within' : 'outside'} published 50–3,000 Hz range); PRI ${fmt(basePriUs, 1)} µs ${timingIsSafe ? '>' : '<'} echo ${fmt(targetEchoUs, 1)} µs + ${fmt(SIMPLE_LISTEN_MARGIN_US, 0)} µs assumed margin.`;
+    if (originalPrfText) {
+      originalPrfText.className = baseCaseIsValid ? '' : 'is-warning';
+      originalPrfText.textContent = `Base trace PRF: ${fmt(originalPrfHz, 1)} Hz; PRI ${fmt(basePriUs, 1)} µs ${timingIsSafe ? '>' : '<'} echo ${fmt(targetEchoUs, 1)} µs + ${fmt(SIMPLE_LISTEN_MARGIN_US, 0)} µs assumed margin.`;
+    }
     output.textContent = `${fmt(effectivePrfHz, 1)} Hz`;
-    if (timeOutput) timeOutput.textContent = `${signed(flyby.timeS, 1)} s`;
-    status.className = `prf-status${targetOverlap ? ' is-overlap' : ''}`;
-    if (targetOverlap) {
-      status.textContent = `Overlap at ${signed(flyby.timeS, 1)} s with PRF fixed at ${fmt(effectivePrfHz, 1)} Hz: surface clutter ${signed(movingState.surfaceAliasHz, 1)} Hz folds into the target bin ${signed(movingState.targetAliasHz, 1)} Hz at ${fmt(movingState.surfaceApparentDepthKm, 2)} km.`;
-    } else {
-      status.textContent = `No overlap at ${signed(flyby.timeS, 1)} s with PRF fixed at ${fmt(effectivePrfHz, 1)} Hz: aliased Doppler separation is ${fmt(movingState.dopplerDeltaHz, 1)} Hz and apparent-depth separation is ${fmt(movingState.depthDeltaKm, 2)} km.`;
+    if (timeOutput) timeOutput.textContent = `${fmt(flyby.timeS, 1)} s`;
+    if (status) {
+      status.className = `prf-status${targetOverlap ? ' is-overlap' : ''}`;
+      if (targetOverlap) {
+        status.textContent = `Overlap at ${fmt(flyby.timeS, 1)} s with PRF fixed at ${fmt(effectivePrfHz, 1)} Hz: surface clutter ${signed(movingState.surfaceAliasHz, 1)} Hz folds into the target bin ${signed(movingState.targetAliasHz, 1)} Hz at ${fmt(movingState.surfaceApparentDepthKm, 2)} km.`;
+      } else {
+        status.textContent = `No overlap at ${fmt(flyby.timeS, 1)} s with PRF fixed at ${fmt(effectivePrfHz, 1)} Hz: aliased Doppler separation is ${fmt(movingState.dopplerDeltaHz, 1)} Hz and apparent-depth separation is ${fmt(movingState.depthDeltaKm, 2)} km.`;
+      }
     }
   }
 
@@ -1403,6 +1412,12 @@
       stopPlayback();
       flyby.timeS = Number(timeSlider.value);
       draw(Number(prfSlider.value));
+    });
+  }
+  if (playbackSpeedSlider) {
+    playbackSpeedSlider.addEventListener('input', () => {
+      flyby.playbackSpeed = Number(playbackSpeedSlider.value);
+      if (playbackSpeedOutput) playbackSpeedOutput.textContent = `${fmt(flyby.playbackSpeed, 1)}×`;
     });
   }
   draw(Number(prfSlider.value));

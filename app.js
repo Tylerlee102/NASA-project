@@ -106,12 +106,20 @@
     audit: 'Graph QA'
   };
   const OWNER_SESSION_KEY = 'europa-owner-archive-unlocked';
+  const RAIL_COLLAPSED_KEY = 'europa-aliasing-rail-collapsed';
   const OWNER_PASSWORD_SHA256 = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
   const PUBLIC_PAGE_TARGETS = new Set(['aliasing-lab', 'trajectory-lab', 'radargram-lab', 'owner-access']);
   let pendingOwnerTarget = 'overview';
   let ownerUnlocked = (() => {
     try {
       return window.sessionStorage.getItem(OWNER_SESSION_KEY) === 'true';
+    } catch (_error) {
+      return false;
+    }
+  })();
+  let railCollapsed = (() => {
+    try {
+      return window.localStorage.getItem(RAIL_COLLAPSED_KEY) === 'true';
     } catch (_error) {
       return false;
     }
@@ -128,6 +136,31 @@
     } catch (_error) {
       // The viewing gate still works for the current page when storage is blocked.
     }
+  }
+
+  function rememberRailState(collapsed) {
+    railCollapsed = collapsed;
+    try {
+      window.localStorage.setItem(RAIL_COLLAPSED_KEY, String(collapsed));
+    } catch (_error) {
+      // The toggle still works for the current page when storage is blocked.
+    }
+  }
+
+  function initRailToggle() {
+    const toggleButton = document.getElementById('rail-toggle-button');
+    if (!toggleButton) return;
+    const applyRailState = () => {
+      document.body.classList.toggle('is-rail-collapsed', railCollapsed);
+      toggleButton.textContent = railCollapsed ? 'Show side' : 'Hide side';
+      toggleButton.setAttribute('aria-expanded', String(!railCollapsed));
+      window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    };
+    toggleButton.addEventListener('click', () => {
+      rememberRailState(!railCollapsed);
+      applyRailState();
+    });
+    applyRailState();
   }
 
   async function sha256(value) {
@@ -2637,6 +2670,7 @@
     });
   }
 
+  initRailToggle();
   initTabs();
   initEmbeddedFrames();
   renderLiveControls();
