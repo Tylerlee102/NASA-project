@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=plane-play-20260715">
-    <script defer src="aliasing.js?v=plane-play-20260715"></script>
+    <link rel="stylesheet" href="aliasing.css?v=time-bins-20260715">
+    <script defer src="aliasing.js?v=time-bins-20260715"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -26,23 +26,35 @@
       <section class="prf-control" aria-label="Effective Doppler sampling PRF control">
         <div class="prf-label-row">
           <div>
-            <h2>Effective Doppler sampling PRF</h2>
+            <h2>Fixed low-PRF Doppler sampling</h2>
             <p id="original-prf"></p>
           </div>
           <output id="effective-prf-output" aria-live="polite"></output>
         </div>
-        <div class="prf-slider-row">
-          <button id="prf-play-button" class="prf-play-button" type="button" aria-pressed="false">Play</button>
-          <input id="effective-prf-slider" class="prf-slider" type="range" min="857" max="913" step="0.1" value="885.2" aria-label="Effective Doppler sampling PRF in hertz">
-        </div>
+        <input id="effective-prf-slider" class="prf-slider" type="range" min="857" max="913" step="0.1" value="885.2" aria-label="Fixed effective Doppler sampling PRF in hertz">
         <div class="prf-range-labels" aria-hidden="true">
           <span id="prf-min-label">857 Hz</span>
           <span>target folding neighborhood</span>
           <span id="prf-max-label">913 Hz</span>
         </div>
+        <div class="flyby-control" aria-label="Flyby time control">
+          <div class="flyby-label-row">
+            <h2>Flyby time</h2>
+            <output id="flyby-time-output" aria-live="polite">0.0 s</output>
+          </div>
+          <div class="prf-slider-row">
+            <button id="prf-play-button" class="prf-play-button" type="button" aria-pressed="false">Play</button>
+            <input id="flyby-time-slider" class="prf-slider" type="range" min="-16" max="16" step="0.05" value="0" aria-label="Flyby time in seconds">
+          </div>
+          <div class="prf-range-labels" aria-hidden="true">
+            <span id="time-min-label">-16 s</span>
+            <span>plane motion at fixed PRF</span>
+            <span id="time-max-label">+16 s</span>
+          </div>
+        </div>
         <div class="model-controls" aria-label="Live model parameters">
           <label class="model-control" for="model-speed-slider">
-            <span>Satellite speed <output id="model-speed-output" for="model-speed-slider">2.5 km/s</output></span>
+            <span>Plane speed <output id="model-speed-output" for="model-speed-slider">2.5 km/s</output></span>
             <input id="model-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="2.5">
           </label>
           <label class="model-control" for="model-altitude-slider">
@@ -68,16 +80,23 @@
       <div class="visual-grid">
         <section class="horizontal-map" aria-labelledby="map-title">
           <div class="map-heading">
-            <h2 id="map-title">Moving point-target geometry</h2>
+            <h2 id="map-title">Plane motion past two returns</h2>
           </div>
           <div id="horizontal-plot" class="horizontal-plot" aria-live="polite"></div>
         </section>
 
         <section class="horizontal-map blur-map" aria-labelledby="blur-title">
           <div class="map-heading">
-            <h2 id="blur-title">PRF fold-band depth</h2>
+            <h2 id="blur-title">Current folded-clutter depth</h2>
           </div>
           <div id="blur-plot" class="blur-plot" aria-live="polite"></div>
+        </section>
+
+        <section class="horizontal-map full-span" aria-labelledby="doppler-bins-title">
+          <div class="map-heading">
+            <h2 id="doppler-bins-title">Low-PRF Doppler bins for two returns</h2>
+          </div>
+          <div id="doppler-bins-plot" class="doppler-bins-plot" aria-live="polite"></div>
         </section>
       </div>
 
