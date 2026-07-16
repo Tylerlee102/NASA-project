@@ -21,7 +21,7 @@
   };
   const flyby = {
     timeS: 0,
-    durationS: 32,
+    durationS: 12,
     playbackSpeed: 2
   };
 
@@ -29,6 +29,8 @@
   const prfPlayButton = document.getElementById('prf-play-button');
   const timeSlider = document.getElementById('flyby-time-slider');
   const timeOutput = document.getElementById('flyby-time-output');
+  const foldingIndicator = document.getElementById('folding-indicator');
+  const foldingIndicatorText = document.getElementById('folding-indicator-text');
   const timeMinLabel = document.getElementById('time-min-label');
   const timeMaxLabel = document.getElementById('time-max-label');
   const playbackSpeedSlider = document.getElementById('playback-speed-slider');
@@ -1413,6 +1415,16 @@
       } else {
         status.textContent = `No overlap at ${fmt(flyby.timeS, 1)} s with PRF fixed at ${fmt(effectivePrfHz, 1)} Hz: aliased Doppler separation is ${fmt(movingState.dopplerDeltaHz, 1)} Hz and apparent-depth separation is ${fmt(movingState.depthDeltaKm, 2)} km.`;
       }
+    }
+    if (foldingIndicator && foldingIndicatorText) {
+      foldingIndicator.classList.toggle('is-overlap', targetOverlap);
+      foldingIndicatorText.textContent = targetOverlap ? 'folding on target' : 'outside target fold';
+      foldingIndicator.setAttribute(
+        'aria-label',
+        targetOverlap
+          ? 'PRF folding overlap is active: folded clutter is in the target Doppler and depth cell'
+          : 'PRF folding overlap is not active: clutter and target are separated'
+      );
     }
   }
 
