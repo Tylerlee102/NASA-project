@@ -93,7 +93,7 @@
 
   const PAGE_TITLES = {
     'aliasing-lab': 'Doppler Aliasing Lab',
-    'trajectory-lab': 'NASA Trajectory Lab',
+    'trajectory-lab': 'E19 Cilix Flyby',
     'radargram-lab': 'Radargram PRF Demo',
     'owner-access': 'Owner Archive',
     overview: 'Overview',
