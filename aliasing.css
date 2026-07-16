@@ -14,7 +14,7 @@
 .prf-label-row p { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
 .prf-label-row p.is-warning { color: var(--danger); font-weight: 800; }
 .prf-label-row output { flex: 0 0 auto; color: var(--accent-2); font-family: Georgia, "Times New Roman", serif; font-size: 1.55rem; }
-.prf-slider-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; margin-top: 16px; }
+.prf-slider-row { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto; align-items: center; gap: 12px; margin-top: 16px; }
 .prf-slider { width: 100%; height: 24px; margin: 0; accent-color: var(--accent-2); cursor: ew-resize; }
 .prf-control > .prf-slider, .flyby-control > .prf-slider { margin-top: 14px; }
 .prf-play-button { min-width: 76px; min-height: 36px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel); color: var(--accent-2); font: inherit; font-size: .74rem; font-weight: 850; cursor: pointer; }
@@ -30,6 +30,10 @@
 .play-speed-control span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .play-speed-control output { color: var(--accent-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .play-speed-control input { width: 100%; accent-color: var(--accent-2); }
+.folding-indicator { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; padding: 0 13px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--muted); font-size: .68rem; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.folding-dot { width: 10px; height: 10px; border-radius: 999px; background: #9a907f; box-shadow: 0 0 0 4px rgba(154, 144, 127, .14); }
+.folding-indicator.is-overlap { border-color: rgba(155, 61, 63, .45); color: var(--danger); }
+.folding-indicator.is-overlap .folding-dot { background: var(--danger); box-shadow: 0 0 0 5px rgba(155, 61, 63, .18), 0 0 13px rgba(155, 61, 63, .55); }
 .lab-givens { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 16px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .lab-givens div { min-width: 0; padding: 9px 10px 10px 0; }
 .lab-givens dt { color: var(--muted); font-size: .68rem; font-weight: 800; text-transform: uppercase; }
@@ -158,6 +162,7 @@
   .prf-label-row output { display: block; margin-top: 8px; font-size: 1.2rem; }
   .prf-slider-row { grid-template-columns: 1fr; gap: 8px; }
   .prf-play-button { width: 100%; }
+  .folding-indicator { justify-content: flex-start; }
   .prf-range-labels span:nth-child(2) { display: none; }
   .prf-range-labels { grid-template-columns: 1fr 1fr; }
   .lab-givens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
