@@ -93,7 +93,7 @@
 
   const PAGE_TITLES = {
     'aliasing-lab': 'Doppler Aliasing Lab',
-    'trajectory-lab': 'SPICE Trajectory Lab',
+    'trajectory-lab': 'NASA Trajectory Lab',
     'radargram-lab': 'Radargram PRF Demo',
     'owner-access': 'Owner Archive',
     overview: 'Overview',
@@ -1090,7 +1090,6 @@
         section.setAttribute('role', 'region');
         section.hidden = !active;
       });
-      document.body.dataset.activePage = next;
       document.title = `${PAGE_TITLES[next] || 'Section'} | Europa Doppler Aliasing Lab`;
       if (updateUrl) setPageUrl(next, 'push');
       revealActiveNavigation();
