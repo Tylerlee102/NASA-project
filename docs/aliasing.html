@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=matlab-validated5-20260714">
-    <script defer src="aliasing.js?v=matlab-validated5-20260714"></script>
+    <link rel="stylesheet" href="aliasing.css?v=plane-play-20260715">
+    <script defer src="aliasing.js?v=plane-play-20260715"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -31,7 +31,10 @@
           </div>
           <output id="effective-prf-output" aria-live="polite"></output>
         </div>
-        <input id="effective-prf-slider" class="prf-slider" type="range" min="857" max="913" step="0.1" value="885.2" aria-label="Effective Doppler sampling PRF in hertz">
+        <div class="prf-slider-row">
+          <button id="prf-play-button" class="prf-play-button" type="button" aria-pressed="false">Play</button>
+          <input id="effective-prf-slider" class="prf-slider" type="range" min="857" max="913" step="0.1" value="885.2" aria-label="Effective Doppler sampling PRF in hertz">
+        </div>
         <div class="prf-range-labels" aria-hidden="true">
           <span id="prf-min-label">857 Hz</span>
           <span>target folding neighborhood</span>
@@ -65,7 +68,7 @@
       <div class="visual-grid">
         <section class="horizontal-map" aria-labelledby="map-title">
           <div class="map-heading">
-            <h2 id="map-title">Fixed point-target geometry</h2>
+            <h2 id="map-title">Moving point-target geometry</h2>
           </div>
           <div id="horizontal-plot" class="horizontal-plot" aria-live="polite"></div>
         </section>
@@ -75,22 +78,6 @@
             <h2 id="blur-title">PRF fold-band depth</h2>
           </div>
           <div id="blur-plot" class="blur-plot" aria-live="polite"></div>
-        </section>
-
-        <section class="horizontal-map full-span" aria-labelledby="live-radargram-title">
-          <div class="map-heading">
-            <h2 id="live-radargram-title">Processed aliased-PRF B-scan (synthetic)</h2>
-            <p>Each column is a generated radar trace. Range-compressed echoes form the surface return and target hyperbola; the current zero-Doppler gate supplies the moving folded-clutter patch.</p>
-          </div>
-          <div id="live-radargram-plot" class="synthetic-radargram-plot" aria-live="polite"></div>
-        </section>
-
-        <section class="horizontal-map full-span" aria-labelledby="reference-radargram-title">
-          <div class="map-heading">
-            <h2 id="reference-radargram-title">Doppler-unaliased reference B-scan (synthetic)</h2>
-            <p>The same generated scene at a sampling rate whose Nyquist interval contains every modeled surface Doppler. This isolates the aliasing effect; the readout flags rates above REASON's published PRF range.</p>
-          </div>
-          <div id="reference-radargram-plot" class="synthetic-radargram-plot" aria-live="polite"></div>
         </section>
       </div>
 
@@ -113,44 +100,6 @@
               <h3 id="doppler-check-title">2. Fast-time × Doppler overlap</h3>
             </div>
             <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
-          </section>
-        </div>
-      </section>
-
-      <section class="processing-section" aria-labelledby="processing-title">
-        <div class="checks-heading">
-          <p class="section-kicker">Radar-processing check</p>
-          <h2 id="processing-title">Trace-matrix processing check</h2>
-          <p class="processing-caveat">MATLAB R2026a numerical cross-check: geometry, fold depth, FFT bins, and zero-Doppler reconstruction agree. These fixed plots use all/every-2/every-4 trace deletion, so they do not move with the PRF slider. The every-4 case is intentionally constructed; the trace matrix is a local constant-Doppler approximation, not full range-migration focusing.</p>
-        </div>
-
-        <div class="visual-grid processing-grid">
-          <section class="horizontal-map" aria-labelledby="radargram-title">
-            <div class="map-heading">
-              <h3 id="radargram-title">1. Synthetic radargram: traces × depth</h3>
-            </div>
-            <div id="radargram-plot" class="processing-plot" aria-live="polite"></div>
-          </section>
-
-          <section class="horizontal-map" aria-labelledby="fft-title">
-            <div class="map-heading">
-              <h3 id="fft-title">2. Doppler image before deletion</h3>
-            </div>
-            <div id="fft-plot" class="processing-plot" aria-live="polite"></div>
-          </section>
-
-          <section class="horizontal-map" aria-labelledby="decimated-fft-title">
-            <div class="map-heading">
-              <h3 id="decimated-fft-title">3. FFT after trace decimation</h3>
-            </div>
-            <div id="decimated-fft-plot" class="processing-plot" aria-live="polite"></div>
-          </section>
-
-          <section class="horizontal-map" aria-labelledby="reconstruction-title">
-            <div class="map-heading">
-              <h3 id="reconstruction-title">4. Zero-Doppler reconstruction</h3>
-            </div>
-            <div id="reconstruction-plot" class="processing-plot" aria-live="polite"></div>
           </section>
         </div>
       </section>
