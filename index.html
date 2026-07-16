@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Doppler Aliasing Lab</title>
-    <link rel="stylesheet" href="styles.css?v=collapsible-rail-20260715">
+    <link rel="stylesheet" href="styles.css?v=e19-cilix-20260715">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=collapsible-rail-20260715"></script>
+    <script defer src="app.js?v=e19-cilix-20260715"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -19,7 +19,7 @@
           <h1>Europa Doppler Aliasing Lab</h1>
           <div class="hero-actions" aria-label="Project actions">
             <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
-            <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run SPICE-reference flyby</a>
+            <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run E19 Cilix flyby</a>
             <a class="secondary-link" href="?page=radargram-lab" data-tab-jump="radargram-lab">Compare radargram PRFs</a>
             <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
           </div>
@@ -27,7 +27,7 @@
             <summary>Section pages</summary>
             <nav class="tabs" aria-label="Section pages">
               <a class="tab is-active" href="?page=aliasing-lab" data-target="aliasing-lab">Doppler Aliasing Lab</a>
-              <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">SPICE Trajectory Lab</a>
+              <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">E19 Cilix Flyby</a>
               <a class="tab" href="?page=radargram-lab" data-target="radargram-lab">Radargram PRF Demo</a>
               <a class="tab" href="?page=owner-access" data-target="owner-access">Owner Archive</a>
               <div id="owner-tabs" class="owner-tabs" hidden>
@@ -58,13 +58,13 @@
       <section id="trajectory-lab" class="page-section trajectory-page-section">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">SPICE reference-trajectory flyby</p>
-            <h2>SPICE trajectory with adaptive four-PRF scheduling</h2>
+            <p class="section-kicker">NASA-reference E19 flyby</p>
+            <h2>E19 groundtrack through the Cilix region</h2>
           </div>
         </div>
-        <p class="section-intro">At every 100 ms local block, the experiment interpolates the SPICE trajectory to 10 ms radar ticks, scores four assumed PRFs over the following nine ticks, and selects the safest candidate. Compare the fixed bad PRF, adaptive schedule, and illustrative postprocessed radargrams.</p>
+        <p class="section-intro">Move through the downloaded NAIF 21F31 v7 reference trajectory for Europa Clipper E19. The page uses the LPSC 2025 E19/Cilix context and intentionally leaves the 3D elevation patch out for now.</p>
         <div class="trajectory-embed-shell">
-          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=range-aware-prf-20260715" title="SPICE reference-trajectory range-aware adaptive four-PRF simulator" loading="eager" scrolling="no"></iframe>
+          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=e19-cilix-20260715" title="NASA-reference E19 Cilix-region flyby simulator" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 

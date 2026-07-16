@@ -1,49 +1,10 @@
 (() => {
   'use strict';
 
+  const data = window.E19_FLYBY;
   const C = 299792458;
-  const spiceFlyby = window.CLIPPER_SPICE_FLYBY;
-  if (!spiceFlyby || !Array.isArray(spiceFlyby.samples) || spiceFlyby.samples.length < 3) {
-    const error = document.getElementById('trajectory-status');
-    if (error) {
-      error.className = 'trajectory-status is-overlap';
-      error.textContent = 'SPICE flyby data did not load. Regenerate docs/data/clipper-flyby.js and reload this page.';
-    }
-    return;
-  }
-
-  const spiceSamples = spiceFlyby.samples;
-  const model = {
-    europaRadiusKm: spiceFlyby.body.meanRadiusKm,
-    europaRadiiKm: spiceFlyby.body.radiiKm,
-    closestAltitudeKm: 0,
-    frequencyMhz: 60,
-    iceIndex: 1.78,
-    targetDepthKm: 6.74,
-    pointCount: 12,
-    dopplerToleranceHz: 25,
-    depthToleranceKm: 0.15,
-    timeMinS: spiceFlyby.window.startOffsetSeconds,
-    timeMaxS: spiceFlyby.window.endOffsetSeconds,
-    radarTickS: 0.01,
-    blockTicks: 10,
-    predictionTicks: 9,
-    candidatePrfsHz: [1150, 1325, 1525, 1725],
-    clutterArcMinKm: -240,
-    clutterArcMaxKm: 240,
-    clutterSearchStepKm: 1,
-    clutterBandStepKm: 0.5,
-    refinementIterations: 10,
-    scoreTieEpsilon: 1e-8,
-    timelineStepS: 0.05,
-    targetOpticalModel: 'physical depth plus first-order refractive delay'
-  };
-  model.blockDurationS = model.radarTickS * model.blockTicks;
-
-  const wavelengthM = C / (model.frequencyMhz * 1e6);
-  const radialBasis = spiceFlyby.localBasis.radial;
-  const alongTrackBasis = spiceFlyby.localBasis.alongTrack;
-  const crossTrackBasis = spiceFlyby.localBasis.crossTrack;
+  const RADAR_FREQUENCY_MHZ = 60;
+  const WAVELENGTH_M = C / (RADAR_FREQUENCY_MHZ * 1e6);
 
   const slider = document.getElementById('time-slider');
   const timeOutput = document.getElementById('time-output');
@@ -51,572 +12,98 @@
   const closestButton = document.getElementById('closest-button');
   const altitudeValue = document.getElementById('altitude-value');
   const trackValue = document.getElementById('track-value');
+  const subpointValue = document.getElementById('subpoint-value');
   const speedValue = document.getElementById('speed-value');
-  const prfValue = document.getElementById('prf-value');
-  const blockValue = document.getElementById('block-value');
-  const clockValue = document.getElementById('clock-value');
-  const closestUtcValue = document.getElementById('closest-utc-value');
+  const incidenceValue = document.getElementById('incidence-value');
+  const cilixValue = document.getElementById('cilix-value');
   const status = document.getElementById('trajectory-status');
+  const sourceStatus = document.getElementById('source-status');
   const geometryPlot = document.getElementById('geometry-plot');
-  const schedulePlot = document.getElementById('fold-plot');
-  const scorePlot = document.getElementById('trace-plot');
+  const foldPlot = document.getElementById('fold-plot');
+  const tracePlot = document.getElementById('trace-plot');
   const dopplerPlot = document.getElementById('doppler-plot');
-  const fixedRadargramPlot = document.getElementById('fixed-radargram-plot');
-  const adaptiveRadargramPlot = document.getElementById('adaptive-radargram-plot');
-  const postprocessedRadargramPlot = document.getElementById('postprocessed-radargram-plot');
-  const candidateScoreGrid = document.getElementById('candidate-score-grid');
-  const sampleTableBody = document.getElementById('spice-sample-table-body');
-  const sampleTableWrap = document.getElementById('sample-table-wrap');
+  const tablePlot = document.getElementById('flyby-radargram-plot');
 
-  const telemetryIds = [
-    'current-utc-value',
-    'center-distance-value',
-    'radial-speed-value',
-    'cross-track-value',
-    'target-range-value',
-    'target-doppler-value',
-    'nearest-alias-value',
-    'position-x-value',
-    'position-y-value',
-    'position-z-value',
-    'velocity-x-value',
-    'velocity-y-value',
-    'velocity-z-value',
-    'encounter-number-value',
-    'encounter-utc-value',
-    'encounter-altitude-value',
-    'encounter-location-value',
-    'europa-radii-value',
-    'sample-cadence-value',
-    'state-definition-value',
-    'spk-file-value',
-    'spk-coverage-value',
-    'spk-sha-value',
-    'artifact-generated-value'
-  ];
-  const schedulerIds = [
-    'source-interval-value',
-    'current-block-value',
-    'block-span-value',
-    'selected-prf-value',
-    'selected-score-value',
-    'fixed-prf-value',
-    'fixed-overlap-count-value',
-    'adaptive-overlap-count-value',
-    'switch-count-value',
-    'radar-tick-count-value'
-  ];
-  const auditIds = [
-    'mean-sphere-altitude-value',
-    'ellipsoid-altitude-value',
-    'altitude-correction-value',
-    'range-window-value',
-    'score-rule-value',
-    'search-rule-value',
-    'pulse-alignment-value',
-    'toolbox-check-value'
-  ];
-  const telemetry = Object.fromEntries(telemetryIds.map((id) => [id, document.getElementById(id)]));
-  const schedulerTelemetry = Object.fromEntries(schedulerIds.map((id) => [id, document.getElementById(id)]));
-  const auditTelemetry = Object.fromEntries(auditIds.map((id) => [id, document.getElementById(id)]));
+  if (!data || !Array.isArray(data.samples) || data.samples.length < 3) {
+    if (status) {
+      status.className = 'trajectory-status is-overlap';
+      status.textContent = 'E19 trajectory data did not load. Check docs/data/e19-flyby.js.';
+    }
+    return;
+  }
 
-  const dot3 = (left, right) => left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
-  const norm3 = (vector) => Math.hypot(vector[0], vector[1], vector[2]);
-  const mix3 = (left, right, fraction) => left.map((value, index) => (
-    value + (right[index] - value) * fraction
-  ));
-  const mod = (value, divisor) => ((value % divisor) + divisor) % divisor;
-  const alias = (frequencyHz, prfHz) => mod(frequencyHz + prfHz / 2, prfHz) - prfHz / 2;
+  const samples = data.samples;
+  const sampleStart = data.flyby.sampleWindowS.start;
+  const sampleEnd = data.flyby.sampleWindowS.end;
+  const sampleStep = data.flyby.sampleWindowS.step;
+  const coreWindow = data.flyby.coreReconableWindow;
+  const closest = data.flyby.closestApproach;
+  const cilix = data.cilix;
+  const closestDate = new Date(`${data.flyby.closestApproachUtc}Z`);
+  let playbackFrameId = null;
+  let lastPlaybackTimestamp = null;
+  const playbackRate = 18;
+
+  slider.min = sampleStart;
+  slider.max = sampleEnd;
+  slider.step = 1;
+  slider.value = 0;
+
   const fmt = (value, digits = 1) => Number(value).toLocaleString(undefined, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits
   });
   const signed = (value, digits = 1) => `${value > 0 ? '+' : ''}${fmt(Math.abs(value) < 0.0005 ? 0 : value, digits)}`;
-  const displayUtc = (value) => `${value.replace('T', ' ')} UTC`;
-  const closestApproachUtcMs = Date.parse(`${spiceFlyby.closestApproach.utc}Z`);
-  const utcAtOffset = (offsetSeconds) => new Date(closestApproachUtcMs + offsetSeconds * 1000)
-    .toISOString()
-    .replace('T', ' ')
-    .replace('Z', ' UTC');
-  const prfLabel = (index) => `P${index + 1}`;
-  const linePath = (rows, x, y, accessor) => rows.map((row, index) => {
-    const point = accessor(row);
-    return `${index ? 'L' : 'M'} ${x(point.x).toFixed(2)} ${y(point.y).toFixed(2)}`;
-  }).join(' ');
-  const unit3 = (vector) => {
-    const length = norm3(vector);
-    return vector.map((value) => value / length);
-  };
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const escapeHtml = (value) => String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
-  function ellipsoidRadiusForDirection(direction) {
-    return 1 / Math.sqrt(direction.reduce((sum, value, index) => (
-      sum + (value / model.europaRadiiKm[index]) ** 2
-    ), 0));
+  function utcForOffset(offsetS) {
+    return new Date(closestDate.getTime() + offsetS * 1000).toISOString().replace('.000Z', 'Z');
   }
 
-  function surfaceDirectionForArc(surfaceArcKm) {
-    const angle = surfaceArcKm / model.europaRadiusKm;
-    return unit3(radialBasis.map((radialValue, index) => (
-      radialValue * Math.cos(angle) + alongTrackBasis[index] * Math.sin(angle)
-    )));
-  }
-
-  function surfacePositionForArc(surfaceArcKm) {
-    const direction = surfaceDirectionForArc(surfaceArcKm);
-    const radiusKm = ellipsoidRadiusForDirection(direction);
-    return direction.map((value) => value * radiusKm);
-  }
-
-  function ellipsoidNormalAt(positionKm) {
-    return unit3(positionKm.map((value, index) => value / model.europaRadiiKm[index] ** 2));
-  }
-
-  function spacecraftAt(timeS) {
-    const clampedTimeS = Math.max(model.timeMinS, Math.min(model.timeMaxS, timeS));
-    const sampleStepS = spiceFlyby.window.stepSeconds;
-    const floatingIndex = (clampedTimeS - model.timeMinS) / sampleStepS;
-    const lowerIndex = Math.max(0, Math.min(spiceSamples.length - 1, Math.floor(floatingIndex)));
-    const upperIndex = Math.min(spiceSamples.length - 1, lowerIndex + 1);
-    const fraction = Math.max(0, Math.min(1, floatingIndex - lowerIndex));
-    const lower = spiceSamples[lowerIndex];
-    const upper = spiceSamples[upperIndex];
-    const positionKm = mix3(lower.positionKm, upper.positionKm, fraction);
-    const velocityKmS = mix3(lower.velocityKmS, upper.velocityKmS, fraction);
-    const centerDistanceKm = norm3(positionKm);
-    const radialDirection = positionKm.map((value) => value / centerDistanceKm);
-    const localSurfaceRadiusKm = ellipsoidRadiusForDirection(radialDirection);
-    return {
-      positionKm,
-      velocityKmS,
-      distanceKm: centerDistanceKm,
-      xKm: dot3(positionKm, alongTrackBasis),
-      crossTrackKm: dot3(positionKm, crossTrackBasis),
-      altitudeKm: centerDistanceKm - localSurfaceRadiusKm,
-      meanSphereAltitudeKm: centerDistanceKm - model.europaRadiusKm,
-      localSurfaceRadiusKm,
-      speedKmS: norm3(velocityKmS),
-      radialSpeedKmS: dot3(positionKm, velocityKmS) / centerDistanceKm
-    };
-  }
-
-  const targetSurfaceRadiusKm = ellipsoidRadiusForDirection(radialBasis);
-  const targetSurfacePositionKm = radialBasis.map((value) => value * targetSurfaceRadiusKm);
-  const targetPhysicalPositionKm = radialBasis.map((value) => (
-    value * (targetSurfaceRadiusKm - model.targetDepthKm)
-  ));
-  const targetSurfaceNormal = ellipsoidNormalAt(targetSurfacePositionKm);
-
-  function measureSurfacePoint(spacecraft, surfaceArcKm) {
-    const pointPositionKm = surfacePositionForArc(surfaceArcKm);
-    const lineOfSightKm = pointPositionKm.map((value, index) => value - spacecraft.positionKm[index]);
-    const rangeKm = norm3(lineOfSightKm);
-    const rangeRateKmS = -dot3(lineOfSightKm, spacecraft.velocityKmS) / rangeKm;
-    return {
-      surfaceArcKm,
-      pointPositionKm,
-      pointXKm: dot3(pointPositionKm, alongTrackBasis),
-      rangeKm,
-      apparentDepthKm: (rangeKm - spacecraft.altitudeKm) / model.iceIndex,
-      trueDopplerHz: -2 * rangeRateKmS * 1000 / wavelengthM
-    };
-  }
-
-  function targetOpticalRangeForPosition(spacecraftPositionKm) {
-    const lineFromTargetKm = spacecraftPositionKm.map((value, index) => value - targetPhysicalPositionKm[index]);
-    const geometricRangeKm = norm3(lineFromTargetKm);
-    const lineUnit = lineFromTargetKm.map((value) => value / geometricRangeKm);
-    const cosAir = Math.max(0.05, Math.min(1, Math.abs(dot3(lineUnit, targetSurfaceNormal))));
-    const sinAir = Math.sqrt(Math.max(0, 1 - cosAir ** 2));
-    const sinIce = Math.min(0.999999, sinAir / model.iceIndex);
-    const cosIce = Math.sqrt(1 - sinIce ** 2);
-    const refractiveDelayKm = (model.iceIndex - 1) * model.targetDepthKm / cosIce;
-    return {
-      geometricRangeKm,
-      opticalRangeKm: geometricRangeKm + refractiveDelayKm,
-      refractiveDelayKm,
-      incidenceAirDeg: Math.acos(cosAir) * 180 / Math.PI,
-      incidenceIceDeg: Math.asin(sinIce) * 180 / Math.PI
-    };
-  }
-
-  function measureTarget(spacecraft) {
-    const optical = targetOpticalRangeForPosition(spacecraft.positionKm);
-    const derivativeStepS = 0.001;
-    const forwardPositionKm = spacecraft.positionKm.map((value, index) => (
-      value + spacecraft.velocityKmS[index] * derivativeStepS
-    ));
-    const backwardPositionKm = spacecraft.positionKm.map((value, index) => (
-      value - spacecraft.velocityKmS[index] * derivativeStepS
-    ));
-    const rangeRateKmS = (
-      targetOpticalRangeForPosition(forwardPositionKm).opticalRangeKm
-      - targetOpticalRangeForPosition(backwardPositionKm).opticalRangeKm
-    ) / (2 * derivativeStepS);
-    return {
-      surfaceArcKm: 0,
-      pointPositionKm: targetPhysicalPositionKm,
-      pointXKm: dot3(targetPhysicalPositionKm, alongTrackBasis),
-      rangeKm: optical.opticalRangeKm,
-      geometricRangeKm: optical.geometricRangeKm,
-      refractiveDelayKm: optical.refractiveDelayKm,
-      apparentDepthKm: (optical.opticalRangeKm - spacecraft.altitudeKm) / model.iceIndex,
-      trueDopplerHz: -2 * rangeRateKmS * 1000 / wavelengthM,
-      incidenceAirDeg: optical.incidenceAirDeg,
-      incidenceIceDeg: optical.incidenceIceDeg
-    };
-  }
-
-  function contextAt(timeS) {
-    const spacecraft = spacecraftAt(timeS);
-    return {
-      timeS,
-      spacecraft,
-      target: measureTarget(spacecraft)
-    };
-  }
-
-  const closestContext = contextAt(0);
-  model.closestAltitudeKm = closestContext.spacecraft.altitudeKm;
-  const meanSphereClosestAltitudeKm = closestContext.spacecraft.meanSphereAltitudeKm;
-  const altitudeCorrectionKm = model.closestAltitudeKm - meanSphereClosestAltitudeKm;
-
-  function solveSameDelayArcKm() {
-    let lowKm = 0;
-    let highKm = model.clutterArcMaxKm;
-    for (let iteration = 0; iteration < 48; iteration += 1) {
-      const middleKm = (lowKm + highKm) / 2;
-      const middleRangeKm = measureSurfacePoint(closestContext.spacecraft, middleKm).rangeKm;
-      if (middleRangeKm < closestContext.target.rangeKm) lowKm = middleKm;
-      else highKm = middleKm;
-    }
-    return (lowKm + highKm) / 2;
-  }
-
-  const targetSurfaceArcKm = solveSameDelayArcKm();
-  const clutterSpreadKm = targetSurfaceArcKm * 11 / 5;
-  const pointArcsKm = Array.from({ length: model.pointCount }, (_, index) => (
-    -clutterSpreadKm + (2 * clutterSpreadKm * index) / (model.pointCount - 1)
-  ));
-  const clutterSearchArcsKm = Array.from({
-    length: Math.round((model.clutterArcMaxKm - model.clutterArcMinKm) / model.clutterSearchStepKm) + 1
-  }, (_, index) => model.clutterArcMinKm + index * model.clutterSearchStepKm);
-
-  const closestPoints = pointArcsKm.map((surfaceArcKm, index) => ({
-    index,
-    ...measureSurfacePoint(closestContext.spacecraft, surfaceArcKm)
-  }));
-  const foldingIndexes = new Set(
-    [...closestPoints]
-      .sort((a, b) => Math.abs(a.apparentDepthKm - closestContext.target.apparentDepthKm)
-        - Math.abs(b.apparentDepthKm - closestContext.target.apparentDepthKm))
-      .slice(0, 2)
-      .map((point) => point.index)
-  );
-  const closestFoldingPair = closestPoints.filter((point) => foldingIndexes.has(point.index));
-  const fixedBadPrfHz = closestFoldingPair.reduce((sum, point) => (
-    sum + Math.abs(point.trueDopplerHz - closestContext.target.trueDopplerHz)
-  ), 0) / closestFoldingPair.length;
-
-  const contextCache = new Map();
-  const profileCache = new Map();
-  const timeCacheKey = (timeS) => Math.round((timeS - model.timeMinS) / model.radarTickS);
-
-  function cachedContextAt(timeS) {
-    const key = timeCacheKey(timeS);
-    if (!contextCache.has(key)) contextCache.set(key, contextAt(timeS));
-    return contextCache.get(key);
-  }
-
-  function coarseProfile(context) {
-    const key = timeCacheKey(context.timeS);
-    if (profileCache.has(key)) return profileCache.get(key);
-    const rangesKm = new Float64Array(clutterSearchArcsKm.length);
-    const dopplerHz = new Float64Array(clutterSearchArcsKm.length);
-    clutterSearchArcsKm.forEach((surfaceArcKm, index) => {
-      const point = measureSurfacePoint(context.spacecraft, surfaceArcKm);
-      rangesKm[index] = point.rangeKm;
-      dopplerHz[index] = point.trueDopplerHz;
+  function interpolateRow(offsetS) {
+    const bounded = clamp(offsetS, sampleStart, sampleEnd);
+    const floatingIndex = (bounded - sampleStart) / sampleStep;
+    const lowerIndex = clamp(Math.floor(floatingIndex), 0, samples.length - 1);
+    const upperIndex = clamp(lowerIndex + 1, 0, samples.length - 1);
+    const lower = samples[lowerIndex];
+    const upper = samples[upperIndex];
+    const mix = upperIndex === lowerIndex ? 0 : floatingIndex - lowerIndex;
+    const row = { offsetS: bounded, utc: utcForOffset(bounded) };
+    [
+      'latDeg',
+      'lonEastDeg',
+      'altitudeKm',
+      'speedKmS',
+      'radialSpeedKmS',
+      'incidenceDeg',
+      'distanceToCilixKm',
+      'groundTrackKm'
+    ].forEach((key) => {
+      row[key] = lerp(lower[key], upper[key], mix);
     });
-    const profile = { rangesKm, dopplerHz };
-    profileCache.set(key, profile);
-    return profile;
+    row.reconableCore = row.altitudeKm >= 50 && row.altitudeKm <= 100
+      && row.incidenceDeg >= 30 && row.incidenceDeg <= 60;
+    row.reconableMargin = row.altitudeKm >= 35 && row.altitudeKm <= 105
+      && row.incidenceDeg >= 20 && row.incidenceDeg <= 60;
+    return row;
   }
 
-  function threatMetrics(surfaceArcKm, surfaceRangeKm, surfaceDopplerHz, context, prfHz) {
-    const unambiguousRangeKm = C / (2 * prfHz) / 1000;
-    const aliasHz = alias(surfaceDopplerHz - context.target.trueDopplerHz, prfHz);
-    const rangeAliasKm = alias(surfaceRangeKm - context.target.rangeKm, unambiguousRangeKm);
-    const depthOffsetKm = rangeAliasKm / model.iceIndex;
-    const rectangularScore = Math.max(
-      Math.abs(aliasHz) / model.dopplerToleranceHz,
-      Math.abs(depthOffsetKm) / model.depthToleranceKm
-    );
-    return {
-      surfaceArcKm,
-      aliasHz,
-      rangeAliasKm,
-      depthOffsetKm,
-      foldedDepthKm: context.target.apparentDepthKm + depthOffsetKm,
-      rectangularScore,
-      jointScore: rectangularScore,
-      unambiguousRangeKm
-    };
+  function derivedLook(row) {
+    const lookAngleDeg = Math.atan2(row.distanceToCilixKm, row.altitudeKm) * 180 / Math.PI;
+    const slantRangeKm = Math.hypot(row.altitudeKm, row.distanceToCilixKm);
+    const before = interpolateRow(row.offsetS - 1);
+    const after = interpolateRow(row.offsetS + 1);
+    const rangeRateKmS = (after.distanceToCilixKm - before.distanceToCilixKm) / 2;
+    const dopplerHz = -2 * rangeRateKmS * 1000 / WAVELENGTH_M;
+    return { lookAngleDeg, slantRangeKm, rangeRateKmS, dopplerHz };
   }
-
-  function metricsAtArc(context, prfHz, surfaceArcKm) {
-    const point = measureSurfacePoint(context.spacecraft, surfaceArcKm);
-    return {
-      ...point,
-      ...threatMetrics(surfaceArcKm, point.rangeKm, point.trueDopplerHz, context, prfHz)
-    };
-  }
-
-  function refineThreat(context, prfHz, centerArcKm) {
-    let lowKm = Math.max(model.clutterArcMinKm, centerArcKm - model.clutterSearchStepKm);
-    let highKm = Math.min(model.clutterArcMaxKm, centerArcKm + model.clutterSearchStepKm);
-    for (let iteration = 0; iteration < model.refinementIterations; iteration += 1) {
-      const leftKm = lowKm + (highKm - lowKm) / 3;
-      const rightKm = highKm - (highKm - lowKm) / 3;
-      const left = metricsAtArc(context, prfHz, leftKm);
-      const right = metricsAtArc(context, prfHz, rightKm);
-      if (left.rectangularScore <= right.rectangularScore) highKm = rightKm;
-      else lowKm = leftKm;
-    }
-    return metricsAtArc(context, prfHz, (lowKm + highKm) / 2);
-  }
-
-  function clutterThreat(context, prfHz) {
-    const profile = coarseProfile(context);
-    const scores = new Float64Array(clutterSearchArcsKm.length);
-    let best = null;
-    clutterSearchArcsKm.forEach((surfaceArcKm, index) => {
-      const candidate = threatMetrics(
-        surfaceArcKm,
-        profile.rangesKm[index],
-        profile.dopplerHz[index],
-        context,
-        prfHz
-      );
-      scores[index] = candidate.rectangularScore;
-      if (!best || candidate.rectangularScore < best.rectangularScore) best = candidate;
-    });
-    const localMinimumIndexes = [];
-    scores.forEach((score, index) => {
-      const left = index ? scores[index - 1] : Infinity;
-      const right = index + 1 < scores.length ? scores[index + 1] : Infinity;
-      if (score <= left && score <= right) localMinimumIndexes.push(index);
-    });
-    localMinimumIndexes.forEach((index) => {
-      const refined = refineThreat(context, prfHz, clutterSearchArcsKm[index]);
-      if (refined.rectangularScore < best.rectangularScore) best = refined;
-    });
-    const measuredBest = metricsAtArc(context, prfHz, best.surfaceArcKm);
-    const overlap = measuredBest.rectangularScore <= 1 + model.scoreTieEpsilon;
-    return { ...measuredBest, overlap, overlapPoint: overlap ? measuredBest : null };
-  }
-
-  function scoreCandidateBlock(blockStartS, prfHz) {
-    let minimumScore = Infinity;
-    let overlapTicks = 0;
-    for (let tick = 1; tick <= model.predictionTicks; tick += 1) {
-      const timeS = Math.min(model.timeMaxS, blockStartS + tick * model.radarTickS);
-      const threat = clutterThreat(cachedContextAt(timeS), prfHz);
-      minimumScore = Math.min(minimumScore, threat.rectangularScore);
-      if (threat.overlap) overlapTicks += 1;
-    }
-    return { minimumScore, overlapTicks };
-  }
-
-  const blockCount = Math.round((model.timeMaxS - model.timeMinS) / model.blockDurationS);
-  const schedule = [];
-  let previousSelectedIndex = -1;
-  for (let blockIndex = 0; blockIndex < blockCount; blockIndex += 1) {
-    const startS = model.timeMinS + blockIndex * model.blockDurationS;
-    const candidates = model.candidatePrfsHz.map((prfHz) => scoreCandidateBlock(startS, prfHz));
-    const fewestOverlaps = Math.min(...candidates.map((candidate) => candidate.overlapTicks));
-    const eligibleByOverlap = candidates.map((candidate, index) => ({ candidate, index }))
-      .filter((entry) => entry.candidate.overlapTicks === fewestOverlaps);
-    const bestScore = Math.max(...eligibleByOverlap.map((entry) => entry.candidate.minimumScore));
-    const tiedIndexes = eligibleByOverlap
-      .filter((entry) => Math.abs(entry.candidate.minimumScore - bestScore) <= model.scoreTieEpsilon)
-      .map((entry) => entry.index);
-    const selectedIndex = tiedIndexes.includes(previousSelectedIndex)
-      ? previousSelectedIndex
-      : tiedIndexes[0];
-    schedule.push({
-      blockIndex,
-      startS,
-      endS: Math.min(model.timeMaxS, startS + model.blockDurationS),
-      selectedIndex,
-      selectedPrfHz: model.candidatePrfsHz[selectedIndex],
-      selectedScore: candidates[selectedIndex].minimumScore,
-      selectedOverlapTicks: candidates[selectedIndex].overlapTicks,
-      pulseCountInNominalBlock: model.candidatePrfsHz[selectedIndex] * model.blockDurationS,
-      pulseAligned: Number.isInteger(model.candidatePrfsHz[selectedIndex] * model.blockDurationS),
-      candidates
-    });
-    previousSelectedIndex = selectedIndex;
-  }
-
-  function blockForTime(timeS) {
-    const index = Math.max(0, Math.min(
-      schedule.length - 1,
-      Math.floor((timeS - model.timeMinS) / model.blockDurationS + 1e-9)
-    ));
-    return schedule[index];
-  }
-
-  function continuousFoldBands(context, prfHz) {
-    const groups = [];
-    let active = null;
-    let activeFoldOrder = null;
-    for (let surfaceArcKm = model.clutterArcMinKm;
-      surfaceArcKm <= model.clutterArcMaxKm + 1e-9;
-      surfaceArcKm += model.clutterBandStepKm) {
-      const point = measureSurfacePoint(context.spacecraft, surfaceArcKm);
-      const relativeDopplerHz = point.trueDopplerHz - context.target.trueDopplerHz;
-      const foldOrder = Math.round(relativeDopplerHz / prfHz);
-      const residualHz = Math.abs(relativeDopplerHz - foldOrder * prfHz);
-      const unambiguousRangeKm = C / (2 * prfHz) / 1000;
-      const depthOffsetKm = alias(point.rangeKm - context.target.rangeKm, unambiguousRangeKm)
-        / model.iceIndex;
-      const foldedDepthKm = context.target.apparentDepthKm + depthOffsetKm;
-      const isCandidate = foldOrder !== 0
-        && residualHz <= model.dopplerToleranceHz
-        && foldedDepthKm >= 0
-        && foldedDepthKm <= 40;
-      if (isCandidate) {
-        if (!active || activeFoldOrder !== foldOrder) {
-          active = [];
-          activeFoldOrder = foldOrder;
-          groups.push(active);
-        }
-        active.push({ ...point, foldOrder, residualHz, depthOffsetKm, foldedDepthKm });
-      } else {
-        active = null;
-        activeFoldOrder = null;
-      }
-    }
-    return groups.map((group) => {
-      const center = group.reduce((best, point) => point.residualHz < best.residualHz ? point : best);
-      return {
-        foldOrder: center.foldOrder,
-        centerDepthKm: center.foldedDepthKm,
-        minDepthKm: Math.min(...group.map((point) => point.foldedDepthKm)),
-        maxDepthKm: Math.max(...group.map((point) => point.foldedDepthKm)),
-        centerArcKm: center.surfaceArcKm
-      };
-    });
-  }
-
-  function stateAt(timeS, prfHz) {
-    const context = cachedContextAt(timeS);
-    const points = pointArcsKm.map((surfaceArcKm, index) => {
-      const point = measureSurfacePoint(context.spacecraft, surfaceArcKm);
-      const metrics = threatMetrics(surfaceArcKm, point.rangeKm, point.trueDopplerHz, context, prfHz);
-      return {
-        index,
-        ...point,
-        ...metrics,
-        relativeAliasHz: metrics.aliasHz
-      };
-    });
-    return {
-      ...context,
-      prfHz,
-      points,
-      foldingPair: points.filter((point) => foldingIndexes.has(point.index)),
-      bands: continuousFoldBands(context, prfHz),
-      threat: clutterThreat(context, prfHz)
-    };
-  }
-
-  const radarTickCount = Math.round((model.timeMaxS - model.timeMinS) / model.radarTickS) + 1;
-  let fixedOverlapTicks = 0;
-  let adaptiveOverlapTicks = 0;
-  for (let tickIndex = 0; tickIndex < radarTickCount; tickIndex += 1) {
-    const timeS = Math.min(model.timeMaxS, model.timeMinS + tickIndex * model.radarTickS);
-    const context = cachedContextAt(timeS);
-    if (clutterThreat(context, fixedBadPrfHz).overlap) fixedOverlapTicks += 1;
-    if (clutterThreat(context, blockForTime(timeS).selectedPrfHz).overlap) adaptiveOverlapTicks += 1;
-  }
-  const switchCount = schedule.slice(1).filter((block, index) => (
-    block.selectedIndex !== schedule[index].selectedIndex
-  )).length;
-
-  function timelineRow(timeS, prfHz, selectedIndex) {
-    const context = cachedContextAt(timeS);
-    return {
-      ...context,
-      prfHz,
-      selectedIndex,
-      bands: continuousFoldBands(context, prfHz)
-    };
-  }
-
-  const timelineCount = Math.round((model.timeMaxS - model.timeMinS) / model.timelineStepS) + 1;
-  const timelineTimes = Array.from({ length: timelineCount }, (_, index) => (
-    Math.min(model.timeMaxS, model.timeMinS + index * model.timelineStepS)
-  ));
-  const fixedTimeline = timelineTimes.map((timeS) => timelineRow(timeS, fixedBadPrfHz, -1));
-  const adaptiveTimeline = timelineTimes.map((timeS) => {
-    const block = blockForTime(timeS);
-    return timelineRow(timeS, block.selectedPrfHz, block.selectedIndex);
-  });
-
-  const targetDepthValues = adaptiveTimeline.map((row) => row.target.apparentDepthKm);
-  const radarDepthMinKm = Math.max(0, Math.floor((Math.min(...targetDepthValues) - 2.2) * 10) / 10);
-  const radarDepthMaxKm = Math.ceil((Math.max(...targetDepthValues) + 3.2) * 10) / 10;
-  const geometryXAbsKm = Math.ceil(
-    Math.max(...spiceSamples.map((sample) => Math.abs(sample.alongTrackKm))) * 1.18 / 5
-  ) * 5;
-  const geometryYMaxKm = Math.max(
-    30,
-    Math.ceil(Math.max(...spiceSamples.map((sample) => spacecraftAt(sample.offsetSeconds).altitudeKm)) + 3)
-  );
-
-  function bandSegments(rows) {
-    const completed = [];
-    const active = new Map();
-    rows.forEach((row) => {
-      const groupedByOrder = new Map();
-      row.bands.forEach((band) => {
-        if (!groupedByOrder.has(band.foldOrder)) groupedByOrder.set(band.foldOrder, []);
-        groupedByOrder.get(band.foldOrder).push(band);
-      });
-      const seen = new Set();
-      groupedByOrder.forEach((bands, order) => {
-        bands.sort((left, right) => left.centerDepthKm - right.centerDepthKm).forEach((band, rank) => {
-          const key = `${row.prfHz.toFixed(3)}:${order}:${rank}`;
-          const nextRow = { ...row, band };
-          const segment = active.get(key);
-          if (segment
-            && row.timeS - segment[segment.length - 1].timeS <= model.timelineStepS * 1.6
-            && Math.abs(band.centerDepthKm - segment[segment.length - 1].band.centerDepthKm) <= 1.8) {
-            segment.push(nextRow);
-          } else {
-            if (segment?.length) completed.push(segment);
-            active.set(key, [nextRow]);
-          }
-          seen.add(key);
-        });
-      });
-      [...active.keys()].forEach((key) => {
-        if (!seen.has(key)) {
-          const segment = active.get(key);
-          if (segment?.length) completed.push(segment);
-          active.delete(key);
-        }
-      });
-    });
-    active.forEach((segment) => {
-      if (segment.length) completed.push(segment);
-    });
-    return completed.filter((segment) => segment.length >= 2);
-  }
-
-  const fixedBandSegments = bandSegments(fixedTimeline);
-  const adaptiveBandSegments = bandSegments(adaptiveTimeline);
 
   function chartScales(width, height, margin, xMin, xMax, yMin, yMax) {
     return {
@@ -625,399 +112,302 @@
     };
   }
 
-  function axes(width, height, margin, scales, xTicks, yTicks, xLabel, yLabel, xFormat = String, yFormat = String) {
-    let svg = '';
+  function pathFor(rows, scales, xKey, yKey) {
+    return rows.map((row, index) => (
+      `${index ? 'L' : 'M'} ${scales.x(row[xKey]).toFixed(2)} ${scales.y(row[yKey]).toFixed(2)}`
+    )).join(' ');
+  }
+
+  function linePath(rows, x, y, pointFor) {
+    return rows.map((row, index) => {
+      const point = pointFor(row);
+      return `${index ? 'L' : 'M'} ${x(point.x).toFixed(2)} ${y(point.y).toFixed(2)}`;
+    }).join(' ');
+  }
+
+  function axis(svg, width, height, margin, scales, xTicks, yTicks, labels) {
     yTicks.forEach((value) => {
       const y = scales.y(value);
-      svg += `<line class="grid" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
-      svg += `<text class="label" x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${yFormat(value)}</text>`;
+      svg.push(`<line class="grid" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`);
+      svg.push(`<text class="label" x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${labels.y(value)}</text>`);
     });
     xTicks.forEach((value) => {
       const x = scales.x(value);
-      svg += `<line class="grid" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
-      svg += `<text class="label" x="${x}" y="${height - margin.bottom + 19}" text-anchor="middle">${xFormat(value)}</text>`;
+      svg.push(`<line class="grid" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`);
+      svg.push(`<text class="label" x="${x}" y="${height - margin.bottom + 19}" text-anchor="middle">${labels.x(value)}</text>`);
     });
-    svg += `<line class="axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
-    svg += `<line class="axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
-    svg += `<text class="label-strong" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${height - 7}" text-anchor="middle">${xLabel}</text>`;
-    svg += `<text class="label-strong" transform="translate(17 ${margin.top + (height - margin.top - margin.bottom) / 2}) rotate(-90)" text-anchor="middle">${yLabel}</text>`;
-    return svg;
+    svg.push(`<line class="axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`);
+    svg.push(`<line class="axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`);
+    svg.push(`<text class="label-strong" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${height - 7}" text-anchor="middle">${labels.xTitle}</text>`);
+    svg.push(`<text class="label-strong" transform="translate(17 ${margin.top + (height - margin.top - margin.bottom) / 2}) rotate(-90)" text-anchor="middle">${labels.yTitle}</text>`);
   }
 
-  function areaPath(rows, scales, lowAccessor, highAccessor) {
-    const valid = rows.filter((row) => Number.isFinite(lowAccessor(row)) && Number.isFinite(highAccessor(row)));
-    const top = valid.map((row, index) => `${index ? 'L' : 'M'} ${scales.x(row.timeS).toFixed(2)} ${scales.y(lowAccessor(row)).toFixed(2)}`).join(' ');
-    const bottom = [...valid].reverse().map((row) => `L ${scales.x(row.timeS).toFixed(2)} ${scales.y(highAccessor(row)).toFixed(2)}`).join(' ');
-    return `${top} ${bottom} Z`;
+  function rowsInWindow(windowInfo) {
+    if (!windowInfo) return [];
+    return samples.filter((row) => row.offsetS >= windowInfo.startOffsetS && row.offsetS <= windowInfo.endOffsetS);
   }
 
-  function renderGeometry(state) {
-    const width = 600;
-    const height = 360;
-    const margin = { left: 58, right: 24, top: 42, bottom: 46 };
-    const scales = chartScales(width, height, margin, -geometryXAbsKm, geometryXAbsKm, geometryYMaxKm, -10);
-    const trajectoryRows = spiceSamples.map((sample) => ({
-      x: sample.alongTrackKm,
-      y: spacecraftAt(sample.offsetSeconds).altitudeKm
-    }));
-    const trajectoryPath = linePath(trajectoryRows, scales.x, scales.y, (row) => row);
-    const xTicks = [-geometryXAbsKm, -geometryXAbsKm / 2, 0, geometryXAbsKm / 2, geometryXAbsKm];
-    const yTicks = [-10, 0, 10, 20, 30].filter((value) => value <= geometryYMaxKm);
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Interpolated Europa Clipper SPICE trajectory above synthetic surface clutter and a fixed subsurface target">`;
-    svg += axes(width, height, margin, scales, xTicks, yTicks, 'local along-track distance (km)', 'height above / depth below ellipsoid (km)', signed, signed);
-    svg += `<line class="surface" x1="${scales.x(-geometryXAbsKm)}" y1="${scales.y(0)}" x2="${scales.x(geometryXAbsKm)}" y2="${scales.y(0)}"></line>`;
-    svg += `<path class="trajectory-line" fill="none" d="${trajectoryPath}"></path>`;
-    state.foldingPair.forEach((point) => {
-      svg += `<line class="ray" x1="${scales.x(state.spacecraft.xKm)}" y1="${scales.y(state.spacecraft.altitudeKm)}" x2="${scales.x(point.pointXKm)}" y2="${scales.y(0)}"></line>`;
-    });
-    state.points.forEach((point) => {
-      const fold = foldingIndexes.has(point.index) ? ' fold' : '';
-      svg += `<circle class="surface-point${fold}" cx="${scales.x(point.pointXKm)}" cy="${scales.y(0)}" r="${fold ? 6.5 : 4.5}"><title>Synthetic clutter point ${point.index + 1}</title></circle>`;
-    });
-    const targetX = scales.x(0);
-    const targetY = scales.y(-model.targetDepthKm);
-    svg += `<rect class="target" x="${targetX - 6}" y="${targetY - 6}" width="12" height="12" transform="rotate(45 ${targetX} ${targetY})"></rect>`;
-    svg += `<circle class="satellite" cx="${scales.x(state.spacecraft.xKm)}" cy="${scales.y(state.spacecraft.altitudeKm)}" r="8"></circle>`;
-    svg += `<text class="label-strong" x="${Math.min(width - margin.right - 105, scales.x(state.spacecraft.xKm) + 11)}" y="${scales.y(state.spacecraft.altitudeKm) - 10}">t = ${signed(state.timeS, 2)} s</text>`;
-    svg += `<text class="label" x="${scales.x(-geometryXAbsKm * 0.95)}" y="${scales.y(Math.min(geometryYMaxKm - 1, model.closestAltitudeKm + 3))}">SPICE samples; triaxial radial altitude</text>`;
-    svg += `<text class="label-strong" x="${targetX + 12}" y="${targetY + 4}">fixed target: -${fmt(model.targetDepthKm, 2)} km</text>`;
-    svg += '</svg>';
-    geometryPlot.innerHTML = svg;
-  }
-
-  function renderSchedule(state, currentBlock) {
+  function renderGroundTrack(row) {
     const width = 720;
-    const height = 330;
-    const margin = { left: 92, right: 24, top: 38, bottom: 48 };
-    const plotWidth = width - margin.left - margin.right;
-    const rowGap = 10;
-    const rowHeight = (height - margin.top - margin.bottom - rowGap * 3) / 4;
-    const x = (timeS) => margin.left + ((timeS - model.timeMinS) / (model.timeMaxS - model.timeMinS)) * plotWidth;
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Best-of-four PRF block schedule over the SPICE flyby">`;
-    model.candidatePrfsHz.forEach((candidatePrfHz, index) => {
-      const y = margin.top + index * (rowHeight + rowGap);
-      svg += `<rect class="schedule-row" x="${margin.left}" y="${y}" width="${plotWidth}" height="${rowHeight}" rx="3"></rect>`;
-      svg += `<text class="label-strong" x="${margin.left - 10}" y="${y + rowHeight / 2 + 4}" text-anchor="end">${prfLabel(index)} ${fmt(candidatePrfHz, 0)}</text>`;
-    });
-    schedule.forEach((block) => {
-      const y = margin.top + block.selectedIndex * (rowHeight + rowGap);
-      const selected = block.blockIndex === currentBlock.blockIndex;
-      svg += `<rect class="schedule-block prf-${block.selectedIndex}" x="${x(block.startS)}" y="${y}" width="${Math.max(1, x(block.endS) - x(block.startS))}" height="${rowHeight}"${selected ? ' style="stroke:#1f211f;stroke-width:2"' : ''}></rect>`;
-    });
-    [-10, -5, 0, 5, 10].forEach((tick) => {
-      svg += `<line class="grid" x1="${x(tick)}" y1="${margin.top}" x2="${x(tick)}" y2="${height - margin.bottom}"></line>`;
-      svg += `<text class="label" x="${x(tick)}" y="${height - margin.bottom + 20}" text-anchor="middle">${signed(tick, 0)}</text>`;
-    });
-    svg += `<line class="current-guide" x1="${x(state.timeS)}" y1="${margin.top}" x2="${x(state.timeS)}" y2="${height - margin.bottom}"></line>`;
-    svg += `<text class="label-strong" x="${margin.left}" y="20">${switchCount} PRF changes across ${schedule.length} decision blocks</text>`;
-    svg += `<text class="label-strong" x="${margin.left + plotWidth / 2}" y="${height - 7}" text-anchor="middle">time from closest approach (s)</text>`;
-    svg += '</svg>';
-    schedulePlot.innerHTML = svg;
-  }
-
-  function renderCandidateScores(block) {
-    const width = 600;
     const height = 360;
-    const margin = { left: 90, right: 66, top: 42, bottom: 50 };
-    const maxScore = Math.max(1.2, ...block.candidates.map((candidate) => candidate.minimumScore)) * 1.08;
-    const x = (score) => margin.left + (score / maxScore) * (width - margin.left - margin.right);
-    const barHeight = 42;
-    const gap = 17;
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Candidate PRF prediction scores for the current decision block">`;
-    block.candidates.forEach((candidate, index) => {
-      const y = margin.top + index * (barHeight + gap);
-      svg += `<rect class="score-track" x="${margin.left}" y="${y}" width="${width - margin.left - margin.right}" height="${barHeight}" rx="5"></rect>`;
-      svg += `<rect class="score-bar prf-${index}${index === block.selectedIndex ? ' is-selected' : ''}" x="${margin.left}" y="${y}" width="${Math.max(1, x(candidate.minimumScore) - margin.left)}" height="${barHeight}" rx="5"></rect>`;
-      svg += `<text class="label-strong" x="${margin.left - 10}" y="${y + barHeight / 2 + 4}" text-anchor="end">${prfLabel(index)}</text>`;
-      svg += `<text class="label-strong" x="${Math.min(width - margin.right + 7, x(candidate.minimumScore) + 7)}" y="${y + barHeight / 2 + 4}">${fmt(candidate.minimumScore, 2)}</text>`;
-      if (index === block.selectedIndex) svg += `<text class="label-danger" x="${width - margin.right + 5}" y="${y + barHeight / 2 + 4}">best</text>`;
+    const margin = { left: 62, right: 26, top: 42, bottom: 48 };
+    const lonMin = Math.floor(Math.min(...samples.map((entry) => entry.lonEastDeg), cilix.lonEastDeg) - 4);
+    const lonMax = Math.ceil(Math.max(...samples.map((entry) => entry.lonEastDeg), cilix.lonEastDeg) + 4);
+    const latMin = Math.floor(Math.min(...samples.map((entry) => entry.latDeg), cilix.latDeg) - 1.2);
+    const latMax = Math.ceil(Math.max(...samples.map((entry) => entry.latDeg), cilix.latDeg) + 1.2);
+    const scales = chartScales(width, height, margin, lonMin, lonMax, latMax, latMin);
+    const coreRows = rowsInWindow(coreWindow);
+    const currentX = scales.x(row.lonEastDeg);
+    const currentY = scales.y(row.latDeg);
+    const cilixRadiusDeg = (cilix.diameterKm / 2) / data.body.meanRadiusKm * 180 / Math.PI;
+    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="E19 groundtrack over the Cilix crater region">`];
+    axis(svg, width, height, margin, scales, [150, 170, 190, 210, 230], [-3, -1, 1, 3], {
+      x: (value) => `${fmt(value, 0)}E`,
+      y: (value) => signed(value, 0),
+      xTitle: 'east longitude (deg)',
+      yTitle: 'planetocentric latitude (deg)'
     });
-    svg += `<line class="basket-threshold" x1="${x(1)}" y1="${margin.top - 7}" x2="${x(1)}" y2="${height - margin.bottom}"></line>`;
-    svg += `<text class="label-danger" x="${x(1) + 5}" y="${height - margin.bottom + 18}">1.0 target-cell scale</text>`;
-    svg += `<text class="label-strong" x="${margin.left}" y="21">block ${block.blockIndex + 1}: predict ticks +1 through +9</text>`;
-    svg += `<text class="label-strong" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${height - 7}" text-anchor="middle">minimum rectangular range-Doppler safety margin</text>`;
-    svg += '</svg>';
-    scorePlot.innerHTML = svg;
+    svg.push(`<path class="groundtrack-line" d="${pathFor(samples, scales, 'lonEastDeg', 'latDeg')}"></path>`);
+    if (coreRows.length) {
+      svg.push(`<path class="groundtrack-reconable" d="${pathFor(coreRows, scales, 'lonEastDeg', 'latDeg')}"></path>`);
+    }
+    const cilixR = Math.max(5, Math.abs(scales.x(cilix.lonEastDeg + cilixRadiusDeg) - scales.x(cilix.lonEastDeg)));
+    svg.push(`<circle class="cilix-marker" cx="${scales.x(cilix.lonEastDeg)}" cy="${scales.y(cilix.latDeg)}" r="${cilixR.toFixed(2)}"></circle>`);
+    svg.push(`<text class="label-strong" x="${scales.x(cilix.lonEastDeg) + 10}" y="${scales.y(cilix.latDeg) - 8}">Cilix marker</text>`);
+    svg.push(`<rect class="closest-marker" x="${scales.x(closest.lonEastDeg) - 6}" y="${scales.y(closest.latDeg) - 6}" width="12" height="12" transform="rotate(45 ${scales.x(closest.lonEastDeg)} ${scales.y(closest.latDeg)})"></rect>`);
+    svg.push(`<text class="label" x="${scales.x(closest.lonEastDeg) + 10}" y="${scales.y(closest.latDeg) + 18}">closest approach</text>`);
+    svg.push(`<circle class="satellite" cx="${currentX}" cy="${currentY}" r="7"></circle>`);
+    svg.push(`<text class="label-strong" x="${Math.min(width - margin.right - 88, currentX + 11)}" y="${currentY - 11}">t ${signed(row.offsetS, 0)} s</text>`);
+    if (coreWindow) {
+      svg.push(`<text class="label-danger" x="${margin.left}" y="22">core reconable: ${fmt(coreWindow.groundLengthKm, 1)} km</text>`);
+    }
+    svg.push('</svg>');
+    geometryPlot.innerHTML = svg.join('');
   }
 
-  function renderDopplerDepth(state, block) {
-    const width = 600;
+  function renderCriteria(row) {
+    const width = 720;
     const height = 360;
-    const margin = { left: 70, right: 24, top: 54, bottom: 48 };
-    const xAbs = Math.ceil(Math.max(...model.candidatePrfsHz) / 200) * 100;
-    const scales = chartScales(width, height, margin, -xAbs, xAbs, radarDepthMinKm, radarDepthMaxKm);
-    const yTicks = Array.from({ length: 5 }, (_, index) => radarDepthMinKm + ((radarDepthMaxKm - radarDepthMinKm) * index) / 4);
-    const radiusX = Math.abs(scales.x(model.dopplerToleranceHz / 2) - scales.x(0));
-    const radiusY = Math.abs(scales.y(state.target.apparentDepthKm + model.depthToleranceKm / 2) - scales.y(state.target.apparentDepthKm));
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Modeled clutter under the selected adaptive PRF in target-relative Doppler and apparent depth">`;
-    svg += axes(width, height, margin, scales, [-xAbs, -xAbs / 2, 0, xAbs / 2, xAbs], yTicks, 'aliased Doppler relative to target (Hz)', 'apparent depth (km)', signed, (value) => fmt(value, 1));
-    svg += `<rect class="target-cell" x="${scales.x(-model.dopplerToleranceHz)}" y="${scales.y(state.target.apparentDepthKm - model.depthToleranceKm)}" width="${scales.x(model.dopplerToleranceHz) - scales.x(-model.dopplerToleranceHz)}" height="${scales.y(state.target.apparentDepthKm + model.depthToleranceKm) - scales.y(state.target.apparentDepthKm - model.depthToleranceKm)}"></rect>`;
-    svg += `<line class="guide" x1="${scales.x(0)}" y1="${margin.top}" x2="${scales.x(0)}" y2="${height - margin.bottom}"></line>`;
-    state.points.forEach((point) => {
-      if (point.foldedDepthKm < radarDepthMinKm || point.foldedDepthKm > radarDepthMaxKm) return;
-      svg += `<ellipse class="response-tail" cx="${scales.x(point.relativeAliasHz)}" cy="${scales.y(point.foldedDepthKm)}" rx="${radiusX}" ry="${radiusY}"></ellipse>`;
-      svg += `<circle class="response-center" cx="${scales.x(point.relativeAliasHz)}" cy="${scales.y(point.foldedDepthKm)}" r="4"></circle>`;
+    const margin = { left: 64, right: 26, top: 42, bottom: 48 };
+    const mid = 178;
+    const laneHeight = 112;
+    const sx = (value) => margin.left + ((value - sampleStart) / (sampleEnd - sampleStart)) * (width - margin.left - margin.right);
+    const syAlt = (value) => margin.top + ((360 - value) / 360) * laneHeight;
+    const syInc = (value) => mid + ((80 - value) / 80) * laneHeight;
+    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Altitude and solar incidence against E19 reconability criteria">`];
+    [-240, -120, 0, 120, 240].forEach((tick) => {
+      const x = sx(tick);
+      svg.push(`<line class="grid" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`);
+      svg.push(`<text class="label" x="${x}" y="${height - margin.bottom + 19}" text-anchor="middle">${signed(tick, 0)}</text>`);
     });
-    if (state.threat.foldedDepthKm >= radarDepthMinKm && state.threat.foldedDepthKm <= radarDepthMaxKm) {
-      svg += `<circle class="threat-center" cx="${scales.x(state.threat.aliasHz)}" cy="${scales.y(state.threat.foldedDepthKm)}" r="7"><title>Nearest refined range-Doppler clutter threat</title></circle>`;
+    [50, 100].forEach((value) => {
+      svg.push(`<line class="criterion-line" x1="${margin.left}" y1="${syAlt(value)}" x2="${width - margin.right}" y2="${syAlt(value)}"></line>`);
+      svg.push(`<text class="label" x="${width - margin.right}" y="${syAlt(value) - 5}" text-anchor="end">${value} km</text>`);
+    });
+    [30, 60].forEach((value) => {
+      svg.push(`<line class="criterion-line" x1="${margin.left}" y1="${syInc(value)}" x2="${width - margin.right}" y2="${syInc(value)}"></line>`);
+      svg.push(`<text class="label" x="${width - margin.right}" y="${syInc(value) - 5}" text-anchor="end">${value} deg</text>`);
+    });
+    if (coreWindow) {
+      const x0 = sx(coreWindow.startOffsetS);
+      const x1 = sx(coreWindow.endOffsetS);
+      svg.push(`<rect class="reconable-window" x="${x0}" y="${margin.top}" width="${x1 - x0}" height="${height - margin.top - margin.bottom}"></rect>`);
     }
-    svg += `<rect class="target" x="${scales.x(0) - 5}" y="${scales.y(state.target.apparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(0)} ${scales.y(state.target.apparentDepthKm)})"></rect>`;
-    svg += `<text class="${state.threat.overlap ? 'label-danger' : 'label-strong'}" x="${margin.left}" y="21">${state.threat.overlap ? 'OVERLAP' : 'separated'}: ${prfLabel(block.selectedIndex)} = ${fmt(state.prfHz, 0)} Hz</text>`;
-    svg += `<text class="label" x="${margin.left}" y="40">gold: nearest threat from 1 km search plus local refinement</text>`;
-    svg += '</svg>';
-    dopplerPlot.innerHTML = svg;
+    svg.push(`<path class="altitude-line" d="${samples.map((entry, index) => `${index ? 'L' : 'M'} ${sx(entry.offsetS).toFixed(2)} ${syAlt(entry.altitudeKm).toFixed(2)}`).join(' ')}"></path>`);
+    svg.push(`<path class="incidence-line" d="${samples.map((entry, index) => `${index ? 'L' : 'M'} ${sx(entry.offsetS).toFixed(2)} ${syInc(entry.incidenceDeg).toFixed(2)}`).join(' ')}"></path>`);
+    const xNow = sx(row.offsetS);
+    svg.push(`<line class="current-guide" x1="${xNow}" y1="${margin.top}" x2="${xNow}" y2="${height - margin.bottom}"></line>`);
+    svg.push(`<circle class="satellite" cx="${xNow}" cy="${syAlt(row.altitudeKm)}" r="6"></circle>`);
+    svg.push(`<circle class="response-center" cx="${xNow}" cy="${syInc(row.incidenceDeg)}" r="5"></circle>`);
+    svg.push(`<text class="label-strong" x="${margin.left}" y="22">altitude: ${fmt(row.altitudeKm, 1)} km</text>`);
+    svg.push(`<text class="label-danger" x="${margin.left}" y="${mid - 15}">incidence: ${fmt(row.incidenceDeg, 1)} deg</text>`);
+    svg.push(`<text class="label-strong" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${height - 7}" text-anchor="middle">time from closest approach (s)</text>`);
+    svg.push(`<text class="label" x="${margin.left}" y="${height - margin.bottom + 40}">shaded: 50-100 km altitude and 30-60 deg incidence</text>`);
+    svg.push('</svg>');
+    foldPlot.innerHTML = svg.join('');
   }
 
-  function renderRadargram(element, rows, segments, state, mode) {
-    const width = 880;
-    const height = 390;
-    const margin = { left: 70, right: 26, top: 44, bottom: 50 };
-    const scales = chartScales(width, height, margin, model.timeMinS, model.timeMaxS, radarDepthMinKm, radarDepthMaxKm);
-    const yTicks = Array.from({ length: 5 }, (_, index) => radarDepthMinKm + ((radarDepthMaxKm - radarDepthMinKm) * index) / 4);
-    const plotWidth = width - margin.left - margin.right;
-    const plotHeight = height - margin.top - margin.bottom;
-    const safeMode = mode.replace(/[^a-z]/g, '');
-    const isFixed = mode === 'fixed';
-    const isPost = mode === 'postprocessed';
-    const lineClass = isFixed ? 'radargram-fold-line' : isPost ? 'post-rejected-line' : 'adaptive-fold-line';
-    const smearClass = isFixed ? 'radargram-fold-smear' : isPost ? 'post-rejected-smear' : 'adaptive-fold-smear';
-    const coreClass = isFixed ? 'radargram-fold-core' : 'adaptive-fold-core';
-    const overlapCount = isFixed ? fixedOverlapTicks : adaptiveOverlapTicks;
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${isFixed ? 'Fixed bad PRF' : isPost ? 'Postprocessed multi-PRF' : 'Adaptive best-of-four PRF'} synthetic radargram">
-      <defs>
-        <filter id="blur-${safeMode}" x="-8%" y="-80%" width="116%" height="260%"><feGaussianBlur stdDeviation="4.5"></feGaussianBlur></filter>
-        <clipPath id="clip-${safeMode}"><rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect></clipPath>
-      </defs>`;
-    svg += `<rect class="radargram-bg" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
-    svg += `<image class="matlab-radargram-texture" href="assets/fake_radargram_flyby_texture.png?v=adaptive-prf-20260715" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" preserveAspectRatio="none"></image>`;
-    svg += `<rect class="radargram-vignette" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"></rect>`;
-    svg += axes(width, height, margin, scales, [-10, -5, 0, 5, 10], yTicks, 'time from closest approach (s)', 'apparent depth / fast time (km)', signed, (value) => fmt(value, 1));
-    svg += `<g clip-path="url(#clip-${safeMode})">`;
-    svg += `<path class="target-cell" d="${areaPath(rows, scales, (row) => row.target.apparentDepthKm - model.depthToleranceKm, (row) => row.target.apparentDepthKm + model.depthToleranceKm)}"></path>`;
-    segments.forEach((segment) => {
-      const visible = segment.some((row) => row.band.maxDepthKm >= radarDepthMinKm && row.band.minDepthKm <= radarDepthMaxKm);
-      if (!visible) return;
-      const blurAttribute = isFixed ? ` filter="url(#blur-${safeMode})"` : '';
-      svg += `<path class="${smearClass}"${blurAttribute} d="${areaPath(segment, scales, (row) => row.band.minDepthKm - 0.10, (row) => row.band.maxDepthKm + 0.10)}"></path>`;
-      if (!isPost) svg += `<path class="${coreClass}" d="${areaPath(segment, scales, (row) => row.band.minDepthKm, (row) => row.band.maxDepthKm)}"></path>`;
-      svg += `<path class="${lineClass}" d="${linePath(segment, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.band.centerDepthKm }))}"></path>`;
+  function renderMotion(row) {
+    const width = 720;
+    const height = 360;
+    const margin = { left: 66, right: 26, top: 42, bottom: 48 };
+    const groundMin = Math.floor(Math.min(...samples.map((entry) => entry.groundTrackKm)) / 100) * 100;
+    const groundMax = Math.ceil(Math.max(...samples.map((entry) => entry.groundTrackKm)) / 100) * 100;
+    const altMax = Math.ceil(Math.max(...samples.map((entry) => entry.altitudeKm)) / 100) * 100;
+    const scales = chartScales(width, height, margin, groundMin, groundMax, altMax, 0);
+    const coreRows = rowsInWindow(coreWindow);
+    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Local side view of E19 altitude over groundtrack distance">`];
+    axis(svg, width, height, margin, scales, [-1000, -500, 0, 500, 1000], [0, 100, 200, 300], {
+      x: (value) => signed(value, 0),
+      y: (value) => fmt(value, 0),
+      xTitle: 'surface groundtrack from closest approach (km)',
+      yTitle: 'altitude above mean Europa (km)'
     });
-    if (isPost) {
-      svg += `<path class="post-target-halo" d="${linePath(rows, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.target.apparentDepthKm }))}"></path>`;
+    svg.push(`<line class="surface" x1="${margin.left}" y1="${scales.y(0)}" x2="${width - margin.right}" y2="${scales.y(0)}"></line>`);
+    svg.push(`<path class="trajectory-line" fill="none" d="${pathFor(samples, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+    if (coreRows.length) {
+      svg.push(`<path class="trajectory-reconable" d="${pathFor(coreRows, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
     }
-    svg += `<path class="target-trace" d="${linePath(rows, scales.x, scales.y, (row) => ({ x: row.timeS, y: row.target.apparentDepthKm }))}"></path>`;
-    svg += `</g>`;
-    svg += `<line class="current-guide" x1="${scales.x(state.timeS)}" y1="${margin.top}" x2="${scales.x(state.timeS)}" y2="${height - margin.bottom}"></line>`;
-    svg += `<rect class="target" x="${scales.x(state.timeS) - 5}" y="${scales.y(state.target.apparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(state.timeS)} ${scales.y(state.target.apparentDepthKm)})"></rect>`;
-    if (isFixed) {
-      svg += `<text class="label-danger" x="${margin.left + 8}" y="24">all fixed-PRF fold branches retained</text>`;
-    } else if (isPost) {
-      svg += `<text class="label-strong" x="${margin.left + 8}" y="24">illustrative mask only; no I/Q processing claimed</text>`;
+    svg.push(`<line class="current-guide" x1="${scales.x(row.groundTrackKm)}" y1="${margin.top}" x2="${scales.x(row.groundTrackKm)}" y2="${height - margin.bottom}"></line>`);
+    svg.push(`<circle class="satellite" cx="${scales.x(row.groundTrackKm)}" cy="${scales.y(row.altitudeKm)}" r="8"></circle>`);
+    svg.push(`<text class="label-strong" x="${Math.min(width - margin.right - 150, scales.x(row.groundTrackKm) + 12)}" y="${scales.y(row.altitudeKm) - 12}">Europa Clipper</text>`);
+    svg.push(`<text class="label" x="${margin.left}" y="22">closest altitude ${fmt(closest.altitudeKm, 1)} km, speed ${fmt(closest.speedKmS, 3)} km/s</text>`);
+    svg.push('</svg>');
+    tracePlot.innerHTML = svg.join('');
+  }
+
+  function renderLook(row) {
+    const width = 720;
+    const height = 360;
+    const margin = { left: 70, right: 28, top: 42, bottom: 48 };
+    const lookRows = samples.map((entry) => ({ ...entry, ...derivedLook(entry) }));
+    const rangeMax = Math.ceil(Math.max(...lookRows.map((entry) => entry.slantRangeKm)) / 100) * 100;
+    const scales = chartScales(width, height, margin, sampleStart, sampleEnd, rangeMax, 0);
+    const look = derivedLook(row);
+    const cilixNearest = data.flyby.cilixClosestSample;
+    const nearestRange = Math.hypot(cilixNearest.altitudeKm, cilixNearest.distanceToCilixKm);
+    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Line of sight range from E19 to the Cilix marker through the sampled flyby">`];
+    axis(svg, width, height, margin, scales, [-240, -120, 0, 120, 240], [0, 250, 500, 750, 1000], {
+      x: (value) => signed(value, 0),
+      y: (value) => fmt(value, 0),
+      xTitle: 'time from closest approach (s)',
+      yTitle: 'flat-surface range to Cilix marker (km)'
+    });
+    svg.push(`<path class="look-range-line" d="${linePath(lookRows, scales.x, scales.y, (entry) => ({ x: entry.offsetS, y: entry.slantRangeKm }))}"></path>`);
+    svg.push(`<line class="current-guide" x1="${scales.x(row.offsetS)}" y1="${margin.top}" x2="${scales.x(row.offsetS)}" y2="${height - margin.bottom}"></line>`);
+    svg.push(`<circle class="satellite" cx="${scales.x(row.offsetS)}" cy="${scales.y(look.slantRangeKm)}" r="7"></circle>`);
+    svg.push(`<rect class="closest-marker" x="${scales.x(cilixNearest.offsetS) - 5}" y="${scales.y(nearestRange) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(cilixNearest.offsetS)} ${scales.y(nearestRange)})"></rect>`);
+    svg.push(`<text class="label" x="${scales.x(cilixNearest.offsetS) + 8}" y="${scales.y(nearestRange) - 8}">nearest Cilix marker</text>`);
+    svg.push(`<text class="label-strong" x="${margin.left}" y="22">look angle ${fmt(look.lookAngleDeg, 1)} deg, range rate ${signed(look.rangeRateKmS, 3)} km/s</text>`);
+    svg.push(`<text class="label-danger" x="${width - margin.right}" y="22" text-anchor="end">60 MHz Doppler ${signed(look.dopplerHz, 1)} Hz</text>`);
+    svg.push('</svg>');
+    dopplerPlot.innerHTML = svg.join('');
+  }
+
+  function sampleRow(label, row) {
+    return `
+      <tr>
+        <th scope="row">${escapeHtml(label)}</th>
+        <td>${signed(row.offsetS, 0)} s</td>
+        <td>${fmt(row.altitudeKm, 1)} km</td>
+        <td>${fmt(row.latDeg, 2)}, ${fmt(row.lonEastDeg, 2)}E</td>
+        <td>${fmt(row.incidenceDeg, 1)} deg</td>
+        <td>${fmt(row.distanceToCilixKm, 1)} km</td>
+      </tr>
+    `;
+  }
+
+  function renderTable(row) {
+    const cilixNearest = data.flyby.cilixClosestSample;
+    const coreStart = coreWindow ? interpolateRow(coreWindow.startOffsetS) : null;
+    const coreEnd = coreWindow ? interpolateRow(coreWindow.endOffsetS) : null;
+    const rows = [
+      sampleRow('Current slider', row),
+      sampleRow('Closest approach', interpolateRow(0)),
+      sampleRow('Nearest Cilix marker', interpolateRow(cilixNearest.offsetS))
+    ];
+    if (coreStart && coreEnd) {
+      rows.push(sampleRow('Reconable start', coreStart));
+      rows.push(sampleRow('Reconable end', coreEnd));
+    }
+    tablePlot.innerHTML = `
+      <div class="source-summary">
+        <div><strong>${escapeHtml(data.flyby.name)}</strong><span>${escapeHtml(data.flyby.rank)}</span></div>
+        <div><strong>${fmt(coreWindow?.groundLengthKm || 0, 1)} km</strong><span>core reconable window in this sample</span></div>
+        <div><strong>${fmt(cilixNearest.distanceToCilixKm, 1)} km</strong><span>closest sampled distance to Cilix marker</span></div>
+      </div>
+      <div class="table-wrap">
+        <table class="sample-table">
+          <thead>
+            <tr>
+              <th scope="col">Sample</th>
+              <th scope="col">Time</th>
+              <th scope="col">Altitude</th>
+              <th scope="col">Lat, lon</th>
+              <th scope="col">Incidence</th>
+              <th scope="col">Cilix marker</th>
+            </tr>
+          </thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function updateReadouts(row) {
+    const look = derivedLook(row);
+    timeOutput.textContent = `${signed(row.offsetS, 0)} s`;
+    altitudeValue.textContent = `${fmt(row.altitudeKm, 1)} km`;
+    trackValue.textContent = `${signed(row.groundTrackKm, 1)} km`;
+    subpointValue.textContent = `${fmt(row.latDeg, 2)}, ${fmt(row.lonEastDeg, 2)}E`;
+    speedValue.textContent = `${fmt(row.speedKmS, 3)} km/s`;
+    incidenceValue.textContent = `${fmt(row.incidenceDeg, 1)} deg`;
+    cilixValue.textContent = `${fmt(row.distanceToCilixKm, 1)} km`;
+    status.className = `trajectory-status${row.reconableCore ? '' : row.reconableMargin ? ' is-margin' : ' is-overlap'}`;
+    if (row.reconableCore) {
+      status.textContent = `E19 is inside the core reconable window at ${signed(row.offsetS, 0)} s: altitude ${fmt(row.altitudeKm, 1)} km, incidence ${fmt(row.incidenceDeg, 1)} deg, flat Cilix look angle ${fmt(look.lookAngleDeg, 1)} deg.`;
+    } else if (row.reconableMargin) {
+      status.textContent = `E19 is inside the looser margin at ${signed(row.offsetS, 0)} s, but outside the core 50-100 km and 30-60 deg window.`;
     } else {
-      svg += `<text class="label-strong" x="${margin.left + 8}" y="24">block changes break and displace clutter branches</text>`;
+      status.textContent = `E19 is outside the core reconable window at ${signed(row.offsetS, 0)} s; move toward closest approach to see the NASA-reference pass enter the Cilix-region window.`;
     }
-    svg += `<text class="${overlapCount ? 'label-danger' : 'label-strong'}" x="${width - margin.right}" y="24" text-anchor="end">${overlapCount} / ${radarTickCount} modeled ticks in target basket</text>`;
-    svg += '</svg>';
-    element.classList.toggle('is-postprocessed', isPost);
-    element.innerHTML = svg;
+    sourceStatus.textContent = `NAIF trajectory sample: ${row.utc}. 3D Cilix DTM intentionally not used.`;
   }
 
-  function createCandidateCards() {
-    const fragment = document.createDocumentFragment();
-    model.candidatePrfsHz.forEach((candidatePrfHz, index) => {
-      const card = document.createElement('article');
-      card.className = 'candidate-score-card';
-      card.dataset.candidateIndex = String(index);
-      const name = document.createElement('p');
-      name.className = 'candidate-name';
-      name.textContent = `${prfLabel(index)} candidate`;
-      const prf = document.createElement('p');
-      prf.className = 'candidate-prf';
-      prf.textContent = `${fmt(candidatePrfHz, 0)} Hz`;
-      const score = document.createElement('p');
-      score.className = 'candidate-score';
-      const selected = document.createElement('p');
-      selected.className = 'candidate-selected-label';
-      card.append(name, prf, score, selected);
-      fragment.appendChild(card);
-    });
-    candidateScoreGrid.replaceChildren(fragment);
+  function draw() {
+    const row = interpolateRow(Number(slider.value));
+    updateReadouts(row);
+    renderGroundTrack(row);
+    renderCriteria(row);
+    renderMotion(row);
+    renderLook(row);
+    renderTable(row);
   }
 
-  function updateSchedulerPanel(block) {
-    schedulerTelemetry['current-block-value'].textContent = `Block ${block.blockIndex + 1} of ${schedule.length}`;
-    schedulerTelemetry['block-span-value'].textContent = `${signed(block.startS, 2)} to ${signed(block.endS, 2)} s`;
-    schedulerTelemetry['selected-prf-value'].textContent = `${prfLabel(block.selectedIndex)} · ${fmt(block.selectedPrfHz, 0)} Hz`;
-    schedulerTelemetry['selected-score-value'].textContent = `${fmt(block.selectedScore, 2)} × rectangular target-cell scale`;
-    [...candidateScoreGrid.children].forEach((card, index) => {
-      const selected = index === block.selectedIndex;
-      card.classList.toggle('is-selected', selected);
-      card.querySelector('.candidate-score').textContent = `margin ${fmt(block.candidates[index].minimumScore, 2)} · ${block.candidates[index].overlapTicks} overlap ticks`;
-      card.querySelector('.candidate-selected-label').textContent = selected ? 'selected for block' : '';
-    });
+  function setPlaying(isPlaying) {
+    playButton.textContent = isPlaying ? 'Pause flyby' : 'Play flyby';
+    playButton.setAttribute('aria-pressed', String(isPlaying));
   }
 
-  function populateStaticData() {
-    const encounter = spiceFlyby.closestApproach;
-    const search = spiceFlyby.encounterSearch;
-    const stateDefinition = spiceFlyby.stateDefinition;
-    const spkKernel = spiceFlyby.kernels.find((kernel) => kernel.kind === 'SPK');
-    telemetry['encounter-number-value'].textContent = `Encounter ${search.selectedNumber} of ${search.encounterCount}`;
-    telemetry['encounter-utc-value'].textContent = displayUtc(encounter.utc);
-    telemetry['encounter-altitude-value'].textContent = `${fmt(model.closestAltitudeKm, 3)} km above the triaxial radial surface (${fmt(encounter.altitudeKm, 3)} km using the mean sphere)`;
-    telemetry['encounter-location-value'].textContent = `${signed(encounter.subSpacecraftLatitudeDeg, 3)}° lat · ${signed(encounter.subSpacecraftLongitudeDeg, 3)}° lon`;
-    telemetry['europa-radii-value'].textContent = `${spiceFlyby.body.radiiKm.map((value) => fmt(value, 1)).join(' × ')} km`;
-    telemetry['sample-cadence-value'].textContent = `${spiceFlyby.window.sampleCount} states · ${fmt(spiceFlyby.window.stepSeconds, 6)} s spacing`;
-    telemetry['state-definition-value'].textContent = `${spiceFlyby.spacecraft.naifId} from ${stateDefinition.observer} · ${stateDefinition.frame} · ${stateDefinition.aberrationCorrection}`;
-    telemetry['spk-file-value'].textContent = spkKernel.filename;
-    telemetry['spk-coverage-value'].textContent = `${displayUtc(spiceFlyby.spkCoverageUtc.start)} – ${displayUtc(spiceFlyby.spkCoverageUtc.end)}`;
-    telemetry['spk-sha-value'].textContent = spkKernel.sha256;
-    telemetry['artifact-generated-value'].textContent = new Date(spiceFlyby.generatedAtUtc).toISOString().replace('T', ' ').replace('Z', ' UTC');
-    schedulerTelemetry['source-interval-value'].textContent = `${fmt(spiceFlyby.window.stepSeconds * 1000, 3)} ms`;
-    schedulerTelemetry['fixed-prf-value'].textContent = `${fmt(fixedBadPrfHz, 1)} Hz`;
-    schedulerTelemetry['fixed-overlap-count-value'].textContent = `${fixedOverlapTicks} / ${radarTickCount}`;
-    schedulerTelemetry['adaptive-overlap-count-value'].textContent = `${adaptiveOverlapTicks} / ${radarTickCount}`;
-    schedulerTelemetry['switch-count-value'].textContent = `${switchCount} across ${schedule.length} blocks`;
-    schedulerTelemetry['radar-tick-count-value'].textContent = `${radarTickCount} at ${fmt(model.radarTickS * 1000, 0)} ms`;
-    auditTelemetry['mean-sphere-altitude-value'].textContent = `${fmt(meanSphereClosestAltitudeKm, 6)} km`;
-    auditTelemetry['ellipsoid-altitude-value'].textContent = `${fmt(model.closestAltitudeKm, 6)} km`;
-    auditTelemetry['altitude-correction-value'].textContent = `${signed(altitudeCorrectionKm, 6)} km`;
-    auditTelemetry['range-window-value'].textContent = model.candidatePrfsHz.map((prfHz, index) => (
-      `${prfLabel(index)} ${fmt(C / (2 * prfHz) / 1000, 3)} km`
-    )).join(' · ');
-    auditTelemetry['score-rule-value'].textContent = 'Fewest overlap ticks first; then maximize min max(|Δf|/25 Hz, |Δd|/0.15 km); retain the previous PRF inside an ε tie.';
-    auditTelemetry['search-rule-value'].textContent = `${fmt(model.clutterSearchStepKm, 1)} km coarse grid with ${model.refinementIterations} local refinement iterations; radargram bands use ${fmt(model.clutterBandStepKm, 1)} km.`;
-    auditTelemetry['pulse-alignment-value'].textContent = model.candidatePrfsHz.map((prfHz) => (
-      `${fmt(prfHz, 0)} Hz → ${fmt(prfHz * model.blockDurationS, 2)} pulses/100 ms`
-    )).join(' · ');
-    auditTelemetry['toolbox-check-value'].textContent = 'MATLAB R2026a formula checks passed for two-way Doppler, range↔time, and PRI generation. This browser still does not claim waveform-level I/Q validation.';
-  }
-
-  function populateSampleTable() {
-    const fragment = document.createDocumentFragment();
-    spiceSamples.forEach((sample, index) => {
-      const row = document.createElement('tr');
-      row.dataset.sampleIndex = String(index);
-      const values = [
-        signed(sample.offsetSeconds, 3),
-        displayUtc(sample.utc),
-        fmt(spacecraftAt(sample.offsetSeconds).altitudeKm, 3),
-        signed(sample.alongTrackKm, 3),
-        signed(sample.crossTrackKm, 3),
-        fmt(sample.speedKmS, 6),
-        signed(sample.radialSpeedKmS, 9)
-      ];
-      values.forEach((value) => {
-        const cell = document.createElement('td');
-        cell.textContent = value;
-        row.appendChild(cell);
-      });
-      fragment.appendChild(row);
-    });
-    sampleTableBody.replaceChildren(fragment);
-  }
-
-  let activeSampleIndex = -1;
-  function updateActiveSampleRow(timeS, forceScroll = false) {
-    const floatingIndex = (timeS - model.timeMinS) / spiceFlyby.window.stepSeconds;
-    const nextIndex = Math.max(0, Math.min(spiceSamples.length - 1, Math.round(floatingIndex)));
-    if (nextIndex === activeSampleIndex && !forceScroll) return;
-    if (activeSampleIndex >= 0) sampleTableBody.children[activeSampleIndex]?.classList.remove('is-current');
-    const nextRow = sampleTableBody.children[nextIndex];
-    nextRow?.classList.add('is-current');
-    activeSampleIndex = nextIndex;
-    if (!nextRow || sampleTableWrap.clientHeight <= 0) return;
-    const headerAllowance = 34;
-    const rowTop = nextRow.offsetTop;
-    const rowBottom = rowTop + nextRow.offsetHeight;
-    const visibleTop = sampleTableWrap.scrollTop + headerAllowance;
-    const visibleBottom = sampleTableWrap.scrollTop + sampleTableWrap.clientHeight;
-    if (forceScroll || rowTop < visibleTop || rowBottom > visibleBottom) {
-      sampleTableWrap.scrollTop = Math.max(0, rowTop - sampleTableWrap.clientHeight / 2);
+  function stopPlayback() {
+    if (playbackFrameId !== null) {
+      cancelAnimationFrame(playbackFrameId);
+      playbackFrameId = null;
     }
+    lastPlaybackTimestamp = null;
+    setPlaying(false);
   }
 
-  function draw(timeS) {
-    const block = blockForTime(timeS);
-    const adaptiveState = stateAt(timeS, block.selectedPrfHz);
-    const fixedState = stateAt(timeS, fixedBadPrfHz);
-    timeOutput.textContent = `${signed(timeS, 2)} s`;
-    altitudeValue.textContent = `${fmt(adaptiveState.spacecraft.altitudeKm, 2)} km`;
-    trackValue.textContent = `${signed(adaptiveState.spacecraft.xKm, 2)} km`;
-    speedValue.textContent = `${fmt(adaptiveState.spacecraft.speedKmS, 3)} km/s`;
-    prfValue.textContent = `${prfLabel(block.selectedIndex)} · ${fmt(block.selectedPrfHz, 0)} Hz`;
-    blockValue.textContent = `${block.blockIndex + 1} / ${schedule.length}`;
-    clockValue.textContent = `${fmt(model.radarTickS * 1000, 0)} ms × ${model.blockTicks}`;
-    telemetry['current-utc-value'].textContent = utcAtOffset(timeS);
-    telemetry['center-distance-value'].textContent = `${fmt(adaptiveState.spacecraft.distanceKm, 3)} km`;
-    telemetry['radial-speed-value'].textContent = `${signed(adaptiveState.spacecraft.radialSpeedKmS, 6)} km/s`;
-    telemetry['cross-track-value'].textContent = `${signed(adaptiveState.spacecraft.crossTrackKm, 3)} km`;
-    telemetry['target-range-value'].textContent = `${fmt(adaptiveState.target.rangeKm, 3)} km`;
-    telemetry['target-doppler-value'].textContent = `${signed(adaptiveState.target.trueDopplerHz, 3)} Hz`;
-    telemetry['nearest-alias-value'].textContent = `${signed(adaptiveState.threat.aliasHz, 3)} Hz`;
-    adaptiveState.spacecraft.positionKm.forEach((value, index) => {
-      telemetry[`position-${'xyz'[index]}-value`].textContent = signed(value, 6);
-    });
-    adaptiveState.spacecraft.velocityKmS.forEach((value, index) => {
-      telemetry[`velocity-${'xyz'[index]}-value`].textContent = signed(value, 9);
-    });
-    updateActiveSampleRow(timeS);
-    updateSchedulerPanel(block);
-    status.className = `trajectory-status${adaptiveState.threat.overlap ? ' is-overlap' : ''}`;
-    if (adaptiveState.threat.overlap) {
-      status.textContent = `Adaptive overlap: ${prfLabel(block.selectedIndex)} still places modeled clutter inside the target basket at ${signed(timeS, 2)} s.`;
-    } else {
-      const fixedComparison = fixedState.threat.overlap ? ' The fixed bad PRF overlaps at this time.' : '';
-      status.textContent = `${prfLabel(block.selectedIndex)} (${fmt(block.selectedPrfHz, 0)} Hz) wins block ${block.blockIndex + 1}; nearest modeled clutter is ${signed(adaptiveState.threat.aliasHz, 1)} Hz and ${signed(adaptiveState.threat.depthOffsetKm, 2)} km from the target.${fixedComparison}`;
+  function playbackStep(timestamp) {
+    if (lastPlaybackTimestamp === null) lastPlaybackTimestamp = timestamp;
+    const elapsedS = Math.min(0.05, (timestamp - lastPlaybackTimestamp) / 1000);
+    lastPlaybackTimestamp = timestamp;
+    let next = Number(slider.value) + elapsedS * playbackRate;
+    if (next > sampleEnd) next = sampleStart;
+    slider.value = String(next);
+    draw();
+    playbackFrameId = requestAnimationFrame(playbackStep);
+  }
+
+  playButton.addEventListener('click', () => {
+    if (playbackFrameId !== null) {
+      stopPlayback();
+      return;
     }
-    renderGeometry(adaptiveState);
-    renderSchedule(adaptiveState, block);
-    renderCandidateScores(block);
-    renderDopplerDepth(adaptiveState, block);
-    renderRadargram(fixedRadargramPlot, fixedTimeline, fixedBandSegments, fixedState, 'fixed');
-    renderRadargram(adaptiveRadargramPlot, adaptiveTimeline, adaptiveBandSegments, adaptiveState, 'adaptive');
-    renderRadargram(postprocessedRadargramPlot, adaptiveTimeline, adaptiveBandSegments, adaptiveState, 'postprocessed');
-  }
+    setPlaying(true);
+    playbackFrameId = requestAnimationFrame(playbackStep);
+  });
 
-  slider.min = String(model.timeMinS);
-  slider.max = String(model.timeMaxS);
-  slider.step = String(model.radarTickS);
-  slider.value = '0';
-  closestUtcValue.textContent = displayUtc(spiceFlyby.closestApproach.utc);
-  createCandidateCards();
-  populateSampleTable();
-  populateStaticData();
-
-  let animationTimer = null;
-  function stopAnimation() {
-    if (animationTimer) window.clearInterval(animationTimer);
-    animationTimer = null;
-    playButton.textContent = 'Play flyby';
-  }
-
-  function startAnimation() {
-    stopAnimation();
-    if (Number(slider.value) >= model.timeMaxS - 0.001) slider.value = String(model.timeMinS);
-    playButton.textContent = 'Pause flyby';
-    animationTimer = window.setInterval(() => {
-      const next = Math.min(model.timeMaxS, Number(slider.value) + 0.13);
-      slider.value = String(next);
-      draw(next);
-      if (next >= model.timeMaxS) stopAnimation();
-    }, 50);
-  }
+  closestButton.addEventListener('click', () => {
+    stopPlayback();
+    slider.value = '0';
+    draw();
+  });
 
   slider.addEventListener('input', () => {
-    stopAnimation();
-    draw(Number(slider.value));
+    stopPlayback();
+    draw();
   });
-  playButton.addEventListener('click', () => animationTimer ? stopAnimation() : startAnimation());
-  closestButton.addEventListener('click', () => {
-    stopAnimation();
-    slider.value = '0';
-    draw(0);
-  });
-  window.addEventListener('resize', () => updateActiveSampleRow(Number(slider.value), true));
 
-  draw(0);
+  draw();
 })();
