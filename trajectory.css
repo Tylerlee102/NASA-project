@@ -275,6 +275,7 @@ a:focus-visible {
   overflow: hidden;
 }
 
+.e19-data-plot { aspect-ratio: 860 / 440; }
 .radargram-plot { aspect-ratio: 720 / 340; }
 
 .plot svg {
@@ -293,19 +294,47 @@ a:focus-visible {
 .groundtrack-line,
 .look-range-line,
 .altitude-line,
-.incidence-line {
+.incidence-line,
+.data-altitude-line,
+.data-incidence-line,
+.data-distance-line {
   fill: none;
   stroke-width: 2.4;
 }
 
 .groundtrack-line,
 .altitude-line,
-.look-range-line {
+.look-range-line,
+.data-altitude-line {
   stroke: var(--teal);
 }
 
-.incidence-line {
+.incidence-line,
+.data-incidence-line {
   stroke: var(--red);
+}
+
+.data-distance-line {
+  stroke: var(--gold);
+}
+
+.data-lane-label {
+  fill: #244c50;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.nearest-marker-line {
+  stroke: var(--gold);
+  stroke-width: 1.8;
+  stroke-dasharray: 4 5;
+}
+
+.closest-approach-line {
+  stroke: var(--teal);
+  stroke-width: 1.8;
+  stroke-dasharray: 8 5;
 }
 
 .groundtrack-reconable,
