@@ -3,18 +3,16 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SPICE Reference-Trajectory Europa Flyby Folding</title>
+    <title>NASA-Reference Europa Flyby Folding</title>
     <script>
-      const standalonePreview = new URLSearchParams(window.location.search).get('standalone') === '1';
-      if (window.top === window.self && !standalonePreview) {
+      if (window.top === window.self) {
         const fullSiteUrl = new URL('index.html', window.location.href);
         fullSiteUrl.searchParams.set('page', 'trajectory-lab');
         window.location.replace(fullSiteUrl.href);
       }
     </script>
-    <link rel="stylesheet" href="trajectory.css?v=range-aware-prf-20260715">
-    <script defer src="data/clipper-flyby.js?v=range-aware-prf-20260715"></script>
-    <script defer src="trajectory.js?v=range-aware-prf-20260715"></script>
+    <link rel="stylesheet" href="trajectory.css?v=matlab-radargram-20260714">
+    <script defer src="trajectory.js?v=matlab-radargram-20260714"></script>
   </head>
   <body>
     <main class="trajectory-page">
@@ -34,213 +32,10 @@
         <dl class="live-values" aria-label="Current flyby values">
           <div><dt>Altitude</dt><dd id="altitude-value"></dd></div>
           <div><dt>Along track</dt><dd id="track-value"></dd></div>
-          <div><dt>Flyby speed</dt><dd id="speed-value"></dd></div>
-          <div><dt>Adaptive PRF</dt><dd id="prf-value"></dd></div>
-          <div><dt>Decision block</dt><dd id="block-value"></dd></div>
-          <div><dt>Radar clock</dt><dd id="clock-value"></dd></div>
-          <div><dt>Closest approach</dt><dd id="closest-utc-value"></dd></div>
+          <div><dt>Flyby speed</dt><dd>4.50 km/s</dd></div>
+          <div><dt>Fold-tuned PRF</dt><dd id="prf-value"></dd></div>
         </dl>
         <p id="trajectory-status" class="trajectory-status" role="status" aria-live="polite"></p>
-        <p class="trajectory-source-note">Trajectory states come from the public Europa Clipper reference SPK and are expressed in <code>IAU_EUROPA</code>. The page now computes radial altitude against Europa's supplied triaxial radii instead of subtracting one mean radius. SPICE states are linearly interpolated to the local processing clock; that interpolation does not create new trajectory fidelity. The four PRFs, radar tick, clutter strength, and target remain experiment assumptions, not REASON flight settings. <a href="https://naif.jpl.nasa.gov/pub/naif/EUROPACLIPPER/kernels/spk/" target="_blank" rel="noreferrer">NAIF kernel archive</a></p>
-      </section>
-
-      <section class="scheduler-panel" aria-labelledby="scheduler-heading">
-        <div class="scheduler-heading">
-          <div>
-            <p class="kicker">Corrected PRF experiment</p>
-            <h2 id="scheduler-heading">Range-aware best of four, selected every local block</h2>
-            <p>At each decision tick, the model predicts the next nine ticks, wraps both Doppler and fast-time range for each candidate PRF, rejects candidates with more overlap ticks, and then maximizes the minimum rectangular safety margin.</p>
-          </div>
-          <p class="scheduler-badge">SPICE-driven schedule</p>
-        </div>
-
-        <div class="scheduler-grid">
-          <article class="scheduler-card">
-            <p class="telemetry-label">Independent radar clock</p>
-            <h3>10 ms ticks &middot; 100 ms blocks</h3>
-            <dl class="scheduler-details">
-              <div><dt>SPICE source interval</dt><dd id="source-interval-value"></dd></div>
-              <div><dt>Decision cadence</dt><dd>Every 10th tick</dd></div>
-              <div><dt>Prediction window</dt><dd>Following 9 ticks (90 ms)</dd></div>
-              <div><dt>Clutter search</dt><dd>&minus;240 to +240 km every 1 km, then locally refined</dd></div>
-            </dl>
-          </article>
-
-          <article class="scheduler-card">
-            <p class="telemetry-label">Current decision</p>
-            <h3 id="current-block-value"></h3>
-            <dl class="scheduler-details">
-              <div><dt>Block span</dt><dd id="block-span-value"></dd></div>
-              <div><dt>Selected PRF</dt><dd id="selected-prf-value"></dd></div>
-              <div><dt>Minimum safety margin</dt><dd id="selected-score-value"></dd></div>
-              <div><dt>Fixed bad comparison</dt><dd id="fixed-prf-value"></dd></div>
-            </dl>
-          </article>
-
-          <article class="scheduler-card scheduler-card-wide">
-            <div class="telemetry-card-heading">
-              <div>
-                <p class="telemetry-label">Four assumed candidates</p>
-                <h3>Prediction score for the next nine ticks</h3>
-              </div>
-              <p class="telemetry-frame">Larger is safer</p>
-            </div>
-            <div id="candidate-score-grid" class="candidate-score-grid" aria-live="polite"></div>
-            <p class="scheduler-formula">First minimize predicted overlap ticks. Then maximize the minimum rectangular margin: max(|aliased Doppler| / 25 Hz, |PRI-wrapped depth offset| / 0.15 km). A score &le; 1 is inside the target basket. Near ties retain the previous PRF.</p>
-          </article>
-
-          <article class="scheduler-card scheduler-card-wide scheduler-outcome">
-            <p class="telemetry-label">Whole-flyby result</p>
-            <dl class="scheduler-outcome-grid">
-              <div><dt>Fixed-bad overlap ticks</dt><dd id="fixed-overlap-count-value"></dd></div>
-              <div><dt>Adaptive overlap ticks</dt><dd id="adaptive-overlap-count-value"></dd></div>
-              <div><dt>PRF changes</dt><dd id="switch-count-value"></dd></div>
-              <div><dt>Modeled radar ticks</dt><dd id="radar-tick-count-value"></dd></div>
-            </dl>
-          </article>
-        </div>
-      </section>
-
-      <section class="validation-panel" aria-labelledby="validation-heading">
-        <div class="validation-heading">
-          <div>
-            <p class="kicker">MATLAB/toolbox corrections now represented</p>
-            <h2 id="validation-heading">What changed in the live website model</h2>
-            <p>This panel exposes the corrections instead of hiding them behind the radargrams. Values below are computed from the same live SPICE state and PRF candidates used by the scheduler.</p>
-          </div>
-          <p class="validation-badge">Range-aware revision</p>
-        </div>
-        <div class="validation-grid">
-          <article class="validation-card">
-            <p class="telemetry-label">Europa body shape</p>
-            <h3>Mean sphere versus triaxial surface</h3>
-            <dl class="validation-values">
-              <div><dt>Old mean-sphere altitude</dt><dd id="mean-sphere-altitude-value"></dd></div>
-              <div><dt>Corrected radial altitude</dt><dd id="ellipsoid-altitude-value"></dd></div>
-              <div><dt>Correction</dt><dd id="altitude-correction-value"></dd></div>
-            </dl>
-          </article>
-          <article class="validation-card">
-            <p class="telemetry-label">PRI range ambiguity</p>
-            <h3>Candidate unambiguous ranges</h3>
-            <p id="range-window-value" class="validation-readout"></p>
-            <p class="validation-note">Every clutter-to-target range difference is wrapped by <em>R</em><sub>u</sub> = c/(2 PRF) before the depth comparison.</p>
-          </article>
-          <article class="validation-card validation-card-wide">
-            <p class="telemetry-label">Selection rule</p>
-            <h3>Overlap-first, deterministic scheduling</h3>
-            <p id="score-rule-value" class="validation-readout"></p>
-            <p id="search-rule-value" class="validation-note"></p>
-          </article>
-          <article class="validation-card validation-card-wide">
-            <p class="telemetry-label">Hardware timing disclosure</p>
-            <h3>The 100 ms blocks are processing decisions, not a pulse-accurate transmitter schedule</h3>
-            <p id="pulse-alignment-value" class="validation-readout"></p>
-            <p class="validation-note">Fractional pulse counts mean a real transmitter must finish the current PRI before switching. The website does not pretend otherwise.</p>
-          </article>
-          <article class="validation-card validation-card-wide validation-card-caveat">
-            <p class="telemetry-label">Toolbox boundary</p>
-            <h3>Verified formulas, but not yet end-to-end I/Q processing</h3>
-            <p id="toolbox-check-value" class="validation-readout"></p>
-          </article>
-        </div>
-      </section>
-
-      <section class="spice-data-panel" aria-labelledby="spice-data-heading">
-        <div class="spice-data-heading">
-          <div>
-            <p class="kicker">Visible SPICE data</p>
-            <h2 id="spice-data-heading">Reference-trajectory telemetry</h2>
-            <p>Every value marked current follows the time slider. This is a sampled reference trajectory, not a real-time spacecraft feed.</p>
-          </div>
-          <p class="live-data-badge"><span aria-hidden="true"></span>Current slider sample</p>
-        </div>
-
-        <div class="telemetry-layout">
-          <article class="telemetry-card telemetry-current">
-            <div class="telemetry-card-heading">
-              <div>
-                <p class="telemetry-label">Current state</p>
-                <h3 id="current-utc-value"></h3>
-              </div>
-              <p class="telemetry-frame">IAU_EUROPA</p>
-            </div>
-
-            <dl class="telemetry-summary">
-              <div><dt>Center distance</dt><dd id="center-distance-value"></dd></div>
-              <div><dt>Radial speed</dt><dd id="radial-speed-value"></dd></div>
-              <div><dt>Cross track</dt><dd id="cross-track-value"></dd></div>
-              <div><dt>Target range</dt><dd id="target-range-value"></dd></div>
-              <div><dt>Target Doppler</dt><dd id="target-doppler-value"></dd></div>
-              <div><dt>Nearest adaptive clutter alias</dt><dd id="nearest-alias-value"></dd></div>
-            </dl>
-
-            <div class="telemetry-table-wrap">
-              <table class="telemetry-table">
-                <caption>Body-fixed spacecraft state vector</caption>
-                <thead>
-                  <tr><th scope="col">Axis</th><th scope="col">Position (km)</th><th scope="col">Velocity (km/s)</th></tr>
-                </thead>
-                <tbody>
-                  <tr><th scope="row">X</th><td id="position-x-value"></td><td id="velocity-x-value"></td></tr>
-                  <tr><th scope="row">Y</th><td id="position-y-value"></td><td id="velocity-y-value"></td></tr>
-                  <tr><th scope="row">Z</th><td id="position-z-value"></td><td id="velocity-z-value"></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-
-          <article class="telemetry-card">
-            <p class="telemetry-label">Selected encounter</p>
-            <h3 id="encounter-number-value"></h3>
-            <dl class="telemetry-details">
-              <div><dt>Closest approach</dt><dd id="encounter-utc-value"></dd></div>
-              <div><dt>Altitude</dt><dd id="encounter-altitude-value"></dd></div>
-              <div><dt>Sub-spacecraft point</dt><dd id="encounter-location-value"></dd></div>
-              <div><dt>Europa radii</dt><dd id="europa-radii-value"></dd></div>
-              <div><dt>Samples</dt><dd id="sample-cadence-value"></dd></div>
-              <div><dt>State definition</dt><dd id="state-definition-value"></dd></div>
-            </dl>
-          </article>
-
-          <article class="telemetry-card telemetry-kernel">
-            <p class="telemetry-label">Kernel provenance</p>
-            <h3>Public NAIF reference SPK</h3>
-            <dl class="telemetry-details">
-              <div><dt>SPK file</dt><dd id="spk-file-value" class="break-value"></dd></div>
-              <div><dt>SPK coverage</dt><dd id="spk-coverage-value"></dd></div>
-              <div><dt>SHA-256</dt><dd id="spk-sha-value" class="code-value"></dd></div>
-              <div><dt>Generated artifact</dt><dd id="artifact-generated-value"></dd></div>
-            </dl>
-            <a class="kernel-link" href="https://naif.jpl.nasa.gov/pub/naif/EUROPACLIPPER/kernels/spk/" target="_blank" rel="noreferrer">Open the source kernel directory</a>
-          </article>
-
-          <article class="telemetry-card telemetry-samples">
-            <div class="telemetry-card-heading">
-              <div>
-                <p class="telemetry-label">Loaded data window</p>
-                <h3>All 121 generated SPICE states</h3>
-              </div>
-              <p class="telemetry-frame">Highlighted row follows slider</p>
-            </div>
-            <div id="sample-table-wrap" class="sample-table-wrap" tabindex="0" aria-label="Scrollable SPICE state samples">
-              <table class="sample-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Offset (s)</th>
-                    <th scope="col">UTC</th>
-                    <th scope="col">Altitude (km)</th>
-                    <th scope="col">Along track (km)</th>
-                    <th scope="col">Cross track (km)</th>
-                    <th scope="col">Speed (km/s)</th>
-                    <th scope="col">Radial speed (km/s)</th>
-                  </tr>
-                </thead>
-                <tbody id="spice-sample-table-body"></tbody>
-              </table>
-            </div>
-          </article>
-        </div>
       </section>
 
       <section class="trajectory-grid" aria-label="Trajectory folding graphs">
@@ -248,8 +43,8 @@
           <div class="graph-heading">
             <p class="graph-number">1</p>
             <div>
-              <h2>SPICE reference-trajectory geometry</h2>
-              <p>The spacecraft path is sampled from the public reference SPK around the October 23, 2031 encounter. The 12 surface points and subsurface target remain synthetic and fixed in Europa's body frame.</p>
+              <h2>NASA-reference flyby geometry</h2>
+              <p>The satellite moves along a locally parabolic closest-approach path above the surface. The 12 surface points and subsurface target remain fixed.</p>
             </div>
           </div>
           <div id="geometry-plot" class="plot" aria-live="polite"></div>
@@ -259,8 +54,8 @@
           <div class="graph-heading">
             <p class="graph-number">2</p>
             <div>
-              <h2>Adaptive four-PRF schedule</h2>
-              <p>Each 100 ms decision block prioritizes zero predicted overlaps, then maximizes the worst range-wrapped Doppler&ndash;depth margin over its following nine 10 ms ticks.</p>
+              <h2>Folded depth through the flyby</h2>
+              <p>Each red branch is a nonzero integer fold satisfying f<sub>relative</sub> &asymp; k &middot; PRF. The plot keeps every modeled order instead of only the nearest one.</p>
             </div>
           </div>
           <div id="fold-plot" class="plot" aria-live="polite"></div>
@@ -270,8 +65,8 @@
           <div class="graph-heading">
             <p class="graph-number">3</p>
             <div>
-              <h2>Current block candidate scores</h2>
-              <p>All four PRFs are evaluated against the same predicted SPICE geometry. The longest bar is selected for this block.</p>
+              <h2>Individual fast-time traces</h2>
+              <p>The moving satellite guide samples the two fixed clutter points and fixed target, producing measurement hyperbolas.</p>
             </div>
           </div>
           <div id="trace-plot" class="plot" aria-live="polite"></div>
@@ -281,8 +76,8 @@
           <div class="graph-heading">
             <p class="graph-number">4</p>
             <div>
-              <h2>Selected-PRF Doppler &times; depth</h2>
-              <p>The current adaptive PRF wraps Doppler and relative fast-time range for every modeled clutter point. Interference requires entry into the rectangular target basket in both axes.</p>
+              <h2>Target-relative Doppler × depth</h2>
+              <p>The clutter points interfere only when they enter the target cell in both aliased Doppler and apparent depth.</p>
             </div>
           </div>
           <div id="doppler-plot" class="plot" aria-live="polite"></div>
@@ -292,33 +87,11 @@
           <div class="graph-heading">
             <p class="graph-number">5</p>
             <div>
-              <h2>Fixed bad PRF</h2>
-              <p>One closest-approach fold-tuned PRF is reused for the whole flyby. Doppler and range-wrapped branches are retained, producing the continuous curved and crossing clutter pattern.</p>
+              <h2>MATLAB-generated fake radargram blur</h2>
+              <p>Fake radargram view of the flyby: the MATLAB texture supplies radar-like layers/speckle, and red shows where folded surface clutter would smear into fast time.</p>
             </div>
           </div>
-          <div id="fixed-radargram-plot" class="plot radargram-plot" aria-live="polite"></div>
-        </article>
-
-        <article class="graph-panel graph-panel-wide">
-          <div class="graph-heading">
-            <p class="graph-number">6</p>
-            <div>
-              <h2>Adaptive best-of-four PRF</h2>
-              <p>Block-level PRF changes break and displace the folded clutter branches while the SPICE-derived target trace remains continuous.</p>
-            </div>
-          </div>
-          <div id="adaptive-radargram-plot" class="plot radargram-plot" aria-live="polite"></div>
-        </article>
-
-        <article class="graph-panel graph-panel-wide">
-          <div class="graph-heading">
-            <p class="graph-number">7</p>
-            <div>
-              <h2>Illustrative rejection mask—not processed I/Q</h2>
-              <p>The display fades PRF-dependent branches and highlights the target to show the proposed rejection concept. It is explicitly not matched filtering, range migration, coherent integration, or mission-validated focusing.</p>
-            </div>
-          </div>
-          <div id="postprocessed-radargram-plot" class="plot radargram-plot" aria-live="polite"></div>
+          <div id="flyby-radargram-plot" class="plot radargram-plot" aria-live="polite"></div>
         </article>
       </section>
     </main>

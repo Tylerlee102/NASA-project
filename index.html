@@ -19,7 +19,7 @@
           <h1>Europa Doppler Aliasing Lab</h1>
           <div class="hero-actions" aria-label="Project actions">
             <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
-            <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run SPICE-reference flyby</a>
+            <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run NASA-reference flyby</a>
             <a class="secondary-link" href="?page=radargram-lab" data-tab-jump="radargram-lab">Compare radargram PRFs</a>
             <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
           </div>
@@ -27,7 +27,7 @@
             <summary>Section pages</summary>
             <nav class="tabs" aria-label="Section pages">
               <a class="tab is-active" href="?page=aliasing-lab" data-target="aliasing-lab">Doppler Aliasing Lab</a>
-              <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">SPICE Trajectory Lab</a>
+              <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">NASA Trajectory Lab</a>
               <a class="tab" href="?page=radargram-lab" data-target="radargram-lab">Radargram PRF Demo</a>
               <a class="tab" href="?page=owner-access" data-target="owner-access">Owner Archive</a>
               <div id="owner-tabs" class="owner-tabs" hidden>
@@ -58,13 +58,13 @@
       <section id="trajectory-lab" class="page-section trajectory-page-section">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">SPICE reference-trajectory flyby</p>
-            <h2>SPICE trajectory with adaptive four-PRF scheduling</h2>
+            <p class="section-kicker">NASA-reference flyby simulation</p>
+            <h2>Europa trajectory with folding enabled</h2>
           </div>
         </div>
-        <p class="section-intro">At every 100 ms local block, the experiment interpolates the SPICE trajectory to 10 ms radar ticks, scores four assumed PRFs over the following nine ticks, and selects the safest candidate. Compare the fixed bad PRF, adaptive schedule, and illustrative postprocessed radargrams.</p>
+        <p class="section-intro">Move through closest approach while the plot tracks every nonzero PRF fold order produced by the modeled surface clutter.</p>
         <div class="trajectory-embed-shell">
-          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=range-aware-prf-20260715" title="SPICE reference-trajectory range-aware adaptive four-PRF simulator" loading="eager" scrolling="no"></iframe>
+          <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=matlab-radargram-20260714" title="NASA-reference Europa flyby folding simulator" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 
