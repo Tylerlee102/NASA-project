@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>NASA-Reference Europa Flyby Folding</title>
+    <title>E19 Cilix NASA-Reference Flyby</title>
     <script>
       if (window.top === window.self) {
         const fullSiteUrl = new URL('index.html', window.location.href);
@@ -11,40 +11,44 @@
         window.location.replace(fullSiteUrl.href);
       }
     </script>
-    <link rel="stylesheet" href="trajectory.css?v=matlab-radargram-20260714">
-    <script defer src="trajectory.js?v=matlab-radargram-20260714"></script>
+    <link rel="stylesheet" href="trajectory.css?v=e19-cilix-20260715">
+    <script defer src="data/e19-flyby.js?v=e19-cilix-20260715"></script>
+    <script defer src="trajectory.js?v=e19-cilix-20260715"></script>
   </head>
   <body>
     <main class="trajectory-page">
-      <section class="trajectory-control" aria-label="Flyby time control">
+      <section class="trajectory-control" aria-label="E19 flyby time control">
         <div class="control-heading">
           <div>
-            <p class="kicker">Trajectory control</p>
-            <h2>Time from closest approach</h2>
+            <p class="kicker">E19 trajectory control</p>
+            <h2>Europa Clipper E19 near Cilix</h2>
           </div>
-          <output id="time-output" for="time-slider">0.00 s</output>
+          <output id="time-output" for="time-slider">0 s</output>
         </div>
         <div class="control-row">
           <button id="play-button" type="button">Play flyby</button>
           <button id="closest-button" class="secondary-button" type="button">Closest approach</button>
-          <input id="time-slider" type="range" min="-10" max="10" step="0.01" value="0" aria-label="Time from closest approach in seconds">
+          <input id="time-slider" type="range" min="-240" max="240" step="1" value="0" aria-label="Time from closest approach in seconds">
         </div>
-        <dl class="live-values" aria-label="Current flyby values">
+        <dl class="live-values" aria-label="Current E19 flyby values">
           <div><dt>Altitude</dt><dd id="altitude-value"></dd></div>
-          <div><dt>Along track</dt><dd id="track-value"></dd></div>
-          <div><dt>Flyby speed</dt><dd>4.50 km/s</dd></div>
-          <div><dt>Fold-tuned PRF</dt><dd id="prf-value"></dd></div>
+          <div><dt>Ground track</dt><dd id="track-value"></dd></div>
+          <div><dt>Sub-spacecraft</dt><dd id="subpoint-value"></dd></div>
+          <div><dt>Flyby speed</dt><dd id="speed-value"></dd></div>
+          <div><dt>Sun incidence</dt><dd id="incidence-value"></dd></div>
+          <div><dt>Cilix range</dt><dd id="cilix-value"></dd></div>
         </dl>
         <p id="trajectory-status" class="trajectory-status" role="status" aria-live="polite"></p>
+        <p id="source-status" class="source-status"></p>
       </section>
 
-      <section class="trajectory-grid" aria-label="Trajectory folding graphs">
+      <section class="trajectory-grid" aria-label="E19 trajectory graphs">
         <article class="graph-panel">
           <div class="graph-heading">
             <p class="graph-number">1</p>
             <div>
-              <h2>NASA-reference flyby geometry</h2>
-              <p>The satellite moves along a locally parabolic closest-approach path above the surface. The 12 surface points and subsurface target remain fixed.</p>
+              <h2>E19 groundtrack over the Cilix region</h2>
+              <p>The yellow segment is the source-derived reconable window; the crater marker is only a location reference, not a 3D elevation patch.</p>
             </div>
           </div>
           <div id="geometry-plot" class="plot" aria-live="polite"></div>
@@ -54,8 +58,8 @@
           <div class="graph-heading">
             <p class="graph-number">2</p>
             <div>
-              <h2>Folded depth through the flyby</h2>
-              <p>Each red branch is a nonzero integer fold satisfying f<sub>relative</sub> &asymp; k &middot; PRF. The plot keeps every modeled order instead of only the nearest one.</p>
+              <h2>Altitude and illumination criteria</h2>
+              <p>The paper flags reconable data where the flyby is low enough and the surface illumination is in the usable incidence range.</p>
             </div>
           </div>
           <div id="fold-plot" class="plot" aria-live="polite"></div>
@@ -65,8 +69,8 @@
           <div class="graph-heading">
             <p class="graph-number">3</p>
             <div>
-              <h2>Individual fast-time traces</h2>
-              <p>The moving satellite guide samples the two fixed clutter points and fixed target, producing measurement hyperbolas.</p>
+              <h2>Local flyby motion</h2>
+              <p>Altitude is taken from the NAIF reference trajectory while the x-axis follows surface groundtrack distance from closest approach.</p>
             </div>
           </div>
           <div id="trace-plot" class="plot" aria-live="polite"></div>
@@ -76,8 +80,8 @@
           <div class="graph-heading">
             <p class="graph-number">4</p>
             <div>
-              <h2>Target-relative Doppler × depth</h2>
-              <p>The clutter points interfere only when they enter the target cell in both aliased Doppler and apparent depth.</p>
+              <h2>Cilix look geometry</h2>
+              <p>This is a flat-surface line-of-sight sketch to the Cilix marker, useful for motion and range-rate only.</p>
             </div>
           </div>
           <div id="doppler-plot" class="plot" aria-live="polite"></div>
@@ -87,8 +91,8 @@
           <div class="graph-heading">
             <p class="graph-number">5</p>
             <div>
-              <h2>MATLAB-generated fake radargram blur</h2>
-              <p>Fake radargram view of the flyby: the MATLAB texture supplies radar-like layers/speckle, and red shows where folded surface clutter would smear into fast time.</p>
+              <h2>Source-backed sample table</h2>
+              <p>Key samples from the downloaded reference path: Cilix-nearest point, reconable window bounds, and closest approach.</p>
             </div>
           </div>
           <div id="flyby-radargram-plot" class="plot radargram-plot" aria-live="polite"></div>

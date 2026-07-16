@@ -161,7 +161,7 @@ a:focus-visible {
 
 .live-values {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   margin: 20px 0 0;
 }
@@ -200,6 +200,19 @@ a:focus-visible {
   border-left-color: var(--red);
   color: var(--red);
   background: var(--red-soft);
+}
+
+.trajectory-status.is-margin {
+  border-left-color: var(--gold);
+  color: #7a551a;
+  background: rgba(169, 121, 34, .14);
+}
+
+.source-status {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.45;
 }
 
 .trajectory-grid {
@@ -275,7 +288,113 @@ a:focus-visible {
 .guide { stroke: var(--teal); stroke-width: 1.4; stroke-dasharray: 5 5; }
 .current-guide { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 6 5; }
 .surface { fill: none; stroke: #6e6659; stroke-width: 2; }
-.trajectory-line { fill: none; stroke: var(--teal); stroke-width: 2.2; stroke-dasharray: 7 5; }
+.trajectory-line { fill: none; stroke: var(--teal); stroke-width: 2.4; }
+
+.groundtrack-line,
+.look-range-line,
+.altitude-line,
+.incidence-line {
+  fill: none;
+  stroke-width: 2.4;
+}
+
+.groundtrack-line,
+.altitude-line,
+.look-range-line {
+  stroke: var(--teal);
+}
+
+.incidence-line {
+  stroke: var(--red);
+}
+
+.groundtrack-reconable,
+.trajectory-reconable {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.cilix-marker {
+  fill: rgba(169, 121, 34, .18);
+  stroke: var(--gold);
+  stroke-width: 2;
+}
+
+.closest-marker {
+  fill: var(--gold);
+  stroke: var(--panel);
+  stroke-width: 1.2;
+}
+
+.criterion-line {
+  stroke: var(--gold);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 4;
+}
+
+.reconable-window {
+  fill: rgba(169, 121, 34, .12);
+  stroke: none;
+}
+
+.source-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.source-summary div {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(40, 95, 100, .07);
+}
+
+.source-summary strong,
+.source-summary span {
+  display: block;
+}
+
+.source-summary strong {
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+
+.source-summary span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.35;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.sample-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+
+.sample-table th,
+.sample-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sample-table thead th {
+  color: var(--muted);
+  font-size: .76rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
 .ray { stroke: rgba(151, 65, 67, .62); stroke-width: 1.6; }
 .satellite { fill: var(--teal); stroke: var(--panel); stroke-width: 2; }
 .surface-point { fill: #a76844; stroke: var(--panel); stroke-width: 1.5; }
@@ -328,4 +447,5 @@ a:focus-visible {
   .live-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .trajectory-grid { grid-template-columns: minmax(0, 1fr); }
   .graph-heading { min-height: 0; }
+  .source-summary { grid-template-columns: 1fr; }
 }
