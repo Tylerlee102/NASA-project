@@ -207,6 +207,31 @@
     };
   }
 
+  function flybyHalfDistanceKm() {
+    return (flyby.durationS / 2) * model.velocityKmS;
+  }
+
+  function currentGeometryHalfWidthKm() {
+    return Math.ceil(Math.max(
+      model.spreadKm,
+      flybyHalfDistanceKm(),
+      Math.abs(selectedFoldingPoint?.xKm || 0)
+    ) / 10) * 10;
+  }
+
+  function currentFastTimeDepthMaxKm() {
+    const halfDistanceKm = flybyHalfDistanceKm();
+    const selectedXKm = selectedFoldingPoint?.xKm || 0;
+    const maxSurfaceDxKm = Math.max(
+      Math.abs(selectedXKm - (-halfDistanceKm)),
+      Math.abs(selectedXKm - halfDistanceKm)
+    );
+    const maxSurfaceDepthKm = (Math.hypot(model.altitudeKm, maxSurfaceDxKm) - model.altitudeKm) / model.iceIndex;
+    const targetOpticalHeightKm = model.altitudeKm + model.iceIndex * model.targetDepthKm;
+    const maxTargetDepthKm = (Math.hypot(targetOpticalHeightKm, halfDistanceKm) - model.altitudeKm) / model.iceIndex;
+    return Math.ceil(Math.max(12, model.targetDepthKm, maxSurfaceDepthKm, maxTargetDepthKm) + 1);
+  }
+
   function apparentDepthForDopplerHz(dopplerHz) {
     const sinTheta = Math.abs(dopplerHz) * wavelengthM / (2 * model.velocityKmS * 1000);
     if (sinTheta <= 0 || sinTheta >= 1) return null;
@@ -316,9 +341,10 @@
     const height = 350;
     const margin = { left: 68, right: 25, top: 50, bottom: 42 };
     const depthMinKm = 0;
-    const depthMaxKm = 12;
+    const depthMaxKm = currentFastTimeDepthMaxKm();
     const sy = (value) => margin.top + ((value - depthMinKm) / (depthMaxKm - depthMinKm)) * (height - margin.top - margin.bottom);
     const clutterVisible = movingState.surfaceApparentDepthKm >= depthMinKm && movingState.surfaceApparentDepthKm <= depthMaxKm;
+    const targetApparentDepthKm = movingState.targetApparentDepthKm;
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Selected clutter apparent depth at fixed PRF while the aircraft moves through time">
       <defs><linearGradient id="blur-block" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b3d3f" stop-opacity=".10"></stop><stop offset=".5" stop-color="#9b3d3f" stop-opacity="${movingState.overlapsTarget ? '.50' : '.30'}"></stop><stop offset="1" stop-color="#9b3d3f" stop-opacity=".10"></stop></linearGradient></defs>`;
 
@@ -331,9 +357,9 @@
       svg += `<text class="blur-label" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${fmt(value, 1)}</text>`;
     }
     svg += `<line class="blur-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
-    svg += `<rect class="blur-target-window" x="${margin.left}" y="${sy(model.targetDepthKm - model.depthToleranceKm)}" width="${width - margin.left - margin.right}" height="${sy(model.targetDepthKm + model.depthToleranceKm) - sy(model.targetDepthKm - model.depthToleranceKm)}"></rect>`;
-    svg += `<line class="blur-target-depth" x1="${margin.left}" y1="${sy(model.targetDepthKm)}" x2="${width - margin.right}" y2="${sy(model.targetDepthKm)}"></line>`;
-    svg += `<text class="blur-title-text" x="${width - margin.right}" y="${sy(model.targetDepthKm) - 7}" text-anchor="end">target ${fmt(model.targetDepthKm, 2)} km ± ${fmt(model.depthToleranceKm, 2)} km</text>`;
+    svg += `<rect class="blur-target-window" x="${margin.left}" y="${sy(targetApparentDepthKm - model.depthToleranceKm)}" width="${width - margin.left - margin.right}" height="${sy(targetApparentDepthKm + model.depthToleranceKm) - sy(targetApparentDepthKm - model.depthToleranceKm)}"></rect>`;
+    svg += `<line class="blur-target-depth" x1="${margin.left}" y1="${sy(targetApparentDepthKm)}" x2="${width - margin.right}" y2="${sy(targetApparentDepthKm)}"></line>`;
+    svg += `<text class="blur-title-text" x="${width - margin.right}" y="${sy(targetApparentDepthKm) - 7}" text-anchor="end">target apparent echo ${fmt(targetApparentDepthKm, 2)} km ± ${fmt(model.depthToleranceKm, 2)} km</text>`;
 
     if (clutterVisible) {
       const clutterTop = sy(movingState.surfaceApparentDepthKm - model.depthToleranceKm);
@@ -342,7 +368,7 @@
       svg += `<line class="blur-layer-edge" x1="${margin.left}" y1="${sy(movingState.surfaceApparentDepthKm)}" x2="${width - margin.right}" y2="${sy(movingState.surfaceApparentDepthKm)}"></line>`;
       svg += `<text class="blur-title-text" x="${margin.left + 10}" y="${clutterTop - 8}">surface clutter echo ${fmt(movingState.surfaceApparentDepthKm, 2)} km</text>`;
     } else {
-      svg += `<text class="blur-title-text" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${margin.top + 35}" text-anchor="middle">surface clutter echo is outside the 0-12 km view</text>`;
+      svg += `<text class="blur-title-text" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${margin.top + 35}" text-anchor="middle">surface clutter echo is outside the current depth view</text>`;
     }
 
     svg += `<text class="blur-title-text" transform="translate(17 ${margin.top + (height - margin.top - margin.bottom) / 2}) rotate(-90)" text-anchor="middle">apparent depth (km, downward)</text>`;
@@ -1301,10 +1327,11 @@
     const left = 64;
     const right = 38;
     const targetDepthRangeKm = 12;
-    const sx = (xKm) => left + ((xKm + model.spreadKm) / (2 * model.spreadKm)) * (width - left - right);
+    const geometryHalfWidthKm = currentGeometryHalfWidthKm();
+    const sx = (xKm) => left + ((xKm + geometryHalfWidthKm) / (2 * geometryHalfWidthKm)) * (width - left - right);
     const targetX = sx(0);
     const aircraftY = 34;
-    const aircraftX = Math.max(left + 22, Math.min(width - right - 22, sx(movingState.planeXKm)));
+    const aircraftX = sx(movingState.planeXKm);
     const aircraftLabelAnchor = aircraftX > width - right - 135 ? 'end' : 'start';
     const aircraftLabelX = aircraftLabelAnchor === 'end' ? aircraftX - 26 : aircraftX + 27;
     const depthToY = (depthKm) => surfaceY + (depthKm / targetDepthRangeKm) * 145;
@@ -1340,7 +1367,11 @@
     points.forEach((point) => {
       const isFoldingPoint = foldingIndexes.has(point.index);
       const css = isFoldingPoint ? (targetOverlap ? 'overlap' : 'closest') : '';
-      svg += `<circle class="geometry-surface-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceY}" r="${isFoldingPoint ? 8 : 6}"><title>Clutter ${point.index + 1}: aliased Doppler ${fmt(point.aliasedDopplerHz, 1)} Hz</title></circle>`;
+      const currentDxKm = point.xKm - movingState.planeXKm;
+      const currentRangeKm = Math.hypot(model.altitudeKm, currentDxKm);
+      const currentDopplerHz = (2 * model.velocityKmS * 1000 / wavelengthM) * (currentDxKm / currentRangeKm);
+      const currentAliasHz = alias(currentDopplerHz, effectivePrfHz);
+      svg += `<circle class="geometry-surface-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceY}" r="${isFoldingPoint ? 8 : 6}"><title>Clutter ${point.index + 1}: current aliased Doppler ${fmt(currentAliasHz, 1)} Hz</title></circle>`;
     });
     svg += `<rect class="geometry-target ${targetOverlap ? 'overlap' : ''}" x="${targetX - 8}" y="${targetY - 8}" width="16" height="16" transform="rotate(45 ${targetX} ${targetY})"><title>Single fixed subsurface target at ${fmt(model.targetDepthKm, 2)} km</title></rect>`;
     if (clutterDepthVisible) {
