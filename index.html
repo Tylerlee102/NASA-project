@@ -4,39 +4,25 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Doppler Aliasing Lab</title>
-    <link rel="stylesheet" href="styles.css?v=spice-live-data-20260715">
+    <link rel="stylesheet" href="styles.css?v=collapsible-rail-20260715">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=frame-observer-fix2-20260714"></script>
+    <script defer src="app.js?v=collapsible-rail-20260715"></script>
   </head>
   <body>
     <div class="site-frame">
-      <aside class="site-rail" aria-label="Project dossier">
+      <button id="rail-toggle-button" class="rail-toggle-button" type="button" aria-controls="site-rail" aria-expanded="true">Hide side</button>
+      <aside id="site-rail" class="site-rail" aria-label="Project dossier">
         <div class="rail-sticky" id="site-rail-content">
           <p class="eyebrow">NASA project</p>
           <h1>Europa Doppler Aliasing Lab</h1>
-          <p class="lead">An interactive view of how surface clutter folds into a fixed subsurface target as the effective Doppler sampling PRF changes.</p>
           <div class="hero-actions" aria-label="Project actions">
             <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
             <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run SPICE-reference flyby</a>
             <a class="secondary-link" href="?page=radargram-lab" data-tab-jump="radargram-lab">Compare radargram PRFs</a>
             <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
           </div>
-          <dl class="dossier-meta" aria-label="Project summary">
-            <div>
-              <dt>Core question</dt>
-              <dd>Can a bright deep echo be trusted as the ice-ocean boundary?</dd>
-            </div>
-            <div>
-              <dt>Model type</dt>
-              <dd>Browser-side sensitivity simulation</dd>
-            </div>
-            <div>
-              <dt>Claim boundary</dt>
-              <dd>Illustrative, not mission-validated</dd>
-            </div>
-          </dl>
           <details class="section-menu" open>
             <summary>Section pages</summary>
             <nav class="tabs" aria-label="Section pages">
@@ -65,7 +51,7 @@
       <main class="content-shell">
       <section id="aliasing-lab" class="page-section is-active embedded-lab-section">
         <div class="aliasing-embed-shell">
-          <iframe id="aliasing-frame" class="aliasing-frame" src="aliasing.html?v=time-bins-20260715" title="Interactive Doppler aliasing simulator" loading="eager" scrolling="no"></iframe>
+          <iframe id="aliasing-frame" class="aliasing-frame" src="aliasing.html?v=forward-playback-20260715" title="Interactive Doppler aliasing simulator" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 
