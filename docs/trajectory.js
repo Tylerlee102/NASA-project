@@ -18,6 +18,7 @@
   const cilixValue = document.getElementById('cilix-value');
   const status = document.getElementById('trajectory-status');
   const sourceStatus = document.getElementById('source-status');
+  const e19DataPlot = document.getElementById('e19-data-plot');
   const geometryPlot = document.getElementById('geometry-plot');
   const foldPlot = document.getElementById('fold-plot');
   const tracePlot = document.getElementById('trace-plot');
@@ -145,6 +146,100 @@
   function rowsInWindow(windowInfo) {
     if (!windowInfo) return [];
     return samples.filter((row) => row.offsetS >= windowInfo.startOffsetS && row.offsetS <= windowInfo.endOffsetS);
+  }
+
+  function renderE19DataPlot(row) {
+    if (!e19DataPlot) return;
+    const width = 860;
+    const height = 440;
+    const margin = { left: 78, right: 34, top: 42, bottom: 48 };
+    const laneHeight = 82;
+    const laneGap = 28;
+    const lanes = [
+      {
+        key: 'altitudeKm',
+        label: 'Altitude',
+        unit: 'km',
+        min: 0,
+        max: 360,
+        top: margin.top,
+        className: 'data-altitude-line',
+        value: (entry) => `${fmt(entry.altitudeKm, 1)} km`
+      },
+      {
+        key: 'incidenceDeg',
+        label: 'Incidence',
+        unit: 'deg',
+        min: 0,
+        max: 80,
+        top: margin.top + laneHeight + laneGap,
+        className: 'data-incidence-line',
+        value: (entry) => `${fmt(entry.incidenceDeg, 1)} deg`
+      },
+      {
+        key: 'distanceToCilixKm',
+        label: 'Cilix distance',
+        unit: 'km',
+        min: 0,
+        max: 1600,
+        top: margin.top + 2 * (laneHeight + laneGap),
+        className: 'data-distance-line',
+        value: (entry) => `${fmt(entry.distanceToCilixKm, 1)} km`
+      }
+    ];
+    const plotLeft = margin.left;
+    const plotRight = width - margin.right;
+    const plotBottom = height - margin.bottom;
+    const sx = (value) => margin.left + ((value - sampleStart) / (sampleEnd - sampleStart)) * (plotRight - margin.left);
+    const sy = (value, lane) => lane.top + ((lane.max - value) / (lane.max - lane.min)) * laneHeight;
+    const pathForLane = (lane) => samples.map((entry, index) => (
+      `${index ? 'L' : 'M'} ${sx(entry.offsetS).toFixed(2)} ${sy(entry[lane.key], lane).toFixed(2)}`
+    )).join(' ');
+    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="E19 flyby sampled data plotted against time">`];
+
+    if (coreWindow) {
+      const x0 = sx(coreWindow.startOffsetS);
+      const x1 = sx(coreWindow.endOffsetS);
+      svg.push(`<rect class="reconable-window" x="${x0}" y="${margin.top - 16}" width="${x1 - x0}" height="${plotBottom - margin.top + 16}"></rect>`);
+      svg.push(`<text class="label" x="${x0 + 6}" y="${margin.top - 22}">core window</text>`);
+    }
+
+    [-240, -120, 0, 120, 240].forEach((tick) => {
+      const x = sx(tick);
+      svg.push(`<line class="grid" x1="${x}" y1="${margin.top - 16}" x2="${x}" y2="${plotBottom}"></line>`);
+      svg.push(`<text class="label" x="${x}" y="${height - 19}" text-anchor="middle">${signed(tick, 0)}</text>`);
+    });
+
+    svg.push(`<line class="closest-approach-line" x1="${sx(0)}" y1="${margin.top - 16}" x2="${sx(0)}" y2="${plotBottom}"></line>`);
+    svg.push(`<text class="label-strong" x="${sx(0) + 7}" y="${margin.top - 3}">closest approach</text>`);
+
+    const cilixNearest = data.flyby.cilixClosestSample;
+    svg.push(`<line class="nearest-marker-line" x1="${sx(cilixNearest.offsetS)}" y1="${margin.top - 16}" x2="${sx(cilixNearest.offsetS)}" y2="${plotBottom}"></line>`);
+    svg.push(`<text class="label" x="${sx(cilixNearest.offsetS) + 7}" y="${plotBottom - 8}">nearest Cilix marker</text>`);
+
+    lanes.forEach((lane) => {
+      const y0 = sy(lane.min, lane);
+      const yMid = sy((lane.min + lane.max) / 2, lane);
+      const y1 = sy(lane.max, lane);
+      [y1, yMid, y0].forEach((y) => {
+        svg.push(`<line class="grid" x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}"></line>`);
+      });
+      svg.push(`<line class="axis" x1="${plotLeft}" y1="${y0}" x2="${plotRight}" y2="${y0}"></line>`);
+      svg.push(`<text class="data-lane-label" x="${plotLeft - 12}" y="${lane.top + laneHeight / 2 - 8}" text-anchor="end">${lane.label}</text>`);
+      svg.push(`<text class="label" x="${plotLeft - 12}" y="${lane.top + laneHeight / 2 + 10}" text-anchor="end">${lane.unit}</text>`);
+      svg.push(`<text class="label" x="${plotLeft - 9}" y="${y1 + 4}" text-anchor="end">${fmt(lane.max, 0)}</text>`);
+      svg.push(`<text class="label" x="${plotLeft - 9}" y="${y0 + 4}" text-anchor="end">${fmt(lane.min, 0)}</text>`);
+      svg.push(`<path class="${lane.className}" d="${pathForLane(lane)}"></path>`);
+      svg.push(`<circle class="satellite" cx="${sx(row.offsetS)}" cy="${sy(row[lane.key], lane)}" r="5.5"></circle>`);
+      svg.push(`<text class="label-strong" x="${plotRight}" y="${lane.top + 12}" text-anchor="end">${lane.value(row)}</text>`);
+    });
+
+    const xNow = sx(row.offsetS);
+    svg.push(`<line class="current-guide" x1="${xNow}" y1="${margin.top - 16}" x2="${xNow}" y2="${plotBottom}"></line>`);
+    svg.push(`<text class="label-strong" x="${Math.min(plotRight - 64, xNow + 8)}" y="${height - 19}">t ${signed(row.offsetS, 0)} s</text>`);
+    svg.push(`<text class="label-strong" x="${plotLeft + (plotRight - plotLeft) / 2}" y="${height - 7}" text-anchor="middle">time from E19 closest approach (s)</text>`);
+    svg.push('</svg>');
+    e19DataPlot.innerHTML = svg.join('');
   }
 
   function renderGroundTrack(row) {
@@ -357,6 +452,7 @@
   function draw() {
     const row = interpolateRow(Number(slider.value));
     updateReadouts(row);
+    renderE19DataPlot(row);
     renderGroundTrack(row);
     renderCriteria(row);
     renderMotion(row);

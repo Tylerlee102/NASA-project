@@ -11,9 +11,9 @@
         window.location.replace(fullSiteUrl.href);
       }
     </script>
-    <link rel="stylesheet" href="trajectory.css?v=e19-cilix-20260715">
+    <link rel="stylesheet" href="trajectory.css?v=e19-data-plot-20260716">
     <script defer src="data/e19-flyby.js?v=e19-cilix-20260715"></script>
-    <script defer src="trajectory.js?v=e19-cilix-20260715"></script>
+    <script defer src="trajectory.js?v=e19-data-plot-20260716"></script>
   </head>
   <body>
     <main class="trajectory-page">
@@ -43,9 +43,20 @@
       </section>
 
       <section class="trajectory-grid" aria-label="E19 trajectory graphs">
-        <article class="graph-panel">
+        <article class="graph-panel graph-panel-wide">
           <div class="graph-heading">
             <p class="graph-number">1</p>
+            <div>
+              <h2>E19-only sampled flyby data</h2>
+              <p>This graph plots the downloaded E19 trajectory samples only: altitude, incidence angle, and distance to the Cilix marker through the flyby window.</p>
+            </div>
+          </div>
+          <div id="e19-data-plot" class="plot e19-data-plot" aria-live="polite"></div>
+        </article>
+
+        <article class="graph-panel">
+          <div class="graph-heading">
+            <p class="graph-number">2</p>
             <div>
               <h2>E19 groundtrack over the Cilix region</h2>
               <p>The yellow segment is the source-derived reconable window; the crater marker is only a location reference, not a 3D elevation patch.</p>
@@ -56,7 +67,7 @@
 
         <article class="graph-panel">
           <div class="graph-heading">
-            <p class="graph-number">2</p>
+            <p class="graph-number">3</p>
             <div>
               <h2>Altitude and illumination criteria</h2>
               <p>The paper flags reconable data where the flyby is low enough and the surface illumination is in the usable incidence range.</p>
@@ -67,7 +78,7 @@
 
         <article class="graph-panel">
           <div class="graph-heading">
-            <p class="graph-number">3</p>
+            <p class="graph-number">4</p>
             <div>
               <h2>Local flyby motion</h2>
               <p>Altitude is taken from the NAIF reference trajectory while the x-axis follows surface groundtrack distance from closest approach.</p>
@@ -78,7 +89,7 @@
 
         <article class="graph-panel">
           <div class="graph-heading">
-            <p class="graph-number">4</p>
+            <p class="graph-number">5</p>
             <div>
               <h2>Cilix look geometry</h2>
               <p>This is a flat-surface line-of-sight sketch to the Cilix marker, useful for motion and range-rate only.</p>
@@ -89,7 +100,7 @@
 
         <article class="graph-panel graph-panel-wide">
           <div class="graph-heading">
-            <p class="graph-number">5</p>
+            <p class="graph-number">6</p>
             <div>
               <h2>Source-backed sample table</h2>
               <p>Key samples from the downloaded reference path: Cilix-nearest point, reconable window bounds, and closest approach.</p>
