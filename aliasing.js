@@ -21,6 +21,7 @@
   };
 
   const prfSlider = document.getElementById('effective-prf-slider');
+  const prfPlayButton = document.getElementById('prf-play-button');
   const speedSlider = document.getElementById('model-speed-slider');
   const altitudeSlider = document.getElementById('model-altitude-slider');
   const depthSlider = document.getElementById('model-depth-slider');
@@ -52,6 +53,53 @@
     const cleaned = Math.abs(value) < 0.05 ? 0 : value;
     return `${cleaned > 0 ? '+' : ''}${fmt(cleaned, digits)}`;
   };
+
+  function setPlaybackActive(isActive) {
+    if (!prfPlayButton) return;
+    prfPlayButton.textContent = isActive ? 'Pause' : 'Play';
+    prfPlayButton.classList.toggle('is-playing', isActive);
+    prfPlayButton.setAttribute('aria-pressed', String(isActive));
+  }
+
+  function stopPlayback() {
+    if (playbackFrameId !== null) {
+      cancelAnimationFrame(playbackFrameId);
+      playbackFrameId = null;
+    }
+    lastPlaybackTime = null;
+    setPlaybackActive(false);
+  }
+
+  function playbackStep(timestamp) {
+    if (lastPlaybackTime === null) lastPlaybackTime = timestamp;
+    const elapsedSeconds = Math.min(0.05, (timestamp - lastPlaybackTime) / 1000);
+    lastPlaybackTime = timestamp;
+
+    const prfMin = Number(prfSlider.min);
+    const prfMax = Number(prfSlider.max);
+    const sweepHzPerSecond = Math.max(8, (prfMax - prfMin) / 4.8);
+    let nextPrf = Number(prfSlider.value) + playbackDirection * sweepHzPerSecond * elapsedSeconds;
+
+    if (nextPrf >= prfMax) {
+      nextPrf = prfMax;
+      playbackDirection = -1;
+    } else if (nextPrf <= prfMin) {
+      nextPrf = prfMin;
+      playbackDirection = 1;
+    }
+
+    prfSlider.value = nextPrf.toFixed(1);
+    draw(Number(prfSlider.value));
+    playbackFrameId = requestAnimationFrame(playbackStep);
+  }
+
+  function startPlayback() {
+    if (playbackFrameId !== null) return;
+    lastPlaybackTime = null;
+    setPlaybackActive(true);
+    playbackFrameId = requestAnimationFrame(playbackStep);
+  }
+
   let fixedPoints = [];
   let selectedFoldingPoint = null;
   let foldingIndexes = new Set();
@@ -62,6 +110,9 @@
   let safePrfMaxHz = 0;
   let selectedFoldPrfHz = 0;
   let foldDepthScaleKm = { min: 0, max: 1 };
+  let playbackFrameId = null;
+  let playbackDirection = 1;
+  let lastPlaybackTime = null;
 
   function updateModelControlOutputs() {
     const outputs = {
@@ -1107,62 +1158,75 @@
     const width = 560;
     const height = 350;
     const surfaceY = 138;
-    const satelliteX = width / 2;
-    const satelliteY = 34;
     const left = 64;
     const right = 38;
     const targetDepthRangeKm = 12;
     const sx = (xKm) => left + ((xKm + model.spreadKm) / (2 * model.spreadKm)) * (width - left - right);
+    const targetX = sx(0);
+    const aircraftY = 34;
+    const prfMin = Number(prfSlider.min);
+    const prfMax = Number(prfSlider.max);
+    const prfProgress = Math.max(0, Math.min(1, (effectivePrfHz - prfMin) / Math.max(1e-9, prfMax - prfMin)));
+    const aircraftMinX = left + 22;
+    const aircraftMaxX = width - right - 22;
+    const aircraftX = aircraftMinX + prfProgress * (aircraftMaxX - aircraftMinX);
+    const aircraftLabelAnchor = aircraftX > width - right - 135 ? 'end' : 'start';
+    const aircraftLabelX = aircraftLabelAnchor === 'end' ? aircraftX - 26 : aircraftX + 27;
     const depthToY = (depthKm) => surfaceY + (depthKm / targetDepthRangeKm) * 145;
     const targetY = depthToY(model.targetDepthKm);
     const foldIsVisible = Boolean(foldBand) && foldBand.minDepthKm <= targetDepthRangeKm && foldBand.maxDepthKm >= 0;
     const blurTopY = foldIsVisible ? depthToY(Math.max(0, foldBand.minDepthKm)) : null;
     const blurBottomY = foldIsVisible ? depthToY(Math.min(targetDepthRangeKm, foldBand.maxDepthKm)) : null;
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Fixed satellite above twelve fixed surface clutter points and one fixed subsurface target; the slider changes only effective sampling PRF">
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Moving plane over twelve fixed surface clutter points and one fixed subsurface target; the slider changes effective sampling PRF and folds clutter toward the target">
       <defs>
         <radialGradient id="target-blur"><stop offset="0" stop-color="#9b3d3f" stop-opacity=".44"></stop><stop offset=".45" stop-color="#d98473" stop-opacity=".16"></stop><stop offset="1" stop-color="#d98473" stop-opacity="0"></stop></radialGradient>
         <linearGradient id="fold-band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b3d3f" stop-opacity="0"></stop><stop offset=".5" stop-color="#9b3d3f" stop-opacity=".30"></stop><stop offset="1" stop-color="#9b3d3f" stop-opacity="0"></stop></linearGradient>
-        <marker id="velocity-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#17494d"></path></marker>
       </defs>`;
     svg += `<line class="geometry-surface" x1="${left}" y1="${surfaceY}" x2="${width - right}" y2="${surfaceY}"></line>`;
-    svg += `<line class="geometry-depth-guide" x1="${satelliteX}" y1="${surfaceY}" x2="${satelliteX}" y2="${targetY}"></line>`;
-    svg += `<line class="geometry-nadir" x1="${satelliteX}" y1="${satelliteY + 9}" x2="${satelliteX}" y2="${targetY - 10}"></line>`;
-    svg += `<line class="geometry-ray ${targetOverlap ? 'overlap' : ''}" x1="${satelliteX}" y1="${satelliteY + 9}" x2="${sx(foldingReturn.xKm)}" y2="${surfaceY - 7}"></line>`;
+    svg += `<line class="geometry-depth-guide" x1="${targetX}" y1="${surfaceY}" x2="${targetX}" y2="${targetY}"></line>`;
+    svg += `<line class="geometry-target-ray" x1="${aircraftX}" y1="${aircraftY + 10}" x2="${targetX}" y2="${targetY - 10}"></line>`;
+    svg += `<line class="geometry-ray ${targetOverlap ? 'overlap' : ''}" x1="${aircraftX}" y1="${aircraftY + 10}" x2="${sx(foldingReturn.xKm)}" y2="${surfaceY - 7}"></line>`;
     if (foldIsVisible) {
       svg += `<rect class="geometry-fold-band" x="${left}" y="${blurTopY}" width="${width - left - right}" height="${Math.max(1, blurBottomY - blurTopY)}"></rect>`;
       svg += `<line class="geometry-fold-line" x1="${left}" y1="${depthToY(foldBand.centerDepthKm)}" x2="${width - right}" y2="${depthToY(foldBand.centerDepthKm)}"></line>`;
     }
-    if (targetOverlap) svg += `<circle class="geometry-blur" cx="${satelliteX}" cy="${targetY}" r="56"></circle>`;
-    svg += `<circle class="geometry-satellite" cx="${satelliteX}" cy="${satelliteY}" r="8"></circle>`;
-    svg += `<line class="geometry-velocity" x1="${satelliteX + 12}" y1="${satelliteY}" x2="${satelliteX + 82}" y2="${satelliteY}" marker-end="url(#velocity-arrow)"></line>`;
-    svg += `<text class="geometry-value" x="${satelliteX + 18}" y="${satelliteY - 13}">satellite and geometry fixed</text>`;
+    if (targetOverlap) svg += `<circle class="geometry-blur" cx="${targetX}" cy="${targetY}" r="56"></circle>`;
+    svg += `<g class="geometry-plane" transform="translate(${aircraftX} ${aircraftY})">
+        <path class="geometry-plane-wing" d="M -3 -5 L 9 -25 L 15 -23 L 8 -4 Z"></path>
+        <path class="geometry-plane-wing" d="M -3 5 L 9 25 L 15 23 L 8 4 Z"></path>
+        <path class="geometry-plane-tail" d="M -15 -4 L -25 -15 L -20 -2 Z"></path>
+        <path class="geometry-plane-tail" d="M -15 4 L -25 15 L -20 2 Z"></path>
+        <path class="geometry-plane-body" d="M -22 0 C -12 -8 8 -8 23 0 C 8 8 -12 8 -22 0 Z"></path>
+        <circle class="geometry-plane-window" cx="10" cy="0" r="2.7"></circle>
+      </g>`;
+    svg += `<text class="geometry-value" x="${aircraftLabelX}" y="${aircraftY - 12}" text-anchor="${aircraftLabelAnchor}">moving plane</text>`;
     svg += `<text class="geometry-title" x="${left}" y="${surfaceY - 23}">surface clutter - 12 fixed points</text>`;
-    svg += `<text class="geometry-title" x="${satelliteX + 16}" y="${targetY + 33}">one fixed subsurface target</text>`;
+    svg += `<text class="geometry-title" x="${targetX + 16}" y="${targetY + 33}">one fixed subsurface target</text>`;
     points.forEach((point) => {
       const isFoldingPoint = foldingIndexes.has(point.index);
       const css = isFoldingPoint ? (targetOverlap ? 'overlap' : 'closest') : '';
       svg += `<circle class="geometry-surface-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceY}" r="${isFoldingPoint ? 8 : 6}"><title>Clutter ${point.index + 1}: aliased Doppler ${fmt(point.aliasedDopplerHz, 1)} Hz</title></circle>`;
     });
-    svg += `<rect class="geometry-target ${targetOverlap ? 'overlap' : ''}" x="${satelliteX - 8}" y="${targetY - 8}" width="16" height="16" transform="rotate(45 ${satelliteX} ${targetY})"><title>Single fixed subsurface target: 0 Hz at ${fmt(model.targetDepthKm, 2)} km</title></rect>`;
+    svg += `<rect class="geometry-target ${targetOverlap ? 'overlap' : ''}" x="${targetX - 8}" y="${targetY - 8}" width="16" height="16" transform="rotate(45 ${targetX} ${targetY})"><title>Single fixed subsurface target: 0 Hz at ${fmt(model.targetDepthKm, 2)} km</title></rect>`;
     if (foldIsVisible) {
       svg += `<text class="geometry-value" x="${left + 12}" y="${blurTopY - 8}">continuous fold order ${foldBand.order}: ${fmt(foldBand.minDepthKm, 2)}-${fmt(foldBand.maxDepthKm, 2)} km</text>`;
     } else {
       svg += `<text class="geometry-value" x="${left + 12}" y="${surfaceY + 24}">no zero-Doppler fold in the 0-12 km view</text>`;
     }
     if (targetOverlap) {
-      svg += `<text class="geometry-danger" x="${satelliteX}" y="${targetY + 56}" text-anchor="middle">CLUTTER / TARGET OVERLAP</text>`;
+      svg += `<text class="geometry-danger" x="${targetX}" y="${targetY + 56}" text-anchor="middle">CLUTTER / TARGET OVERLAP</text>`;
     }
-    svg += `<text class="geometry-label" x="${satelliteX + 16}" y="${(surfaceY + targetY) / 2}">target depth ${fmt(model.targetDepthKm, 2)} km</text>`;
+    svg += `<text class="geometry-label" x="${targetX + 16}" y="${(surfaceY + targetY) / 2}">target depth ${fmt(model.targetDepthKm, 2)} km</text>`;
     svg += '</svg>';
     plot.innerHTML = svg;
 
     renderFoldDepthBlock(effectivePrfHz, foldBand, targetOverlap);
-    renderLiveRadargram(effectivePrfHz, foldBand, targetOverlap);
-    renderReferenceRadargram();
     renderTraceCheck(foldingReturn, targetOverlap);
     renderFastTimeDopplerCheck(effectivePrfHz, foldingReturn, targetOverlap);
     if (!processingRendered) {
-      renderProcessingExperiment();
+      if (radargramPlot && fftPlot && decimatedFftPlot && reconstructionPlot) {
+        renderProcessingExperiment();
+      }
       processingRendered = true;
     }
     const listenWindowUs = targetEchoUs + SIMPLE_LISTEN_MARGIN_US;
@@ -1184,6 +1248,7 @@
 
   [speedSlider, altitudeSlider, depthSlider].filter(Boolean).forEach((input) => {
     input.addEventListener('input', () => {
+      stopPlayback();
       model.velocityKmS = Number(speedSlider.value);
       model.altitudeKm = Number(altitudeSlider.value);
       model.targetDepthKm = Number(depthSlider.value);
@@ -1193,6 +1258,15 @@
     });
   });
   refreshDerivedModel(true);
-  prfSlider.addEventListener('input', () => draw(Number(prfSlider.value)));
+  if (prfPlayButton) {
+    prfPlayButton.addEventListener('click', () => {
+      if (playbackFrameId === null) startPlayback();
+      else stopPlayback();
+    });
+  }
+  prfSlider.addEventListener('input', () => {
+    stopPlayback();
+    draw(Number(prfSlider.value));
+  });
   draw(Number(prfSlider.value));
 })();
