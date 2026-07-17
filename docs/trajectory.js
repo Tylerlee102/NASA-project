@@ -16,6 +16,7 @@
   const speedValue = document.getElementById('speed-value');
   const incidenceValue = document.getElementById('incidence-value');
   const cilixValue = document.getElementById('cilix-value');
+  const aliasRiskValue = document.getElementById('alias-risk-value');
   const status = document.getElementById('trajectory-status');
   const e19DataPlot = document.getElementById('e19-data-plot');
   const geometryPlot = document.getElementById('geometry-plot');
@@ -45,6 +46,54 @@
   let lastPlaybackTimestamp = null;
   let lastRenderedSecond = null;
   const playbackRate = 18;
+  const aliasAnalysis = {
+    source: 'MATLAB R2026a',
+    prfFloorHz: 3416.36346301951,
+    broadAliasSector: {
+      startS: -99.5,
+      endS: 144,
+      label: '3000 Hz still aliases'
+    },
+    zeroFoldSectors: [
+      {
+        prfHz: 737.7,
+        startS: -104,
+        endS: -102.5,
+        centerS: -103.5,
+        aliasHz: -2.02209045164466,
+        foldOrder: -2,
+        label: '737.7 Hz fold'
+      },
+      {
+        prfHz: 737.7,
+        startS: 152,
+        endS: 155.5,
+        centerS: 153.5,
+        aliasHz: -0.821259708891489,
+        foldOrder: -2,
+        label: 'strongest 737.7 Hz fold',
+        strongest: true
+      },
+      {
+        prfHz: 1500,
+        startS: -101.5,
+        endS: -98,
+        centerS: -99.5,
+        aliasHz: -1.63884376303804,
+        foldOrder: -1,
+        label: '1500 Hz fold'
+      },
+      {
+        prfHz: 1500,
+        startS: 140,
+        endS: 148,
+        centerS: 144,
+        aliasHz: -0.237874563227706,
+        foldOrder: -1,
+        label: 'long 1500 Hz fold'
+      }
+    ]
+  };
 
   slider.min = sampleStart;
   slider.max = sampleEnd;
@@ -169,6 +218,50 @@
     return samples.filter((row) => row.offsetS >= windowInfo.startOffsetS && row.offsetS <= windowInfo.endOffsetS);
   }
 
+  function rowsInSector(sector) {
+    const rows = [
+      interpolateRow(sector.startS),
+      ...samples.filter((entry) => entry.offsetS > sector.startS && entry.offsetS < sector.endS),
+      interpolateRow(sector.endS)
+    ];
+    return rows.sort((a, b) => a.offsetS - b.offsetS);
+  }
+
+  function activePrfSector(offsetS) {
+    const fold = aliasAnalysis.zeroFoldSectors.find((sector) => (
+      offsetS >= sector.startS && offsetS <= sector.endS
+    ));
+    if (fold) return { ...fold, kind: 'fold' };
+    const broad = aliasAnalysis.broadAliasSector;
+    if (offsetS >= broad.startS && offsetS <= broad.endS) {
+      return { ...broad, kind: 'alias' };
+    }
+    return null;
+  }
+
+  function renderAliasBands(svg, sx, y, height, options = {}) {
+    const { showBroad = true, labelStrongest = false } = options;
+    if (showBroad) {
+      const broad = aliasAnalysis.broadAliasSector;
+      const x0 = sx(broad.startS);
+      const x1 = sx(broad.endS);
+      svg.push(`<rect class="alias-sector is-broad" x="${x0}" y="${y}" width="${Math.max(1, x1 - x0)}" height="${height}"></rect>`);
+      if (options.labelBroad) {
+        svg.push(`<text class="label-warning" x="${Math.min(x1 - 104, x0 + 6)}" y="${y + 14}">${broad.label}</text>`);
+      }
+    }
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      const x0 = sx(sector.startS);
+      const x1 = sx(sector.endS);
+      const className = `alias-sector${sector.strongest ? ' is-strongest' : ''}`;
+      svg.push(`<rect class="${className}" x="${x0}" y="${y}" width="${Math.max(2, x1 - x0)}" height="${height}"></rect>`);
+      svg.push(`<line class="alias-sector-center" x1="${sx(sector.centerS)}" y1="${y}" x2="${sx(sector.centerS)}" y2="${y + height}"></line>`);
+      if (sector.strongest && labelStrongest) {
+        svg.push(`<text class="label-danger" x="${Math.max(78, sx(sector.centerS) - 118)}" y="${y + 30}">${sector.label}</text>`);
+      }
+    });
+  }
+
   function renderE19DataPlot(row) {
     if (!e19DataPlot) return;
     const width = 860;
@@ -224,6 +317,8 @@
       svg.push(`<rect class="reconable-window" x="${x0}" y="${margin.top - 16}" width="${x1 - x0}" height="${plotBottom - margin.top + 16}"></rect>`);
       svg.push(`<text class="label" x="${x0 + 6}" y="${margin.top - 22}">core window</text>`);
     }
+
+    renderAliasBands(svg, sx, margin.top - 16, plotBottom - margin.top + 16);
 
     [-240, -120, 0, 120, 240].forEach((tick) => {
       const x = sx(tick);
@@ -284,6 +379,10 @@
       yTitle: 'planetocentric latitude (deg)'
     });
     svg.push(`<path class="groundtrack-line" d="${pathFor(samples, scales, 'lonEastDeg', 'latDeg')}"></path>`);
+    svg.push(`<path class="groundtrack-alias-broad" d="${pathFor(rowsInSector(aliasAnalysis.broadAliasSector), scales, 'lonEastDeg', 'latDeg')}"></path>`);
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      svg.push(`<path class="groundtrack-alias-sector${sector.strongest ? ' is-strongest' : ''}" d="${pathFor(rowsInSector(sector), scales, 'lonEastDeg', 'latDeg')}"></path>`);
+    });
     if (coreRows.length) {
       svg.push(`<path class="groundtrack-reconable" d="${pathFor(coreRows, scales, 'lonEastDeg', 'latDeg')}"></path>`);
     }
@@ -329,6 +428,7 @@
       const x1 = sx(coreWindow.endOffsetS);
       svg.push(`<rect class="reconable-window" x="${x0}" y="${margin.top}" width="${x1 - x0}" height="${height - margin.top - margin.bottom}"></rect>`);
     }
+    renderAliasBands(svg, sx, margin.top, height - margin.top - margin.bottom);
     svg.push(`<path class="altitude-line" d="${samples.map((entry, index) => `${index ? 'L' : 'M'} ${sx(entry.offsetS).toFixed(2)} ${syAlt(entry.altitudeKm).toFixed(2)}`).join(' ')}"></path>`);
     svg.push(`<path class="incidence-line" d="${samples.map((entry, index) => `${index ? 'L' : 'M'} ${sx(entry.offsetS).toFixed(2)} ${syInc(entry.incidenceDeg).toFixed(2)}`).join(' ')}"></path>`);
     const xNow = sx(row.offsetS);
@@ -361,6 +461,10 @@
     });
     svg.push(`<line class="surface" x1="${margin.left}" y1="${scales.y(0)}" x2="${width - margin.right}" y2="${scales.y(0)}"></line>`);
     svg.push(`<path class="trajectory-line" fill="none" d="${pathFor(samples, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+    svg.push(`<path class="trajectory-alias-broad" d="${pathFor(rowsInSector(aliasAnalysis.broadAliasSector), scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      svg.push(`<path class="trajectory-alias-sector${sector.strongest ? ' is-strongest' : ''}" d="${pathFor(rowsInSector(sector), scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+    });
     if (coreRows.length) {
       svg.push(`<path class="trajectory-reconable" d="${pathFor(coreRows, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
     }
@@ -389,8 +493,20 @@
       xTitle: 'time from closest approach (s)',
       yTitle: '60 MHz two-way Doppler (Hz)'
     });
+    renderAliasBands(svg, scales.x, margin.top, height - margin.top - margin.bottom, {
+      labelBroad: true,
+      labelStrongest: true
+    });
+    const lowPrfNyquistHz = aliasAnalysis.zeroFoldSectors[0].prfHz / 2;
+    const bandTop = scales.y(lowPrfNyquistHz);
+    const bandBottom = scales.y(-lowPrfNyquistHz);
+    svg.push(`<rect class="alias-sampled-band" x="${margin.left}" y="${bandTop}" width="${width - margin.left - margin.right}" height="${bandBottom - bandTop}"></rect>`);
     svg.push(`<line class="criterion-line" x1="${margin.left}" y1="${scales.y(0)}" x2="${width - margin.right}" y2="${scales.y(0)}"></line>`);
     svg.push(`<path class="look-range-line" d="${linePath(lookRows, scales.x, scales.y, (entry) => ({ x: entry.offsetS, y: entry.dopplerHz }))}"></path>`);
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      const sectorLook = derivedLook(interpolateRow(sector.centerS));
+      svg.push(`<circle class="alias-sector-dot${sector.strongest ? ' is-strongest' : ''}" cx="${scales.x(sector.centerS)}" cy="${scales.y(sectorLook.dopplerHz)}" r="${sector.strongest ? 6 : 4.8}"></circle>`);
+    });
     svg.push(`<line class="current-guide" x1="${scales.x(row.offsetS)}" y1="${margin.top}" x2="${scales.x(row.offsetS)}" y2="${height - margin.bottom}"></line>`);
     svg.push(satelliteIcon(scales.x(row.offsetS), scales.y(look.dopplerHz), 9));
     svg.push(`<rect class="closest-marker" x="${scales.x(cilixNearest.offsetS) - 5}" y="${scales.y(nearestLook.dopplerHz) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(cilixNearest.offsetS)} ${scales.y(nearestLook.dopplerHz)})"></rect>`);
@@ -427,11 +543,13 @@
       rows.push(sampleRow('Reconable start', coreStart));
       rows.push(sampleRow('Reconable end', coreEnd));
     }
+    const strongestFold = aliasAnalysis.zeroFoldSectors.find((sector) => sector.strongest);
     tablePlot.innerHTML = `
       <div class="source-summary">
         <div><strong>${escapeHtml(data.flyby.name)}</strong><span>${escapeHtml(data.flyby.rank)}</span></div>
         <div><strong>${fmt(coreWindow?.groundLengthKm || 0, 1)} km</strong><span>core reconable window in this sample</span></div>
-        <div><strong>${fmt(cilixNearest.distanceToCilixKm, 1)} km</strong><span>closest sampled distance to Cilix marker</span></div>
+        <div><strong>${fmt(aliasAnalysis.prfFloorHz, 1)} Hz</strong><span>MATLAB no-alias PRF floor</span></div>
+        <div><strong>${signed(strongestFold.centerS, 1)} s</strong><span>strongest ${fmt(strongestFold.prfHz, 1)} Hz fold sector</span></div>
       </div>
       <div class="table-wrap">
         <table class="sample-table">
@@ -460,6 +578,19 @@
     speedValue.textContent = `${fmt(row.speedKmS, 3)} km/s`;
     incidenceValue.textContent = `${fmt(row.incidenceDeg, 1)} deg`;
     cilixValue.textContent = `${fmt(row.distanceToCilixKm, 1)} km`;
+    const activeSector = activePrfSector(row.offsetS);
+    if (aliasRiskValue) {
+      aliasRiskValue.className = '';
+      if (activeSector?.kind === 'fold') {
+        aliasRiskValue.textContent = `${fmt(activeSector.prfHz, 1)} Hz fold`;
+        aliasRiskValue.classList.add('is-risk-hot');
+      } else if (activeSector?.kind === 'alias') {
+        aliasRiskValue.textContent = '3000 Hz aliases';
+        aliasRiskValue.classList.add('is-risk-warm');
+      } else {
+        aliasRiskValue.textContent = 'lower';
+      }
+    }
     status.className = `trajectory-status${row.reconableCore ? '' : row.reconableMargin ? ' is-margin' : ' is-overlap'}`;
     if (row.reconableCore) {
       status.textContent = `Core window: ${signed(row.offsetS, 0)} s`;
