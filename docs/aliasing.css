@@ -36,7 +36,7 @@
 .folding-dot { width: 10px; height: 10px; border-radius: 999px; background: #9a907f; box-shadow: 0 0 0 4px rgba(154, 144, 127, .14); }
 .folding-indicator.is-overlap { border-color: rgba(155, 61, 63, .45); color: var(--danger); }
 .folding-indicator.is-overlap .folding-dot { background: var(--danger); box-shadow: 0 0 0 5px rgba(155, 61, 63, .18), 0 0 13px rgba(155, 61, 63, .55); }
-.lab-givens { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; margin: 12px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.lab-givens { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 12px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .lab-givens div { min-width: 0; padding: 7px 10px 8px 0; }
 .lab-givens dt { color: var(--muted); font-size: .64rem; font-weight: 800; text-transform: uppercase; }
 .lab-givens dd { margin: 1px 0 0; color: var(--ink-soft); font-size: .78rem; font-weight: 750; }
@@ -52,7 +52,7 @@
 .map-heading { min-height: 58px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .map-heading h2, .map-heading h3 { max-width: 650px; margin: 0; font-size: 1.9rem; }
 .map-heading p { margin: 7px 0 0; color: var(--muted); font-size: .84rem; }
-.model-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
+.model-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
 .model-control { display: grid; gap: 3px; min-width: 0; color: var(--ink-soft); font-size: .68rem; font-weight: 800; }
 .model-control span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .model-control output { color: var(--accent-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -68,12 +68,16 @@
 .checks-heading > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: .88rem; }
 .checks-grid, .processing-grid { margin-top: 14px; }
 .processing-caveat { max-width: 740px; margin: 8px 0 0; color: var(--muted); font-size: .84rem; line-height: 1.45; }
+.multi-clutter-control { display: grid; grid-template-columns: minmax(220px, 340px) minmax(0, 1fr); align-items: end; gap: 16px; margin-top: 14px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); }
+.multi-clutter-status { margin: 0; color: var(--muted); font-size: .82rem; font-weight: 750; line-height: 1.35; }
+.multi-clutter-status.is-overlap { color: var(--danger); font-weight: 850; }
 
 .geometry-surface { stroke: #6f6a60; stroke-width: 2.2; }
 .geometry-depth-guide { stroke: #d7ccbb; stroke-width: 1; stroke-dasharray: 5 5; }
 .geometry-nadir { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 5; }
 .geometry-ray { stroke: #b88734; stroke-width: 1.6; stroke-dasharray: 5 4; opacity: .9; }
 .geometry-ray.overlap { stroke: var(--danger); stroke-width: 2.5; stroke-dasharray: none; }
+.multi-clutter-ray { stroke: var(--danger); stroke-width: 1.4; stroke-dasharray: 4 4; opacity: .62; }
 .geometry-fold-band { fill: url(#fold-band); }
 .geometry-fold-line { stroke: var(--danger); stroke-width: 1.8; stroke-dasharray: 7 5; }
 .geometry-plane-body { fill: var(--accent-2); stroke: #fffefa; stroke-width: 2; }
@@ -83,7 +87,9 @@
 .geometry-surface-point { fill: var(--copper); stroke: #fffefa; stroke-width: 1.7; }
 .geometry-surface-point.closest { fill: #b88734; stroke: #6d4a0d; stroke-width: 2.4; }
 .geometry-surface-point.overlap { fill: var(--danger); stroke: #6d2023; stroke-width: 2.8; filter: drop-shadow(0 0 7px rgba(155,61,63,.60)); }
-.geometry-ray.multi { stroke: var(--danger); stroke-width: 1.1; stroke-dasharray: 3 4; opacity: .46; }
+.multi-clutter-point { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.4; opacity: .78; }
+.multi-clutter-point.nearest { fill: #b88734; stroke: #6d4a0d; stroke-width: 2; opacity: .95; }
+.multi-clutter-point.overlap { fill: var(--danger); stroke: #6d2023; stroke-width: 2.3; opacity: 1; filter: drop-shadow(0 0 7px rgba(155,61,63,.60)); }
 .geometry-target { fill: var(--accent); stroke: #fffefa; stroke-width: 2; }
 .geometry-target.overlap { fill: var(--danger); stroke: #6d2023; }
 .geometry-blur { fill: url(#target-blur); }
@@ -113,14 +119,11 @@
 .check-title { fill: #17494d; font-size: 11px; font-weight: 850; }
 .check-danger { fill: var(--danger); font-size: 11px; font-weight: 850; }
 .check-target-window { fill: rgba(47, 111, 115, .10); }
+.multi-target-cell { fill: rgba(47, 111, 115, .12); stroke: rgba(47, 111, 115, .36); stroke-width: 1; }
 .check-target-line { stroke: var(--accent-2); stroke-width: 1.3; stroke-dasharray: 5 4; }
 .check-clutter-tail { fill: url(#clutter-tail); stroke: var(--danger); stroke-width: 1.3; }
-.check-clutter-tail.multi { opacity: .42; stroke-width: .9; }
-.check-clutter-tail.multi.overlap { opacity: .95; stroke-width: 1.7; }
 .check-target-tail { fill: url(#target-tail); stroke: var(--accent-2); stroke-width: 1.3; }
 .check-clutter-center { fill: var(--danger); stroke: #6d2023; stroke-width: 1.8; }
-.check-clutter-center.multi { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.2; }
-.check-clutter-center.multi.overlap { fill: var(--danger); stroke: #6d2023; stroke-width: 2.2; filter: drop-shadow(0 0 7px rgba(155,61,63,.60)); }
 .check-target-center { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.7; }
 .check-motion-guide { stroke: var(--danger); stroke-width: 1.1; stroke-dasharray: 4 4; opacity: .45; }
 .check-moving-clutter { fill: var(--danger); stroke: #6d2023; stroke-width: 2.2; }
@@ -153,7 +156,6 @@
 .bin-fold-link { fill: none; stroke: var(--danger); stroke-width: 1.7; stroke-dasharray: 5 4; opacity: .9; }
 .bin-surface-marker { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.8; }
 .bin-surface-marker.overlap { fill: var(--danger); stroke: #6d2023; filter: drop-shadow(0 0 7px rgba(155,61,63,.60)); }
-.bin-surface-marker.near { fill: #b88734; stroke: #6d4a0d; }
 .bin-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.8; }
 .bin-target-marker.overlap { fill: var(--danger); stroke: #6d2023; }
 .bin-title { fill: #17494d; font-size: 11px; font-weight: 850; }
@@ -185,6 +187,7 @@
   .map-heading h2, .map-heading h3 { font-size: 1.65rem; }
   .map-heading { min-height: 0; }
   .model-controls { grid-template-columns: 1fr; }
+  .multi-clutter-control { grid-template-columns: 1fr; }
   .checks-heading h2 { font-size: 2.05rem; }
   .visual-grid { grid-template-columns: 1fr; }
   .horizontal-plot, .blur-plot, .diagnostic-plot, .doppler-bins-plot, .processing-plot, .synthetic-radargram-plot { min-height: 0; aspect-ratio: 560 / 405; }

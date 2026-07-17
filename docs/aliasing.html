@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=multi-clutter-20260716">
-    <script defer src="aliasing.js?v=multi-clutter-20260716"></script>
+    <link rel="stylesheet" href="aliasing.css?v=equal-clutter-20260716">
+    <script defer src="aliasing.js?v=equal-clutter-20260716"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -72,17 +72,12 @@
             <span>Target depth <output id="model-depth-output" for="model-depth-slider">6.74 km</output></span>
             <input id="model-depth-slider" type="range" min="2.0" max="12.0" step="0.01" value="6.74">
           </label>
-          <label class="model-control" for="model-point-count-slider">
-            <span>Surface clutter points <output id="model-point-count-output" for="model-point-count-slider">12</output></span>
-            <input id="model-point-count-slider" type="range" min="1" max="48" step="1" value="12">
-          </label>
         </div>
         <dl class="lab-givens" aria-label="Fixed model assumptions">
           <div><dt>Altitude</dt><dd id="given-altitude"></dd></div>
           <div><dt>Speed</dt><dd id="given-speed"></dd></div>
           <div><dt>Radar</dt><dd id="given-frequency"></dd></div>
           <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
-          <div><dt>Clutter pts</dt><dd id="given-points"></dd></div>
           <div><dt>Ice index</dt><dd id="given-index"></dd></div>
         </dl>
       </section>
@@ -90,14 +85,14 @@
       <div class="visual-grid">
         <section class="horizontal-map" aria-labelledby="map-title">
           <div class="map-heading">
-            <h2 id="map-title">Plane motion past surface clutter</h2>
+            <h2 id="map-title">Plane motion past two returns</h2>
           </div>
           <div id="horizontal-plot" class="horizontal-plot" aria-live="polite"></div>
         </section>
 
         <section class="horizontal-map blur-map" aria-labelledby="blur-title">
           <div class="map-heading">
-            <h2 id="blur-title">Current folded-clutter depths</h2>
+            <h2 id="blur-title">Current folded-clutter depth</h2>
           </div>
           <div id="blur-plot" class="blur-plot" aria-live="polite"></div>
         </section>
@@ -112,8 +107,8 @@
 
       <section class="checks-section" aria-labelledby="checks-title">
         <div class="checks-heading">
-          <p class="section-kicker">Clutter iterations</p>
-          <h2 id="checks-title">Single-point and multi-point overlap checks</h2>
+          <p class="section-kicker">Independent sanity checks</p>
+          <h2 id="checks-title">Trace and Doppler overlap checks</h2>
         </div>
 
         <div class="visual-grid checks-grid">
@@ -126,9 +121,40 @@
 
           <section class="horizontal-map" aria-labelledby="doppler-check-title">
             <div class="map-heading">
-              <h3 id="doppler-check-title">2. Multi-point fast-time × Doppler overlap</h3>
+              <h3 id="doppler-check-title">2. Fast-time × Doppler overlap</h3>
             </div>
             <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="checks-section multi-clutter-section" aria-labelledby="multi-clutter-title">
+        <div class="checks-heading">
+          <p class="section-kicker">Equal-distance clutter subsection</p>
+          <h2 id="multi-clutter-title">More surface points folding into the subsurface cell</h2>
+        </div>
+
+        <section class="multi-clutter-control" aria-label="Equal-distance surface clutter control">
+          <label class="model-control" for="multi-clutter-count-slider">
+            <span>Surface clutter points <output id="multi-clutter-count-output" for="multi-clutter-count-slider">12</output></span>
+            <input id="multi-clutter-count-slider" type="range" min="1" max="64" step="1" value="12">
+          </label>
+          <p id="multi-clutter-status" class="multi-clutter-status" aria-live="polite"></p>
+        </section>
+
+        <div class="visual-grid checks-grid">
+          <section class="horizontal-map" aria-labelledby="multi-clutter-geometry-title">
+            <div class="map-heading">
+              <h3 id="multi-clutter-geometry-title">Equal-distance surface points</h3>
+            </div>
+            <div id="multi-clutter-geometry-plot" class="diagnostic-plot" aria-live="polite"></div>
+          </section>
+
+          <section class="horizontal-map" aria-labelledby="multi-clutter-doppler-title">
+            <div class="map-heading">
+              <h3 id="multi-clutter-doppler-title">Multi-point Doppler folding check</h3>
+            </div>
+            <div id="multi-clutter-doppler-plot" class="diagnostic-plot" aria-live="polite"></div>
           </section>
         </div>
       </section>
