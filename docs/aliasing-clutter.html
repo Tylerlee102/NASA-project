@@ -42,9 +42,6 @@
         <div id="given-frequency"></div>
         <div id="given-depth"></div>
         <div id="given-index"></div>
-        <div id="horizontal-plot"></div>
-        <div id="blur-plot"></div>
-        <div id="doppler-check-plot"></div>
       </section>
 
       <section class="checks-section multi-clutter-section is-subtab-section" aria-labelledby="multi-clutter-title">
@@ -78,6 +75,20 @@
         </div>
 
         <div class="visual-grid checks-grid">
+          <section class="horizontal-map" aria-labelledby="map-title">
+            <div class="map-heading">
+              <h2 id="map-title">Plane motion past two returns</h2>
+            </div>
+            <div id="horizontal-plot" class="horizontal-plot" aria-live="polite"></div>
+          </section>
+
+          <section class="horizontal-map blur-map" aria-labelledby="blur-title">
+            <div class="map-heading">
+              <h2 id="blur-title">Current folded-clutter depth</h2>
+            </div>
+            <div id="blur-plot" class="blur-plot" aria-live="polite"></div>
+          </section>
+
           <section class="horizontal-map full-span" aria-labelledby="doppler-bins-title">
             <div class="map-heading">
               <h2 id="doppler-bins-title">Low-PRF Doppler bins for two returns</h2>
@@ -90,6 +101,13 @@
               <h2 id="trace-check-title">Trace hyperbola overlap</h2>
             </div>
             <div id="trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
+          </section>
+
+          <section class="horizontal-map" aria-labelledby="doppler-check-title">
+            <div class="map-heading">
+              <h2 id="doppler-check-title">Fast-time × Doppler overlap</h2>
+            </div>
+            <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
           </section>
         </div>
       </section>
