@@ -97,7 +97,6 @@
 
   const PAGE_TITLES = {
     'aliasing-lab': 'Doppler Aliasing Lab',
-    'clutter-lab': 'Equal-Distance Clutter',
     'trajectory-lab': 'E19 Cilix Flyby',
     'radargram-lab': 'Radargram PRF Demo',
     'owner-access': 'Owner Archive',
@@ -113,7 +112,7 @@
   const OWNER_SESSION_KEY = 'europa-owner-archive-unlocked';
   const RAIL_COLLAPSED_KEY = 'europa-aliasing-rail-collapsed';
   const OWNER_PASSWORD_SHA256 = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-  const PUBLIC_PAGE_TARGETS = new Set(['aliasing-lab', 'clutter-lab', 'trajectory-lab', 'radargram-lab', 'owner-access']);
+  const PUBLIC_PAGE_TARGETS = new Set(['aliasing-lab', 'trajectory-lab', 'radargram-lab', 'owner-access']);
   let pendingOwnerTarget = 'overview';
   let ownerUnlocked = (() => {
     try {
@@ -1022,7 +1021,6 @@
     const sections = document.querySelectorAll('.page-section');
     const validTargets = new Set(Array.from(sections).map((section) => section.id));
     const ownerTabs = document.getElementById('owner-tabs');
-    const ownerSectionMenu = document.getElementById('owner-section-menu');
     const ownerLockButton = document.getElementById('owner-lock-button');
     const ownerAccessForm = document.getElementById('owner-access-form');
     const ownerPassword = document.getElementById('owner-password');
@@ -1034,10 +1032,6 @@
 
     function syncOwnerNavigation() {
       if (ownerTabs) ownerTabs.hidden = !ownerUnlocked;
-      if (ownerSectionMenu) {
-        ownerSectionMenu.hidden = !ownerUnlocked;
-        if (ownerUnlocked) ownerSectionMenu.open = true;
-      }
       if (ownerLockButton) ownerLockButton.hidden = !ownerUnlocked;
     }
 
