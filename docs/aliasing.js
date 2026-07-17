@@ -24,6 +24,7 @@
     durationS: 12,
     playbackSpeed: 2
   };
+  const YOUTUBE_PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
   const prfSlider = document.getElementById('effective-prf-slider');
   const prfPlayButton = document.getElementById('prf-play-button');
@@ -33,7 +34,7 @@
   const foldingIndicatorText = document.getElementById('folding-indicator-text');
   const timeMinLabel = document.getElementById('time-min-label');
   const timeMaxLabel = document.getElementById('time-max-label');
-  const playbackSpeedSlider = document.getElementById('playback-speed-slider');
+  const playbackSpeedButton = document.getElementById('playback-speed-button');
   const playbackSpeedOutput = document.getElementById('playback-speed-output');
   const speedSlider = document.getElementById('model-speed-slider');
   const altitudeSlider = document.getElementById('model-altitude-slider');
@@ -64,6 +65,17 @@
     const cleaned = Math.abs(value) < 0.05 ? 0 : value;
     return `${cleaned > 0 ? '+' : ''}${fmt(cleaned, digits)}`;
   };
+  const formatPlaybackSpeed = (value) => {
+    if (value === 1) return 'Normal';
+    return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}x`;
+  };
+
+  function updatePlaybackSpeedControl() {
+    if (playbackSpeedOutput) playbackSpeedOutput.textContent = formatPlaybackSpeed(flyby.playbackSpeed);
+    if (playbackSpeedButton) {
+      playbackSpeedButton.setAttribute('aria-label', `Playback speed ${formatPlaybackSpeed(flyby.playbackSpeed)}`);
+    }
+  }
 
   function setPlaybackActive(isActive) {
     if (!prfPlayButton) return;
@@ -165,7 +177,7 @@
     if (timeOutput) timeOutput.textContent = `${fmt(flyby.timeS, 1)} s`;
     if (timeMinLabel) timeMinLabel.textContent = '0 s';
     if (timeMaxLabel) timeMaxLabel.textContent = `${fmt(flyby.durationS, 0)} s`;
-    if (playbackSpeedOutput) playbackSpeedOutput.textContent = `${fmt(flyby.playbackSpeed, 1)}Ã—`;
+    updatePlaybackSpeedControl();
   }
 
   function movingTwoReturnState(effectivePrfHz) {
@@ -1129,10 +1141,12 @@
       draw(Number(prfSlider.value));
     });
   }
-  if (playbackSpeedSlider) {
-    playbackSpeedSlider.addEventListener('input', () => {
-      flyby.playbackSpeed = Number(playbackSpeedSlider.value);
-      if (playbackSpeedOutput) playbackSpeedOutput.textContent = `${fmt(flyby.playbackSpeed, 1)}Ã—`;
+  if (playbackSpeedButton) {
+    playbackSpeedButton.addEventListener('click', () => {
+      const currentIndex = YOUTUBE_PLAYBACK_SPEEDS.findIndex((speed) => speed === flyby.playbackSpeed);
+      const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % YOUTUBE_PLAYBACK_SPEEDS.length;
+      flyby.playbackSpeed = YOUTUBE_PLAYBACK_SPEEDS[nextIndex];
+      updatePlaybackSpeedControl();
     });
   }
   draw(Number(prfSlider.value));

@@ -208,13 +208,6 @@ a:focus-visible {
   background: rgba(169, 121, 34, .14);
 }
 
-.source-status {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: .86rem;
-  line-height: 1.45;
-}
-
 .trajectory-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -236,34 +229,34 @@ a:focus-visible {
 
 .graph-heading {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  gap: 12px;
-  min-height: 112px;
-  padding-bottom: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  min-height: 68px;
+  align-items: start;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
 }
 
-.graph-number {
-  margin: -5px 0 0;
-  color: var(--teal);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 2.7rem;
-  line-height: 1;
-}
-
 .graph-heading h2 {
-  margin-bottom: 7px;
+  margin-bottom: 0;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1.45rem, 3vw, 2.15rem);
   font-weight: 500;
   line-height: 1.05;
 }
 
-.graph-heading p:last-child {
-  margin-bottom: 0;
+.graph-source {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   color: var(--muted);
-  font-size: .9rem;
-  line-height: 1.45;
+  background: rgba(40, 95, 100, .07);
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .plot {
@@ -275,7 +268,8 @@ a:focus-visible {
   overflow: hidden;
 }
 
-.e19-data-plot { aspect-ratio: 860 / 440; }
+.e19-data-plot,
+#e19-data-plot { aspect-ratio: 860 / 440; }
 .radargram-plot { aspect-ratio: 720 / 340; }
 
 .plot svg {
@@ -426,6 +420,31 @@ a:focus-visible {
 }
 .ray { stroke: rgba(151, 65, 67, .62); stroke-width: 1.6; }
 .satellite { fill: var(--teal); stroke: var(--panel); stroke-width: 2; }
+.satellite-icon {
+  overflow: visible;
+  pointer-events: none;
+}
+.satellite-panel {
+  fill: rgba(40, 95, 100, .18);
+  stroke: var(--teal);
+  stroke-width: 1.15;
+}
+.satellite-body {
+  fill: var(--teal);
+  stroke: var(--panel);
+  stroke-width: 1.45;
+}
+.satellite-boom,
+.satellite-antenna {
+  stroke: #244c50;
+  stroke-width: 1.15;
+  stroke-linecap: round;
+}
+.satellite-node {
+  fill: var(--gold);
+  stroke: var(--panel);
+  stroke-width: .75;
+}
 .surface-point { fill: #a76844; stroke: var(--panel); stroke-width: 1.5; }
 .surface-point.fold { fill: var(--red); stroke: #67292b; stroke-width: 2; }
 .target { fill: var(--teal); stroke: var(--panel); stroke-width: 2; }
@@ -475,6 +494,7 @@ a:focus-visible {
   #time-slider { flex-basis: 100%; }
   .live-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .trajectory-grid { grid-template-columns: minmax(0, 1fr); }
-  .graph-heading { min-height: 0; }
+  .graph-heading { min-height: 0; grid-template-columns: 1fr; }
+  .graph-source { justify-self: start; }
   .source-summary { grid-template-columns: 1fr; }
 }

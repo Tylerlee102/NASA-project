@@ -13,6 +13,10 @@
   const colors = ['#1f6b70', '#9b4e2f', '#5f4f8f', '#3f7a55', '#9b3d3f', '#315f88', '#7a641f', '#59615d'];
   const tooltip = document.getElementById('chart-tooltip');
 
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+
   if (!sourceData) {
     document.body.innerHTML = '<main><h1>Site data did not load.</h1></main>';
     return;
@@ -1152,14 +1156,14 @@
       tab.addEventListener('click', (event) => {
         event.preventDefault();
         setActive(tab.dataset.target, true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'auto' });
       });
     });
     document.querySelectorAll('[data-tab-jump]').forEach((link) => {
       link.addEventListener('click', (event) => {
         event.preventDefault();
         setActive(link.dataset.tabJump, true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'auto' });
       });
     });
     window.addEventListener('popstate', () => {
@@ -1174,10 +1178,12 @@
     if (window.location.hash && validTargets.has(window.location.hash.replace('#', ''))) {
       setPageUrl(initialTarget, 'replace');
     }
-    if (window.location.hash) {
+    if (window.location.hash || new URL(window.location.href).searchParams.has('page')) {
       window.requestAnimationFrame(() => window.scrollTo(0, 0));
       window.setTimeout(() => window.scrollTo(0, 0), 100);
       window.setTimeout(() => window.scrollTo(0, 0), 350);
+      window.setTimeout(() => window.scrollTo(0, 0), 900);
+      window.setTimeout(() => window.scrollTo(0, 0), 1600);
     }
   }
 
