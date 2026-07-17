@@ -359,6 +359,7 @@
   }
 
   function renderGroundTrack(row) {
+    if (!geometryPlot) return;
     const width = 720;
     const height = 360;
     const margin = { left: 62, right: 26, top: 42, bottom: 48 };
@@ -401,6 +402,7 @@
   }
 
   function renderCriteria(row) {
+    if (!foldPlot) return;
     const width = 720;
     const height = 360;
     const margin = { left: 64, right: 26, top: 42, bottom: 48 };
@@ -444,6 +446,7 @@
   }
 
   function renderMotion(row) {
+    if (!tracePlot) return;
     const width = 720;
     const height = 360;
     const margin = { left: 66, right: 26, top: 42, bottom: 48 };
@@ -477,6 +480,7 @@
   }
 
   function renderLook(row) {
+    if (!dopplerPlot) return;
     const width = 720;
     const height = 360;
     const margin = { left: 74, right: 28, top: 42, bottom: 48 };
@@ -531,6 +535,7 @@
   }
 
   function renderTable(row) {
+    if (!tablePlot) return;
     const cilixNearest = data.flyby.cilixClosestSample;
     const coreStart = coreWindow ? interpolateRow(coreWindow.startOffsetS) : null;
     const coreEnd = coreWindow ? interpolateRow(coreWindow.endOffsetS) : null;
@@ -610,12 +615,7 @@
   function draw(offsetS = currentOffset) {
     const row = interpolateRow(offsetS);
     updateReadouts(row);
-    renderE19DataPlot(row);
-    renderGroundTrack(row);
-    renderCriteria(row);
     renderMotion(row);
-    renderLook(row);
-    renderTable(row);
   }
 
   function drawAt(offsetS, force = false) {

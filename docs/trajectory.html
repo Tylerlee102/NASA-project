@@ -11,9 +11,9 @@
         window.location.replace(fullSiteUrl.href);
       }
     </script>
-    <link rel="stylesheet" href="trajectory.css?v=e19-prf-sectors-20260716">
+    <link rel="stylesheet" href="trajectory.css?v=e19-single-graph-20260716">
     <script defer src="data/e19-flyby.js?v=e19-cilix-20260715"></script>
-    <script defer src="trajectory.js?v=e19-prf-sectors-20260716"></script>
+    <script defer src="trajectory.js?v=e19-single-graph-20260716"></script>
   </head>
   <body>
     <main class="trajectory-page">
@@ -51,56 +51,6 @@
             <span class="graph-source">SPICE E19</span>
           </div>
           <div id="trace-plot" class="plot e19-data-plot" aria-live="polite"></div>
-        </article>
-
-        <article class="graph-panel">
-          <div class="graph-heading chart-style-heading">
-            <div>
-              <h2>Groundtrack: E19 Cilix Region</h2>
-            </div>
-            <span class="graph-source">SPICE E19</span>
-          </div>
-          <div id="geometry-plot" class="plot" aria-live="polite"></div>
-        </article>
-
-        <article class="graph-panel">
-          <div class="graph-heading chart-style-heading">
-            <div>
-              <h2>Scenario Profile: Altitude, Incidence, Cilix Range</h2>
-            </div>
-            <span class="graph-source">SPICE E19</span>
-          </div>
-          <div id="e19-data-plot" class="plot" aria-live="polite"></div>
-        </article>
-
-        <article class="graph-panel">
-          <div class="graph-heading chart-style-heading">
-            <div>
-              <h2>Doppler: Cilix Range-Rate at 60 MHz</h2>
-            </div>
-            <span class="graph-source">Derived</span>
-          </div>
-          <div id="doppler-plot" class="plot" aria-live="polite"></div>
-        </article>
-
-        <article class="graph-panel">
-          <div class="graph-heading chart-style-heading">
-            <div>
-              <h2>Reconable Window: Altitude and Incidence Criteria</h2>
-            </div>
-            <span class="graph-source">Criteria</span>
-          </div>
-          <div id="fold-plot" class="plot" aria-live="polite"></div>
-        </article>
-
-        <article class="graph-panel graph-panel-wide">
-          <div class="graph-heading chart-style-heading">
-            <div>
-              <h2>SPICE Source Samples</h2>
-            </div>
-            <span class="graph-source">Table</span>
-          </div>
-          <div id="flyby-radargram-plot" class="plot radargram-plot" aria-live="polite"></div>
         </article>
       </section>
     </main>
