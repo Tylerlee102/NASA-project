@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Equal-Distance Surface Clutter</title>
+    <script>
+      if (window.top === window.self) {
+        const fullSiteUrl = new URL('index.html', window.location.href);
+        fullSiteUrl.searchParams.set('page', 'clutter-lab');
+        window.location.replace(fullSiteUrl.href);
+      }
+    </script>
+    <link rel="stylesheet" href="styles.css?v=clutter-page-20260716">
+    <link rel="stylesheet" href="aliasing.css?v=clutter-page-20260716">
+    <link rel="stylesheet" href="clutter.css?v=clutter-page-20260716">
+    <script defer src="clutter.js?v=clutter-page-20260716"></script>
+  </head>
+  <body>
+    <main class="simple-lab clutter-lab">
+      <header class="simple-header">
+        <a class="lab-back-link" href="index.html?page=aliasing-lab" target="_top">Back to Doppler Aliasing Lab</a>
+        <p class="section-kicker">Doppler aliasing lab</p>
+        <h1>Equal-distance surface clutter</h1>
+      </header>
+
+      <section class="prf-control" aria-label="Equal-distance clutter controls">
+        <div class="prf-label-row">
+          <div>
+            <h2>Fixed low-PRF Doppler sampling</h2>
+          </div>
+          <output id="clutter-prf-output" aria-live="polite"></output>
+        </div>
+        <input id="clutter-prf-slider" class="prf-slider" type="range" min="700" max="780" step="0.1" value="737.7" aria-label="Fixed effective Doppler sampling PRF in hertz">
+        <div class="prf-range-labels" aria-hidden="true">
+          <span id="clutter-prf-min-label">700 Hz</span>
+          <span>target folding neighborhood</span>
+          <span id="clutter-prf-max-label">780 Hz</span>
+        </div>
+
+        <div class="flyby-control" aria-label="Flyby run control">
+          <div class="flyby-label-row">
+            <h2>Flyby time</h2>
+            <output id="clutter-time-output" aria-live="polite">6.0 s</output>
+          </div>
+          <input id="clutter-time-slider" class="prf-slider" type="range" min="0" max="12" step="0.05" value="6" aria-label="Flyby time in seconds">
+          <div class="prf-range-labels" aria-hidden="true">
+            <span>0 s</span>
+            <span>forward plane motion</span>
+            <span>12 s</span>
+          </div>
+          <div class="prf-slider-row">
+            <button id="clutter-play-button" class="prf-play-button" type="button" aria-pressed="false">Play</button>
+            <button id="clutter-speed-button" class="play-speed-button" type="button" aria-label="Playback speed 2x">
+              <span>Speed</span>
+              <output id="clutter-speed-output">2x</output>
+            </button>
+            <div id="clutter-folding-indicator" class="folding-indicator" aria-live="polite">
+              <span class="folding-dot" aria-hidden="true"></span>
+              <span id="clutter-folding-indicator-text">outside target cell</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="model-controls clutter-model-controls" aria-label="Live model parameters">
+          <label class="model-control" for="clutter-count-slider">
+            <span>Surface clutter points <output id="clutter-count-output" for="clutter-count-slider">17</output></span>
+            <input id="clutter-count-slider" type="range" min="1" max="96" step="1" value="17">
+          </label>
+          <label class="model-control" for="clutter-speed-slider">
+            <span>Plane speed <output id="clutter-model-speed-output" for="clutter-speed-slider">2.5 km/s</output></span>
+            <input id="clutter-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="2.5">
+          </label>
+          <label class="model-control" for="clutter-altitude-slider">
+            <span>Altitude <output id="clutter-altitude-output" for="clutter-altitude-slider">25 km</output></span>
+            <input id="clutter-altitude-slider" type="range" min="10" max="60" step="1" value="25">
+          </label>
+          <label class="model-control" for="clutter-depth-slider">
+            <span>Target depth <output id="clutter-depth-output" for="clutter-depth-slider">6.74 km</output></span>
+            <input id="clutter-depth-slider" type="range" min="2.0" max="12.0" step="0.01" value="6.74">
+          </label>
+        </div>
+
+        <dl class="lab-givens clutter-givens" aria-label="Fixed model assumptions">
+          <div><dt>Surface window</dt><dd id="clutter-given-window"></dd></div>
+          <div><dt>Point spacing</dt><dd id="clutter-given-spacing"></dd></div>
+          <div><dt>Doppler cell</dt><dd id="clutter-given-doppler"></dd></div>
+          <div><dt>Depth cell</dt><dd id="clutter-given-depth-cell"></dd></div>
+          <div><dt>Ice index</dt><dd id="clutter-given-index"></dd></div>
+        </dl>
+        <p id="clutter-status" class="prf-status" aria-live="polite"></p>
+      </section>
+
+      <div class="visual-grid">
+        <section class="horizontal-map" aria-labelledby="clutter-geometry-title">
+          <div class="map-heading">
+            <h2 id="clutter-geometry-title">Equal-distance surface points</h2>
+          </div>
+          <div id="clutter-geometry-plot" class="diagnostic-plot" aria-live="polite"></div>
+        </section>
+
+        <section class="horizontal-map" aria-labelledby="clutter-doppler-title">
+          <div class="map-heading">
+            <h2 id="clutter-doppler-title">Doppler folding into target cell</h2>
+          </div>
+          <div id="clutter-doppler-plot" class="diagnostic-plot" aria-live="polite"></div>
+        </section>
+
+        <section class="horizontal-map full-span" aria-labelledby="clutter-run-title">
+          <div class="map-heading">
+            <h2 id="clutter-run-title">Run: folded clutter through flyby time</h2>
+          </div>
+          <div id="clutter-run-plot" class="doppler-bins-plot" aria-live="polite"></div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

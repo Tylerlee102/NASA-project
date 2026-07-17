@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Europa Doppler Aliasing Lab</title>
-    <link rel="stylesheet" href="styles.css?v=e19-cilix-20260715">
+    <link rel="stylesheet" href="styles.css?v=clutter-page-20260716">
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=e19-play-satellite-20260716"></script>
+    <script defer src="app.js?v=clutter-page-20260716"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -19,17 +19,14 @@
           <h1>Europa Doppler Aliasing Lab</h1>
           <div class="hero-actions" aria-label="Project actions">
             <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
+            <a class="secondary-link" href="?page=clutter-lab" data-tab-jump="clutter-lab">Equal-distance clutter page</a>
             <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run E19 Cilix flyby</a>
             <a class="secondary-link" href="?page=radargram-lab" data-tab-jump="radargram-lab">Compare radargram PRFs</a>
             <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
           </div>
-          <details class="section-menu" open>
-            <summary>Section pages</summary>
-            <nav class="tabs" aria-label="Section pages">
-              <a class="tab is-active" href="?page=aliasing-lab" data-target="aliasing-lab">Doppler Aliasing Lab</a>
-              <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">E19 Cilix Flyby</a>
-              <a class="tab" href="?page=radargram-lab" data-target="radargram-lab">Radargram PRF Demo</a>
-              <a class="tab" href="?page=owner-access" data-target="owner-access">Owner Archive</a>
+          <details id="owner-section-menu" class="section-menu" hidden>
+            <summary>Owner archive pages</summary>
+            <nav class="tabs" aria-label="Owner archive pages">
               <div id="owner-tabs" class="owner-tabs" hidden>
                 <a class="tab" href="?page=overview" data-target="overview">Overview</a>
                 <a class="tab" href="?page=surface" data-target="surface">Flyby Geometry</a>
@@ -51,7 +48,13 @@
       <main class="content-shell">
       <section id="aliasing-lab" class="page-section is-active embedded-lab-section">
         <div class="aliasing-embed-shell">
-          <iframe id="aliasing-frame" class="aliasing-frame" src="aliasing.html?v=equal-clutter-20260716" title="Interactive Doppler aliasing simulator" loading="eager" scrolling="no"></iframe>
+          <iframe id="aliasing-frame" class="aliasing-frame" src="aliasing.html?v=main-aliasing-20260716" title="Interactive Doppler aliasing simulator" loading="eager" scrolling="no"></iframe>
+        </div>
+      </section>
+
+      <section id="clutter-lab" class="page-section embedded-lab-section">
+        <div class="aliasing-embed-shell">
+          <iframe id="clutter-frame" class="aliasing-frame" src="clutter.html?v=equal-distance-page-20260716" title="Equal-distance surface clutter aliasing page" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 
