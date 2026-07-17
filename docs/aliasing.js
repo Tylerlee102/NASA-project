@@ -604,15 +604,11 @@
 
   function equalDistanceClutterPoints(count) {
     const safeCount = Math.max(1, Math.round(count));
-    const centerXKm = selectedFoldingPoint?.xKm || 0;
-    const rangeKm = Math.hypot(model.altitudeKm, centerXKm);
-    const depthSlope = Math.abs(centerXKm) > 0.001
-      ? Math.abs(centerXKm) / (model.iceIndex * rangeKm)
-      : 1 / model.iceIndex;
-    const spacingKm = Math.max(0.08, (model.depthToleranceKm / Math.max(0.05, depthSlope)) * 0.45);
-    const startXKm = centerXKm - spacingKm * (safeCount - 1) / 2;
+    const spacingKm = safeCount > 1 ? (2 * model.spreadKm) / (safeCount - 1) : 0;
     return Array.from({ length: safeCount }, (_, index) => {
-      const xKm = startXKm + spacingKm * index;
+      const xKm = safeCount === 1
+        ? (selectedFoldingPoint?.xKm || 0)
+        : -model.spreadKm + spacingKm * index;
       const rangeKm = Math.hypot(model.altitudeKm, xKm);
       return {
         index,
@@ -691,7 +687,8 @@
     const surfaceY = 138;
     const aircraftY = 34;
     const depthMaxKm = Math.max(12, currentFastTimeDepthMaxKm());
-    const geometryHalfWidthKm = Math.ceil(Math.max(model.spreadKm, flybyHalfDistanceKm(), Math.abs(state.planeXKm)) / 10) * 10;
+    const furthestPointKm = Math.max(...state.points.map((point) => Math.abs(point.xKm)));
+    const geometryHalfWidthKm = Math.ceil(Math.max(model.spreadKm, flybyHalfDistanceKm(), Math.abs(state.planeXKm), furthestPointKm) / 10) * 10;
     const sx = (xKm) => left + ((xKm + geometryHalfWidthKm) / (2 * geometryHalfWidthKm)) * (width - left - right);
     const depthToY = (depthKm) => surfaceY + (depthKm / depthMaxKm) * 160;
     const targetX = sx(0);
@@ -715,7 +712,7 @@
         <path class="geometry-plane-body" d="M -22 0 C -12 -8 8 -8 23 0 C 8 8 -12 8 -22 0 Z"></path>
         <circle class="geometry-plane-window" cx="10" cy="0" r="2.7"></circle>
       </g>`;
-    svg += `<text class="geometry-title" x="${left}" y="${surfaceY - 23}">${fmt(multiClutterPointCount, 0)} equally spaced surface points</text>`;
+    svg += `<text class="geometry-title" x="${left}" y="${surfaceY - 23}">${fmt(multiClutterPointCount, 0)} equally spaced surface points across ${fmt(2 * model.spreadKm, 0)} km</text>`;
     state.points.forEach((point) => {
       const css = point.overlapsTarget ? 'overlap' : point.index === nearest.index ? 'nearest' : '';
       const radius = point.overlapsTarget ? 7.4 : point.index === nearest.index ? 6.6 : 4.8;

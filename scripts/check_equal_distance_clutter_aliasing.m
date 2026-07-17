@@ -30,10 +30,16 @@ timesS = [0 3 6 9 12];
 rows = [];
 
 for count = counts
-  points = equalDistanceFoldPatch(model, selectedPoint.xKm, count, depthToleranceKm, wavelengthM);
-  spacingKm = spacingForFoldPatch(model, selectedPoint.xKm, depthToleranceKm);
+  points = equalDistanceSurfaceSpan(model, selectedPoint.xKm, count, wavelengthM);
+  spacingKm = spacingForSurfaceSpan(model, count);
   assert(count == 1 || max(abs(diff([points.xKm]) - spacingKm)) < 1e-10, ...
     'surface clutter points must be equal-distance');
+  if count > 1
+    assert(abs(points(1).xKm + model.spreadKm) < 1e-10, ...
+      'first surface clutter point must sit at the left edge of the surface span');
+    assert(abs(points(end).xKm - model.spreadKm) < 1e-10, ...
+      'last surface clutter point must sit at the right edge of the surface span');
+  end
 
   for timeS = timesS
     planeXKm = (timeS - flybyDurationS / 2) * model.velocityKmS;
@@ -58,9 +64,9 @@ for count = counts
   end
 end
 
-centerRows = rows([rows.time_s] == 6);
-center48 = centerRows([centerRows.point_count] == 48);
-assert(center48.overlap_count >= 2, '48 equal-distance points should create multiple target-cell clutter aliases at center time');
+count12Rows = rows([rows.point_count] == 12);
+assert(all(abs([count12Rows.equal_spacing_km] - (2 * model.spreadKm / 11)) < 1e-10), ...
+  '12-point default must be spread across the full surface span');
 
 summary = struct2table(rows);
 outputPath = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'outputs', 'equal_distance_clutter_aliasing_matlab_summary.csv');
@@ -81,24 +87,25 @@ for idx = 1:count
 end
 end
 
-function points = equalDistanceFoldPatch(model, centerXKm, count, depthToleranceKm, wavelengthM)
-spacingKm = spacingForFoldPatch(model, centerXKm, depthToleranceKm);
-startXKm = centerXKm - spacingKm * (count - 1) / 2;
+function points = equalDistanceSurfaceSpan(model, centerXKm, count, wavelengthM)
+spacingKm = spacingForSurfaceSpan(model, count);
 points = repmat(emptyPoint(), 1, count);
 for idx = 1:count
-  xKm = startXKm + spacingKm * (idx - 1);
+  if count == 1
+    xKm = centerXKm;
+  else
+    xKm = -model.spreadKm + spacingKm * (idx - 1);
+  end
   points(idx) = pointForX(model, xKm, idx - 1, wavelengthM);
 end
 end
 
-function spacingKm = spacingForFoldPatch(model, centerXKm, depthToleranceKm)
-rangeKm = hypot(model.altitudeKm, centerXKm);
-if abs(centerXKm) > 0.001
-  depthSlope = abs(centerXKm) / (model.iceIndex * rangeKm);
+function spacingKm = spacingForSurfaceSpan(model, count)
+if count <= 1
+  spacingKm = 0;
 else
-  depthSlope = 1 / model.iceIndex;
+  spacingKm = 2 * model.spreadKm / (count - 1);
 end
-spacingKm = max(0.08, (depthToleranceKm / max(0.05, depthSlope)) * 0.45);
 end
 
 function point = pointForX(model, xKm, index, wavelengthM)
