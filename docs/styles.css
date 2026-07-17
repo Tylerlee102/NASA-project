@@ -247,19 +247,14 @@ input:focus-visible,
   border-top: 1px solid var(--line-strong);
 }
 
-.section-menu summary {
+.section-menu-title {
+  margin: 0;
   min-height: 42px;
   padding: 12px 0;
   color: var(--ink);
-  cursor: pointer;
   font-size: 0.78rem;
   font-weight: 850;
   text-transform: uppercase;
-}
-
-.section-menu summary:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
 }
 
 .tabs {
@@ -290,6 +285,39 @@ input:focus-visible,
   color: var(--ink);
   box-shadow: inset 3px 0 0 var(--accent);
   padding-left: 12px;
+}
+
+.section-subtabs {
+  display: grid;
+  border-bottom: 1px solid var(--line);
+}
+
+.section-subtabs .sub-tab {
+  min-height: 36px;
+  padding-left: 22px;
+  border-bottom: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  box-shadow: inset 1px 0 0 var(--line-strong);
+}
+
+.section-subtabs .sub-tab::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-right: 9px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+.section-subtabs .sub-tab.is-active {
+  padding-left: 22px;
+  color: var(--accent-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.section-subtabs .sub-tab.is-active::before {
+  background: var(--accent);
 }
 
 .page-section {
@@ -1948,6 +1976,12 @@ tr:last-child td {
     position: static;
   }
 
+  .section-subtabs {
+    flex: 0 0 auto;
+    display: flex;
+    border-bottom: 0;
+  }
+
   .tab {
     flex: 0 0 auto;
     width: auto;
@@ -1956,6 +1990,19 @@ tr:last-child td {
     border: 1px solid var(--line-strong);
     border-radius: 999px;
     white-space: nowrap;
+  }
+
+  .section-subtabs .sub-tab,
+  .section-subtabs .sub-tab.is-active {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    box-shadow: none;
+  }
+
+  .section-subtabs .sub-tab::before {
+    display: none;
   }
 
   .tab.is-active {

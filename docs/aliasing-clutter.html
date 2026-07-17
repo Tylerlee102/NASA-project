@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Surface Clutter Points</title>
+    <script>
+      if (window.top === window.self) {
+        const fullSiteUrl = new URL('index.html', window.location.href);
+        fullSiteUrl.searchParams.set('page', 'aliasing-clutter-lab');
+        window.location.replace(fullSiteUrl.href);
+      }
+    </script>
+    <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
+    <link rel="stylesheet" href="aliasing.css?v=doppler-subtab-20260717">
+    <script defer src="aliasing.js?v=doppler-subtab-20260717"></script>
+  </head>
+  <body>
+    <main class="simple-lab">
+      <section class="support-lab-state" aria-hidden="true">
+        <output id="effective-prf-output"></output>
+        <input id="effective-prf-slider" type="range" min="857" max="913" step="0.1" value="885.2">
+        <span id="prf-min-label"></span>
+        <span id="prf-max-label"></span>
+        <output id="flyby-time-output">0.0 s</output>
+        <input id="flyby-time-slider" type="range" min="0" max="12" step="0.05" value="0">
+        <span id="time-min-label"></span>
+        <span id="time-max-label"></span>
+        <button id="prf-play-button" type="button"></button>
+        <button id="playback-speed-button" type="button"></button>
+        <output id="playback-speed-output">2x</output>
+        <div id="folding-indicator"></div>
+        <span id="folding-indicator-text"></span>
+        <input id="model-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="2.5">
+        <input id="model-altitude-slider" type="range" min="10" max="60" step="1" value="25">
+        <input id="model-depth-slider" type="range" min="2.0" max="12.0" step="0.01" value="6.74">
+        <output id="model-speed-output"></output>
+        <output id="model-altitude-output"></output>
+        <output id="model-depth-output"></output>
+        <div id="given-altitude"></div>
+        <div id="given-speed"></div>
+        <div id="given-frequency"></div>
+        <div id="given-depth"></div>
+        <div id="given-index"></div>
+        <div id="horizontal-plot"></div>
+        <div id="blur-plot"></div>
+        <div id="doppler-bins-plot"></div>
+        <div id="trace-check-plot"></div>
+        <div id="doppler-check-plot"></div>
+      </section>
+
+      <section class="checks-section multi-clutter-section is-subtab-section" aria-labelledby="multi-clutter-title">
+        <div class="checks-heading">
+          <p class="section-kicker">Doppler Aliasing Lab</p>
+          <h1 id="multi-clutter-title">More surface points folding into the subsurface cell</h1>
+        </div>
+
+        <section class="multi-clutter-control" aria-label="Equal-distance surface clutter control">
+          <label class="model-control" for="multi-clutter-count-slider">
+            <span>Surface clutter points <output id="multi-clutter-count-output" for="multi-clutter-count-slider">12</output></span>
+            <input id="multi-clutter-count-slider" type="range" min="1" max="64" step="1" value="12">
+          </label>
+          <p id="multi-clutter-status" class="multi-clutter-status" aria-live="polite"></p>
+        </section>
+
+        <div class="visual-grid checks-grid">
+          <section class="horizontal-map" aria-labelledby="multi-clutter-geometry-title">
+            <div class="map-heading">
+              <h2 id="multi-clutter-geometry-title">Equal-distance surface points</h2>
+            </div>
+            <div id="multi-clutter-geometry-plot" class="diagnostic-plot" aria-live="polite"></div>
+          </section>
+
+          <section class="horizontal-map" aria-labelledby="multi-clutter-doppler-title">
+            <div class="map-heading">
+              <h2 id="multi-clutter-doppler-title">Multi-point Doppler folding check</h2>
+            </div>
+            <div id="multi-clutter-doppler-plot" class="diagnostic-plot" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

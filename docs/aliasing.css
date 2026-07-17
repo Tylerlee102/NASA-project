@@ -6,6 +6,10 @@
 .simple-header h1 { max-width: none; margin: 10px 0 0; font-size: 4.4rem; }
 .lab-back-link { display: inline-flex; min-height: 40px; align-items: center; color: var(--accent-2); font-size: .82rem; font-weight: 800; text-decoration: none; }
 .lab-back-link:hover, .lab-back-link:focus-visible { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.support-lab-state { display: none; }
+.is-subtab-section { margin-top: 0; }
+.is-subtab-section .checks-heading { max-width: 980px; }
+.is-subtab-section .checks-heading h1 { max-width: 920px; margin: 7px 0 0; font-size: 3.6rem; }
 
 .prf-control, .horizontal-map { border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); }
 .prf-control { padding: 16px 18px 14px; }
