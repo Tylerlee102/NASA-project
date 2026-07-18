@@ -12,50 +12,83 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=doppler-subtab-20260717">
-    <script defer src="aliasing.js?v=doppler-subtab-20260717"></script>
+    <link rel="stylesheet" href="aliasing.css?v=doppler-clutter-controls-20260717">
+    <script defer src="aliasing.js?v=doppler-clutter-controls-20260717"></script>
   </head>
   <body>
     <main class="simple-lab">
-      <section class="support-lab-state" aria-hidden="true">
-        <output id="effective-prf-output"></output>
-        <input id="effective-prf-slider" type="range" min="857" max="913" step="0.1" value="885.2">
-        <span id="prf-min-label"></span>
-        <span id="prf-max-label"></span>
-        <output id="flyby-time-output">0.0 s</output>
-        <input id="flyby-time-slider" type="range" min="0" max="12" step="0.05" value="0">
-        <span id="time-min-label"></span>
-        <span id="time-max-label"></span>
-        <button id="prf-play-button" type="button"></button>
-        <button id="playback-speed-button" type="button"></button>
-        <output id="playback-speed-output">2x</output>
-        <div id="folding-indicator"></div>
-        <span id="folding-indicator-text"></span>
-        <input id="model-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="2.5">
-        <input id="model-altitude-slider" type="range" min="10" max="60" step="1" value="25">
-        <input id="model-depth-slider" type="range" min="2.0" max="12.0" step="0.01" value="6.74">
-        <output id="model-speed-output"></output>
-        <output id="model-altitude-output"></output>
-        <output id="model-depth-output"></output>
-        <div id="given-altitude"></div>
-        <div id="given-speed"></div>
-        <div id="given-frequency"></div>
-        <div id="given-depth"></div>
-        <div id="given-index"></div>
-      </section>
-
       <section class="checks-section multi-clutter-section is-subtab-section" aria-labelledby="multi-clutter-title">
         <div class="checks-heading">
           <p class="section-kicker">Doppler Aliasing Lab</p>
           <h1 id="multi-clutter-title">More surface points folding into the subsurface cell</h1>
         </div>
 
-        <section class="multi-clutter-control" aria-label="Equal-distance surface clutter control">
-          <label class="model-control" for="multi-clutter-count-slider">
-            <span>Surface clutter points <output id="multi-clutter-count-output" for="multi-clutter-count-slider">12</output></span>
-            <input id="multi-clutter-count-slider" type="range" min="1" max="64" step="1" value="12">
-          </label>
-          <p id="multi-clutter-status" class="multi-clutter-status" aria-live="polite"></p>
+        <section class="prf-control combined-clutter-control" aria-label="Surface clutter simulation controls">
+          <div class="prf-label-row">
+            <div>
+              <h2>Fixed low-PRF Doppler sampling</h2>
+            </div>
+            <output id="effective-prf-output" aria-live="polite"></output>
+          </div>
+          <input id="effective-prf-slider" class="prf-slider" type="range" min="857" max="913" step="0.1" value="885.2" aria-label="Fixed effective Doppler sampling PRF in hertz">
+          <div class="prf-range-labels" aria-hidden="true">
+            <span id="prf-min-label">857 Hz</span>
+            <span>target folding neighborhood</span>
+            <span id="prf-max-label">913 Hz</span>
+          </div>
+
+          <div class="flyby-control" aria-label="Flyby time control">
+            <div class="flyby-label-row">
+              <h2>Flyby time</h2>
+              <output id="flyby-time-output" aria-live="polite">0.0 s</output>
+            </div>
+            <input id="flyby-time-slider" class="prf-slider" type="range" min="0" max="12" step="0.05" value="0" aria-label="Flyby time in seconds">
+            <div class="prf-range-labels" aria-hidden="true">
+              <span id="time-min-label">0 s</span>
+              <span>forward plane motion</span>
+              <span id="time-max-label">12 s</span>
+            </div>
+            <div class="prf-slider-row">
+              <button id="prf-play-button" class="prf-play-button" type="button" aria-pressed="false">Play</button>
+              <button id="playback-speed-button" class="play-speed-button" type="button" aria-label="Playback speed 2x">
+                <span>Speed</span>
+                <output id="playback-speed-output">2x</output>
+              </button>
+              <div id="folding-indicator" class="folding-indicator" aria-live="polite">
+                <span class="folding-dot" aria-hidden="true"></span>
+                <span id="folding-indicator-text">outside target fold</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="model-controls" aria-label="Live surface clutter model parameters">
+            <label class="model-control" for="model-speed-slider">
+              <span>Plane speed <output id="model-speed-output" for="model-speed-slider">2.5 km/s</output></span>
+              <input id="model-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="2.5">
+            </label>
+            <label class="model-control" for="model-altitude-slider">
+              <span>Altitude <output id="model-altitude-output" for="model-altitude-slider">25 km</output></span>
+              <input id="model-altitude-slider" type="range" min="10" max="60" step="1" value="25">
+            </label>
+            <label class="model-control" for="model-depth-slider">
+              <span>Target depth <output id="model-depth-output" for="model-depth-slider">6.74 km</output></span>
+              <input id="model-depth-slider" type="range" min="2.0" max="12.0" step="0.01" value="6.74">
+            </label>
+            <label class="model-control" for="multi-clutter-count-slider">
+              <span>Surface clutter points <output id="multi-clutter-count-output" for="multi-clutter-count-slider">12</output></span>
+              <input id="multi-clutter-count-slider" type="range" min="1" max="64" step="1" value="12">
+            </label>
+          </div>
+
+          <p id="multi-clutter-status" class="multi-clutter-status combined-clutter-status" aria-live="polite"></p>
+
+          <dl class="lab-givens" aria-label="Current model assumptions">
+            <div><dt>Altitude</dt><dd id="given-altitude"></dd></div>
+            <div><dt>Speed</dt><dd id="given-speed"></dd></div>
+            <div><dt>Radar</dt><dd id="given-frequency"></dd></div>
+            <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
+            <div><dt>Ice index</dt><dd id="given-index"></dd></div>
+          </dl>
         </section>
 
         <div class="visual-grid checks-grid">
@@ -81,21 +114,30 @@
             </div>
             <div id="doppler-bins-plot" class="doppler-bins-plot" aria-live="polite"></div>
           </section>
-
-          <section class="horizontal-map" aria-labelledby="trace-check-title">
-            <div class="map-heading">
-              <h2 id="trace-check-title">Trace hyperbola overlap</h2>
-            </div>
-            <div id="trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
-          </section>
-
-          <section class="horizontal-map" aria-labelledby="doppler-check-title">
-            <div class="map-heading">
-              <h2 id="doppler-check-title">Fast-time × Doppler overlap</h2>
-            </div>
-            <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
-          </section>
         </div>
+
+        <section class="checks-section compact-checks-section" aria-labelledby="checks-title">
+          <div class="checks-heading">
+            <p class="section-kicker">Independent sanity checks</p>
+            <h2 id="checks-title">Trace and Doppler overlap checks</h2>
+          </div>
+
+          <div class="visual-grid checks-grid">
+            <section class="horizontal-map" aria-labelledby="trace-check-title">
+              <div class="map-heading">
+                <h3 id="trace-check-title">1. Trace hyperbola overlap</h3>
+              </div>
+              <div id="trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
+            </section>
+
+            <section class="horizontal-map" aria-labelledby="doppler-check-title">
+              <div class="map-heading">
+                <h3 id="doppler-check-title">2. Fast-time × Doppler overlap</h3>
+              </div>
+              <div id="doppler-check-plot" class="diagnostic-plot" aria-live="polite"></div>
+            </section>
+          </div>
+        </section>
       </section>
     </main>
   </body>
