@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>E19 Isotropic Layer Noise</title>
+    <script>
+      if (window.top === window.self) {
+        const fullSiteUrl = new URL('index.html', window.location.href);
+        fullSiteUrl.searchParams.set('page', 'trajectory-roughness-lab');
+        window.location.replace(fullSiteUrl.href);
+      }
+    </script>
+    <link rel="stylesheet" href="trajectory.css?v=e19-single-graph-20260716">
+    <link rel="stylesheet" href="trajectory-roughness.css?v=isotropic-layer-20260717">
+    <script defer src="data/e19-flyby.js?v=e19-cilix-20260715"></script>
+    <script defer src="trajectory-roughness.js?v=isotropic-layer-20260717"></script>
+  </head>
+  <body>
+    <main class="trajectory-page roughness-page">
+      <header class="roughness-header">
+        <p class="kicker">E19 Cilix Flyby</p>
+        <h1>Isotropic layer bumps producing coherent noise</h1>
+      </header>
+
+      <section class="trajectory-control roughness-control" aria-label="Isotropic rough-layer controls">
+        <div class="control-heading">
+          <div>
+            <p class="kicker">E19 SPICE groundtrack</p>
+            <h2>Rough subsurface layer</h2>
+          </div>
+          <output id="rough-time-output" for="rough-time-slider">0 s</output>
+        </div>
+
+        <div class="control-row rough-time-row">
+          <button id="rough-play-button" type="button" aria-pressed="false">Play flyby</button>
+          <button id="rough-closest-button" class="secondary-button" type="button">Closest approach</button>
+          <input id="rough-time-slider" type="range" min="-240" max="240" step="1" value="0" aria-label="Time from E19 closest approach in seconds">
+        </div>
+
+        <div class="roughness-sliders">
+          <label for="layer-depth-slider">
+            <span>Mean layer depth <output id="layer-depth-output" for="layer-depth-slider">6.0 km</output></span>
+            <input id="layer-depth-slider" type="range" min="2" max="15" step="0.1" value="6">
+          </label>
+          <label for="bump-height-slider">
+            <span>RMS bump height <output id="bump-height-output" for="bump-height-slider">1.5 m</output></span>
+            <input id="bump-height-slider" type="range" min="0" max="5" step="0.1" value="1.5">
+          </label>
+          <label for="bump-width-slider">
+            <span>Isotropic bump width <output id="bump-width-output" for="bump-width-slider">18 km</output></span>
+            <input id="bump-width-slider" type="range" min="4" max="45" step="1" value="18">
+          </label>
+          <label for="bump-spacing-slider">
+            <span>Mean bump spacing <output id="bump-spacing-output" for="bump-spacing-slider">36 km</output></span>
+            <input id="bump-spacing-slider" type="range" min="12" max="90" step="1" value="36">
+          </label>
+        </div>
+
+        <dl class="live-values roughness-values" aria-label="Current rough-layer simulation values">
+          <div><dt>E19 altitude</dt><dd id="rough-altitude-value"></dd></div>
+          <div><dt>Ground track</dt><dd id="rough-track-value"></dd></div>
+          <div><dt>Layer bumps</dt><dd id="rough-count-value"></dd></div>
+          <div><dt>Phase spread</dt><dd id="rough-phase-value"></dd></div>
+          <div><dt>Coherence</dt><dd id="rough-coherence-value"></dd></div>
+          <div><dt>Roughness noise</dt><dd id="rough-noise-value"></dd></div>
+        </dl>
+        <p id="roughness-status" class="trajectory-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="trajectory-grid roughness-grid" aria-label="Isotropic rough-layer graphs">
+        <article class="graph-panel graph-panel-wide">
+          <div class="graph-heading">
+            <h2>E19 groundtrack over isotropic bumps</h2>
+            <span class="graph-source">SPICE E19</span>
+          </div>
+          <div id="bump-field-plot" class="plot roughness-wide-plot" aria-live="polite"></div>
+        </article>
+
+        <article class="graph-panel">
+          <div class="graph-heading">
+            <h2>Layer bump cross-section</h2>
+            <span class="graph-source">Radial Gaussian</span>
+          </div>
+          <div id="layer-profile-plot" class="plot" aria-live="polite"></div>
+        </article>
+
+        <article class="graph-panel">
+          <div class="graph-heading">
+            <h2>Coherent phase-noise return</h2>
+            <span class="graph-source">60 MHz</span>
+          </div>
+          <div id="phase-noise-plot" class="plot" aria-live="polite"></div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

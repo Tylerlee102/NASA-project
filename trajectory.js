@@ -16,8 +16,8 @@
   const speedValue = document.getElementById('speed-value');
   const incidenceValue = document.getElementById('incidence-value');
   const cilixValue = document.getElementById('cilix-value');
+  const aliasRiskValue = document.getElementById('alias-risk-value');
   const status = document.getElementById('trajectory-status');
-  const sourceStatus = document.getElementById('source-status');
   const e19DataPlot = document.getElementById('e19-data-plot');
   const geometryPlot = document.getElementById('geometry-plot');
   const foldPlot = document.getElementById('fold-plot');
@@ -41,9 +41,59 @@
   const closest = data.flyby.closestApproach;
   const cilix = data.cilix;
   const closestDate = new Date(`${data.flyby.closestApproachUtc}Z`);
+  let currentOffset = 0;
   let playbackFrameId = null;
   let lastPlaybackTimestamp = null;
+  let lastRenderedSecond = null;
   const playbackRate = 18;
+  const aliasAnalysis = {
+    source: 'MATLAB R2026a',
+    prfFloorHz: 3416.36346301951,
+    broadAliasSector: {
+      startS: -99.5,
+      endS: 144,
+      label: '3000 Hz still aliases'
+    },
+    zeroFoldSectors: [
+      {
+        prfHz: 737.7,
+        startS: -104,
+        endS: -102.5,
+        centerS: -103.5,
+        aliasHz: -2.02209045164466,
+        foldOrder: -2,
+        label: '737.7 Hz fold'
+      },
+      {
+        prfHz: 737.7,
+        startS: 152,
+        endS: 155.5,
+        centerS: 153.5,
+        aliasHz: -0.821259708891489,
+        foldOrder: -2,
+        label: 'strongest 737.7 Hz fold',
+        strongest: true
+      },
+      {
+        prfHz: 1500,
+        startS: -101.5,
+        endS: -98,
+        centerS: -99.5,
+        aliasHz: -1.63884376303804,
+        foldOrder: -1,
+        label: '1500 Hz fold'
+      },
+      {
+        prfHz: 1500,
+        startS: 140,
+        endS: 148,
+        centerS: 144,
+        aliasHz: -0.237874563227706,
+        foldOrder: -1,
+        label: 'long 1500 Hz fold'
+      }
+    ]
+  };
 
   slider.min = sampleStart;
   slider.max = sampleEnd;
@@ -63,6 +113,26 @@
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+
+  function satelliteIcon(x, y, size = 8) {
+    const bodyW = size * 0.9;
+    const bodyH = size * 0.68;
+    const panelW = size * 0.95;
+    const panelH = size * 0.42;
+    const boom = size * 0.45;
+    const antenna = size * 0.45;
+    const n = (value) => Number(value).toFixed(2);
+    return `
+      <g class="satellite-icon" transform="translate(${n(x)} ${n(y)}) rotate(-18)">
+        <line class="satellite-boom" x1="${n(-bodyW / 2 - boom)}" y1="0" x2="${n(bodyW / 2 + boom)}" y2="0"></line>
+        <rect class="satellite-panel" x="${n(-bodyW / 2 - boom - panelW)}" y="${n(-panelH / 2)}" width="${n(panelW)}" height="${n(panelH)}" rx="1"></rect>
+        <rect class="satellite-panel" x="${n(bodyW / 2 + boom)}" y="${n(-panelH / 2)}" width="${n(panelW)}" height="${n(panelH)}" rx="1"></rect>
+        <rect class="satellite-body" x="${n(-bodyW / 2)}" y="${n(-bodyH / 2)}" width="${n(bodyW)}" height="${n(bodyH)}" rx="1.5"></rect>
+        <line class="satellite-antenna" x1="0" y1="${n(-bodyH / 2)}" x2="0" y2="${n(-bodyH / 2 - antenna)}"></line>
+        <circle class="satellite-node" cx="0" cy="${n(-bodyH / 2 - antenna)}" r="${n(size * 0.12)}"></circle>
+      </g>
+    `;
+  }
 
   function utcForOffset(offsetS) {
     return new Date(closestDate.getTime() + offsetS * 1000).toISOString().replace('.000Z', 'Z');
@@ -148,6 +218,50 @@
     return samples.filter((row) => row.offsetS >= windowInfo.startOffsetS && row.offsetS <= windowInfo.endOffsetS);
   }
 
+  function rowsInSector(sector) {
+    const rows = [
+      interpolateRow(sector.startS),
+      ...samples.filter((entry) => entry.offsetS > sector.startS && entry.offsetS < sector.endS),
+      interpolateRow(sector.endS)
+    ];
+    return rows.sort((a, b) => a.offsetS - b.offsetS);
+  }
+
+  function activePrfSector(offsetS) {
+    const fold = aliasAnalysis.zeroFoldSectors.find((sector) => (
+      offsetS >= sector.startS && offsetS <= sector.endS
+    ));
+    if (fold) return { ...fold, kind: 'fold' };
+    const broad = aliasAnalysis.broadAliasSector;
+    if (offsetS >= broad.startS && offsetS <= broad.endS) {
+      return { ...broad, kind: 'alias' };
+    }
+    return null;
+  }
+
+  function renderAliasBands(svg, sx, y, height, options = {}) {
+    const { showBroad = true, labelStrongest = false } = options;
+    if (showBroad) {
+      const broad = aliasAnalysis.broadAliasSector;
+      const x0 = sx(broad.startS);
+      const x1 = sx(broad.endS);
+      svg.push(`<rect class="alias-sector is-broad" x="${x0}" y="${y}" width="${Math.max(1, x1 - x0)}" height="${height}"></rect>`);
+      if (options.labelBroad) {
+        svg.push(`<text class="label-warning" x="${Math.min(x1 - 104, x0 + 6)}" y="${y + 14}">${broad.label}</text>`);
+      }
+    }
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      const x0 = sx(sector.startS);
+      const x1 = sx(sector.endS);
+      const className = `alias-sector${sector.strongest ? ' is-strongest' : ''}`;
+      svg.push(`<rect class="${className}" x="${x0}" y="${y}" width="${Math.max(2, x1 - x0)}" height="${height}"></rect>`);
+      svg.push(`<line class="alias-sector-center" x1="${sx(sector.centerS)}" y1="${y}" x2="${sx(sector.centerS)}" y2="${y + height}"></line>`);
+      if (sector.strongest && labelStrongest) {
+        svg.push(`<text class="label-danger" x="${Math.max(78, sx(sector.centerS) - 118)}" y="${y + 30}">${sector.label}</text>`);
+      }
+    });
+  }
+
   function renderE19DataPlot(row) {
     if (!e19DataPlot) return;
     const width = 860;
@@ -204,6 +318,8 @@
       svg.push(`<text class="label" x="${x0 + 6}" y="${margin.top - 22}">core window</text>`);
     }
 
+    renderAliasBands(svg, sx, margin.top - 16, plotBottom - margin.top + 16);
+
     [-240, -120, 0, 120, 240].forEach((tick) => {
       const x = sx(tick);
       svg.push(`<line class="grid" x1="${x}" y1="${margin.top - 16}" x2="${x}" y2="${plotBottom}"></line>`);
@@ -230,7 +346,7 @@
       svg.push(`<text class="label" x="${plotLeft - 9}" y="${y1 + 4}" text-anchor="end">${fmt(lane.max, 0)}</text>`);
       svg.push(`<text class="label" x="${plotLeft - 9}" y="${y0 + 4}" text-anchor="end">${fmt(lane.min, 0)}</text>`);
       svg.push(`<path class="${lane.className}" d="${pathForLane(lane)}"></path>`);
-      svg.push(`<circle class="satellite" cx="${sx(row.offsetS)}" cy="${sy(row[lane.key], lane)}" r="5.5"></circle>`);
+      svg.push(satelliteIcon(sx(row.offsetS), sy(row[lane.key], lane), 6.2));
       svg.push(`<text class="label-strong" x="${plotRight}" y="${lane.top + 12}" text-anchor="end">${lane.value(row)}</text>`);
     });
 
@@ -243,6 +359,7 @@
   }
 
   function renderGroundTrack(row) {
+    if (!geometryPlot) return;
     const width = 720;
     const height = 360;
     const margin = { left: 62, right: 26, top: 42, bottom: 48 };
@@ -263,6 +380,10 @@
       yTitle: 'planetocentric latitude (deg)'
     });
     svg.push(`<path class="groundtrack-line" d="${pathFor(samples, scales, 'lonEastDeg', 'latDeg')}"></path>`);
+    svg.push(`<path class="groundtrack-alias-broad" d="${pathFor(rowsInSector(aliasAnalysis.broadAliasSector), scales, 'lonEastDeg', 'latDeg')}"></path>`);
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      svg.push(`<path class="groundtrack-alias-sector${sector.strongest ? ' is-strongest' : ''}" d="${pathFor(rowsInSector(sector), scales, 'lonEastDeg', 'latDeg')}"></path>`);
+    });
     if (coreRows.length) {
       svg.push(`<path class="groundtrack-reconable" d="${pathFor(coreRows, scales, 'lonEastDeg', 'latDeg')}"></path>`);
     }
@@ -271,7 +392,7 @@
     svg.push(`<text class="label-strong" x="${scales.x(cilix.lonEastDeg) + 10}" y="${scales.y(cilix.latDeg) - 8}">Cilix marker</text>`);
     svg.push(`<rect class="closest-marker" x="${scales.x(closest.lonEastDeg) - 6}" y="${scales.y(closest.latDeg) - 6}" width="12" height="12" transform="rotate(45 ${scales.x(closest.lonEastDeg)} ${scales.y(closest.latDeg)})"></rect>`);
     svg.push(`<text class="label" x="${scales.x(closest.lonEastDeg) + 10}" y="${scales.y(closest.latDeg) + 18}">closest approach</text>`);
-    svg.push(`<circle class="satellite" cx="${currentX}" cy="${currentY}" r="7"></circle>`);
+    svg.push(satelliteIcon(currentX, currentY, 9));
     svg.push(`<text class="label-strong" x="${Math.min(width - margin.right - 88, currentX + 11)}" y="${currentY - 11}">t ${signed(row.offsetS, 0)} s</text>`);
     if (coreWindow) {
       svg.push(`<text class="label-danger" x="${margin.left}" y="22">core reconable: ${fmt(coreWindow.groundLengthKm, 1)} km</text>`);
@@ -281,6 +402,7 @@
   }
 
   function renderCriteria(row) {
+    if (!foldPlot) return;
     const width = 720;
     const height = 360;
     const margin = { left: 64, right: 26, top: 42, bottom: 48 };
@@ -308,11 +430,12 @@
       const x1 = sx(coreWindow.endOffsetS);
       svg.push(`<rect class="reconable-window" x="${x0}" y="${margin.top}" width="${x1 - x0}" height="${height - margin.top - margin.bottom}"></rect>`);
     }
+    renderAliasBands(svg, sx, margin.top, height - margin.top - margin.bottom);
     svg.push(`<path class="altitude-line" d="${samples.map((entry, index) => `${index ? 'L' : 'M'} ${sx(entry.offsetS).toFixed(2)} ${syAlt(entry.altitudeKm).toFixed(2)}`).join(' ')}"></path>`);
     svg.push(`<path class="incidence-line" d="${samples.map((entry, index) => `${index ? 'L' : 'M'} ${sx(entry.offsetS).toFixed(2)} ${syInc(entry.incidenceDeg).toFixed(2)}`).join(' ')}"></path>`);
     const xNow = sx(row.offsetS);
     svg.push(`<line class="current-guide" x1="${xNow}" y1="${margin.top}" x2="${xNow}" y2="${height - margin.bottom}"></line>`);
-    svg.push(`<circle class="satellite" cx="${xNow}" cy="${syAlt(row.altitudeKm)}" r="6"></circle>`);
+    svg.push(satelliteIcon(xNow, syAlt(row.altitudeKm), 8));
     svg.push(`<circle class="response-center" cx="${xNow}" cy="${syInc(row.incidenceDeg)}" r="5"></circle>`);
     svg.push(`<text class="label-strong" x="${margin.left}" y="22">altitude: ${fmt(row.altitudeKm, 1)} km</text>`);
     svg.push(`<text class="label-danger" x="${margin.left}" y="${mid - 15}">incidence: ${fmt(row.incidenceDeg, 1)} deg</text>`);
@@ -323,6 +446,7 @@
   }
 
   function renderMotion(row) {
+    if (!tracePlot) return;
     const width = 720;
     const height = 360;
     const margin = { left: 66, right: 26, top: 42, bottom: 48 };
@@ -340,11 +464,15 @@
     });
     svg.push(`<line class="surface" x1="${margin.left}" y1="${scales.y(0)}" x2="${width - margin.right}" y2="${scales.y(0)}"></line>`);
     svg.push(`<path class="trajectory-line" fill="none" d="${pathFor(samples, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+    svg.push(`<path class="trajectory-alias-broad" d="${pathFor(rowsInSector(aliasAnalysis.broadAliasSector), scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      svg.push(`<path class="trajectory-alias-sector${sector.strongest ? ' is-strongest' : ''}" d="${pathFor(rowsInSector(sector), scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+    });
     if (coreRows.length) {
       svg.push(`<path class="trajectory-reconable" d="${pathFor(coreRows, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
     }
     svg.push(`<line class="current-guide" x1="${scales.x(row.groundTrackKm)}" y1="${margin.top}" x2="${scales.x(row.groundTrackKm)}" y2="${height - margin.bottom}"></line>`);
-    svg.push(`<circle class="satellite" cx="${scales.x(row.groundTrackKm)}" cy="${scales.y(row.altitudeKm)}" r="8"></circle>`);
+    svg.push(satelliteIcon(scales.x(row.groundTrackKm), scales.y(row.altitudeKm), 11));
     svg.push(`<text class="label-strong" x="${Math.min(width - margin.right - 150, scales.x(row.groundTrackKm) + 12)}" y="${scales.y(row.altitudeKm) - 12}">Europa Clipper</text>`);
     svg.push(`<text class="label" x="${margin.left}" y="22">closest altitude ${fmt(closest.altitudeKm, 1)} km, speed ${fmt(closest.speedKmS, 3)} km/s</text>`);
     svg.push('</svg>');
@@ -352,29 +480,43 @@
   }
 
   function renderLook(row) {
+    if (!dopplerPlot) return;
     const width = 720;
     const height = 360;
-    const margin = { left: 70, right: 28, top: 42, bottom: 48 };
+    const margin = { left: 74, right: 28, top: 42, bottom: 48 };
     const lookRows = samples.map((entry) => ({ ...entry, ...derivedLook(entry) }));
-    const rangeMax = Math.ceil(Math.max(...lookRows.map((entry) => entry.slantRangeKm)) / 100) * 100;
-    const scales = chartScales(width, height, margin, sampleStart, sampleEnd, rangeMax, 0);
+    const dopplerMax = Math.ceil(Math.max(...lookRows.map((entry) => Math.abs(entry.dopplerHz))) / 100) * 100 || 100;
+    const scales = chartScales(width, height, margin, sampleStart, sampleEnd, dopplerMax, -dopplerMax);
     const look = derivedLook(row);
     const cilixNearest = data.flyby.cilixClosestSample;
-    const nearestRange = Math.hypot(cilixNearest.altitudeKm, cilixNearest.distanceToCilixKm);
-    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Line of sight range from E19 to the Cilix marker through the sampled flyby">`];
-    axis(svg, width, height, margin, scales, [-240, -120, 0, 120, 240], [0, 250, 500, 750, 1000], {
+    const nearestLook = derivedLook(interpolateRow(cilixNearest.offsetS));
+    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="E19 60 MHz Doppler derived from flat Cilix marker range rate">`];
+    axis(svg, width, height, margin, scales, [-240, -120, 0, 120, 240], [-dopplerMax, 0, dopplerMax], {
       x: (value) => signed(value, 0),
       y: (value) => fmt(value, 0),
       xTitle: 'time from closest approach (s)',
-      yTitle: 'flat-surface range to Cilix marker (km)'
+      yTitle: '60 MHz two-way Doppler (Hz)'
     });
-    svg.push(`<path class="look-range-line" d="${linePath(lookRows, scales.x, scales.y, (entry) => ({ x: entry.offsetS, y: entry.slantRangeKm }))}"></path>`);
+    renderAliasBands(svg, scales.x, margin.top, height - margin.top - margin.bottom, {
+      labelBroad: true,
+      labelStrongest: true
+    });
+    const lowPrfNyquistHz = aliasAnalysis.zeroFoldSectors[0].prfHz / 2;
+    const bandTop = scales.y(lowPrfNyquistHz);
+    const bandBottom = scales.y(-lowPrfNyquistHz);
+    svg.push(`<rect class="alias-sampled-band" x="${margin.left}" y="${bandTop}" width="${width - margin.left - margin.right}" height="${bandBottom - bandTop}"></rect>`);
+    svg.push(`<line class="criterion-line" x1="${margin.left}" y1="${scales.y(0)}" x2="${width - margin.right}" y2="${scales.y(0)}"></line>`);
+    svg.push(`<path class="look-range-line" d="${linePath(lookRows, scales.x, scales.y, (entry) => ({ x: entry.offsetS, y: entry.dopplerHz }))}"></path>`);
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      const sectorLook = derivedLook(interpolateRow(sector.centerS));
+      svg.push(`<circle class="alias-sector-dot${sector.strongest ? ' is-strongest' : ''}" cx="${scales.x(sector.centerS)}" cy="${scales.y(sectorLook.dopplerHz)}" r="${sector.strongest ? 6 : 4.8}"></circle>`);
+    });
     svg.push(`<line class="current-guide" x1="${scales.x(row.offsetS)}" y1="${margin.top}" x2="${scales.x(row.offsetS)}" y2="${height - margin.bottom}"></line>`);
-    svg.push(`<circle class="satellite" cx="${scales.x(row.offsetS)}" cy="${scales.y(look.slantRangeKm)}" r="7"></circle>`);
-    svg.push(`<rect class="closest-marker" x="${scales.x(cilixNearest.offsetS) - 5}" y="${scales.y(nearestRange) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(cilixNearest.offsetS)} ${scales.y(nearestRange)})"></rect>`);
-    svg.push(`<text class="label" x="${scales.x(cilixNearest.offsetS) + 8}" y="${scales.y(nearestRange) - 8}">nearest Cilix marker</text>`);
-    svg.push(`<text class="label-strong" x="${margin.left}" y="22">look angle ${fmt(look.lookAngleDeg, 1)} deg, range rate ${signed(look.rangeRateKmS, 3)} km/s</text>`);
-    svg.push(`<text class="label-danger" x="${width - margin.right}" y="22" text-anchor="end">60 MHz Doppler ${signed(look.dopplerHz, 1)} Hz</text>`);
+    svg.push(satelliteIcon(scales.x(row.offsetS), scales.y(look.dopplerHz), 9));
+    svg.push(`<rect class="closest-marker" x="${scales.x(cilixNearest.offsetS) - 5}" y="${scales.y(nearestLook.dopplerHz) - 5}" width="10" height="10" transform="rotate(45 ${scales.x(cilixNearest.offsetS)} ${scales.y(nearestLook.dopplerHz)})"></rect>`);
+    svg.push(`<text class="label" x="${scales.x(cilixNearest.offsetS) + 8}" y="${scales.y(nearestLook.dopplerHz) - 8}">nearest Cilix marker</text>`);
+    svg.push(`<text class="label-strong" x="${margin.left}" y="22">range rate ${signed(look.rangeRateKmS, 3)} km/s, look angle ${fmt(look.lookAngleDeg, 1)} deg</text>`);
+    svg.push(`<text class="label-danger" x="${width - margin.right}" y="22" text-anchor="end">Doppler ${signed(look.dopplerHz, 1)} Hz</text>`);
     svg.push('</svg>');
     dopplerPlot.innerHTML = svg.join('');
   }
@@ -393,6 +535,7 @@
   }
 
   function renderTable(row) {
+    if (!tablePlot) return;
     const cilixNearest = data.flyby.cilixClosestSample;
     const coreStart = coreWindow ? interpolateRow(coreWindow.startOffsetS) : null;
     const coreEnd = coreWindow ? interpolateRow(coreWindow.endOffsetS) : null;
@@ -405,11 +548,13 @@
       rows.push(sampleRow('Reconable start', coreStart));
       rows.push(sampleRow('Reconable end', coreEnd));
     }
+    const strongestFold = aliasAnalysis.zeroFoldSectors.find((sector) => sector.strongest);
     tablePlot.innerHTML = `
       <div class="source-summary">
         <div><strong>${escapeHtml(data.flyby.name)}</strong><span>${escapeHtml(data.flyby.rank)}</span></div>
         <div><strong>${fmt(coreWindow?.groundLengthKm || 0, 1)} km</strong><span>core reconable window in this sample</span></div>
-        <div><strong>${fmt(cilixNearest.distanceToCilixKm, 1)} km</strong><span>closest sampled distance to Cilix marker</span></div>
+        <div><strong>${fmt(aliasAnalysis.prfFloorHz, 1)} Hz</strong><span>MATLAB no-alias PRF floor</span></div>
+        <div><strong>${signed(strongestFold.centerS, 1)} s</strong><span>strongest ${fmt(strongestFold.prfHz, 1)} Hz fold sector</span></div>
       </div>
       <div class="table-wrap">
         <table class="sample-table">
@@ -438,26 +583,47 @@
     speedValue.textContent = `${fmt(row.speedKmS, 3)} km/s`;
     incidenceValue.textContent = `${fmt(row.incidenceDeg, 1)} deg`;
     cilixValue.textContent = `${fmt(row.distanceToCilixKm, 1)} km`;
+    const activeSector = activePrfSector(row.offsetS);
+    if (aliasRiskValue) {
+      aliasRiskValue.className = '';
+      if (activeSector?.kind === 'fold') {
+        aliasRiskValue.textContent = `${fmt(activeSector.prfHz, 1)} Hz fold`;
+        aliasRiskValue.classList.add('is-risk-hot');
+      } else if (activeSector?.kind === 'alias') {
+        aliasRiskValue.textContent = '3000 Hz aliases';
+        aliasRiskValue.classList.add('is-risk-warm');
+      } else {
+        aliasRiskValue.textContent = 'lower';
+      }
+    }
     status.className = `trajectory-status${row.reconableCore ? '' : row.reconableMargin ? ' is-margin' : ' is-overlap'}`;
     if (row.reconableCore) {
-      status.textContent = `E19 is inside the core reconable window at ${signed(row.offsetS, 0)} s: altitude ${fmt(row.altitudeKm, 1)} km, incidence ${fmt(row.incidenceDeg, 1)} deg, flat Cilix look angle ${fmt(look.lookAngleDeg, 1)} deg.`;
+      status.textContent = `Core window: ${signed(row.offsetS, 0)} s`;
     } else if (row.reconableMargin) {
-      status.textContent = `E19 is inside the looser margin at ${signed(row.offsetS, 0)} s, but outside the core 50-100 km and 30-60 deg window.`;
+      status.textContent = `Margin window: ${signed(row.offsetS, 0)} s`;
     } else {
-      status.textContent = `E19 is outside the core reconable window at ${signed(row.offsetS, 0)} s; move toward closest approach to see the NASA-reference pass enter the Cilix-region window.`;
+      status.textContent = `Outside window: ${signed(row.offsetS, 0)} s`;
     }
-    sourceStatus.textContent = `NAIF trajectory sample: ${row.utc}. 3D Cilix DTM intentionally not used.`;
   }
 
-  function draw() {
-    const row = interpolateRow(Number(slider.value));
+  function setSliderOffset(offsetS) {
+    currentOffset = clamp(Number(offsetS) || 0, sampleStart, sampleEnd);
+    slider.value = String(Math.round(currentOffset));
+    return currentOffset;
+  }
+
+  function draw(offsetS = currentOffset) {
+    const row = interpolateRow(offsetS);
     updateReadouts(row);
-    renderE19DataPlot(row);
-    renderGroundTrack(row);
-    renderCriteria(row);
     renderMotion(row);
-    renderLook(row);
-    renderTable(row);
+  }
+
+  function drawAt(offsetS, force = false) {
+    const nextOffset = setSliderOffset(offsetS);
+    const renderSecond = Math.round(nextOffset);
+    if (!force && renderSecond === lastRenderedSecond) return;
+    lastRenderedSecond = renderSecond;
+    draw(nextOffset);
   }
 
   function setPlaying(isPlaying) {
@@ -476,12 +642,11 @@
 
   function playbackStep(timestamp) {
     if (lastPlaybackTimestamp === null) lastPlaybackTimestamp = timestamp;
-    const elapsedS = Math.min(0.05, (timestamp - lastPlaybackTimestamp) / 1000);
+    const elapsedS = Math.min(0.08, (timestamp - lastPlaybackTimestamp) / 1000);
     lastPlaybackTimestamp = timestamp;
-    let next = Number(slider.value) + elapsedS * playbackRate;
+    let next = currentOffset + elapsedS * playbackRate;
     if (next > sampleEnd) next = sampleStart;
-    slider.value = String(next);
-    draw();
+    drawAt(next);
     playbackFrameId = requestAnimationFrame(playbackStep);
   }
 
@@ -496,14 +661,13 @@
 
   closestButton.addEventListener('click', () => {
     stopPlayback();
-    slider.value = '0';
-    draw();
+    drawAt(0, true);
   });
 
   slider.addEventListener('input', () => {
     stopPlayback();
-    draw();
+    drawAt(Number(slider.value), true);
   });
 
-  draw();
+  drawAt(0, true);
 })();

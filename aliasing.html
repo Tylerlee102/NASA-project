@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=fold-dot-20260715">
-    <script defer src="aliasing.js?v=fold-dot-20260715"></script>
+    <link rel="stylesheet" href="aliasing.css?v=doppler-main-20260717">
+    <script defer src="aliasing.js?v=doppler-main-20260717"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -49,10 +49,10 @@
           </div>
           <div class="prf-slider-row">
             <button id="prf-play-button" class="prf-play-button" type="button" aria-pressed="false">Play</button>
-            <label class="play-speed-control" for="playback-speed-slider">
-              <span>Play speed <output id="playback-speed-output" for="playback-speed-slider">2.0×</output></span>
-              <input id="playback-speed-slider" type="range" min="0.25" max="8" step="0.25" value="2">
-            </label>
+            <button id="playback-speed-button" class="play-speed-button" type="button" aria-label="Playback speed 2x">
+              <span>Speed</span>
+              <output id="playback-speed-output">2x</output>
+            </button>
             <div id="folding-indicator" class="folding-indicator" aria-live="polite">
               <span class="folding-dot" aria-hidden="true"></span>
               <span id="folding-indicator-text">outside target fold</span>
