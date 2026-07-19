@@ -12,8 +12,8 @@
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=doppler-clutter-controls-20260717">
-    <script defer src="aliasing.js?v=doppler-clutter-controls-20260717"></script>
+    <link rel="stylesheet" href="aliasing.css?v=doppler-bumpy-surface-20260718">
+    <script defer src="aliasing.js?v=doppler-bumpy-surface-20260718"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -75,8 +75,12 @@
               <input id="model-depth-slider" type="range" min="2.0" max="12.0" step="0.01" value="6.74">
             </label>
             <label class="model-control" for="multi-clutter-count-slider">
-              <span>Surface clutter points <output id="multi-clutter-count-output" for="multi-clutter-count-slider">12</output></span>
+              <span>Surface bump points <output id="multi-clutter-count-output" for="multi-clutter-count-slider">12</output></span>
               <input id="multi-clutter-count-slider" type="range" min="1" max="64" step="1" value="12">
+            </label>
+            <label class="model-control" for="bump-height-slider">
+              <span>Surface bump height <output id="bump-height-output" for="bump-height-slider">1.2 km</output></span>
+              <input id="bump-height-slider" type="range" min="0" max="4" step="0.1" value="1.2">
             </label>
           </div>
 

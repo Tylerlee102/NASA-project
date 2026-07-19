@@ -58,7 +58,7 @@
 .map-heading p { margin: 7px 0 0; color: var(--muted); font-size: .84rem; }
 .model-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
 .combined-clutter-control { margin-top: 16px; }
-.combined-clutter-control .model-controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.combined-clutter-control .model-controls { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .multi-clutter-status.combined-clutter-status { min-height: 1.2em; margin: 10px 0 0; }
 .model-control { display: grid; gap: 3px; min-width: 0; color: var(--ink-soft); font-size: .68rem; font-weight: 800; }
 .model-control span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -83,7 +83,8 @@
   .combined-clutter-control .model-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-.geometry-surface { stroke: #6f6a60; stroke-width: 2.2; }
+.geometry-surface { stroke: #6f6a60; stroke-width: 1.2; opacity: .45; }
+.geometry-bumpy-surface { fill: none; stroke: var(--copper); stroke-width: 2.3; }
 .geometry-depth-guide { stroke: #d7ccbb; stroke-width: 1; stroke-dasharray: 5 5; }
 .geometry-nadir { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 5; }
 .geometry-ray { stroke: #b88734; stroke-width: 1.6; stroke-dasharray: 5 4; opacity: .9; }
@@ -125,25 +126,29 @@
 .check-clutter-curve.larger { stroke-width: 2.8; }
 .check-clutter-curve.smaller { stroke: #b88734; stroke-width: 2; }
 .check-target-curve { fill: none; stroke: var(--accent-2); stroke-width: 2.4; stroke-dasharray: 7 4; }
+.check-target-curve.cluster { stroke-width: 1.2; opacity: .28; stroke-dasharray: 5 5; }
 .check-overlap-point { fill: var(--danger); stroke: #6d2023; stroke-width: 2.2; }
 .check-delay-point { fill: #b88734; stroke: #6d4a0d; stroke-width: 2; }
 .check-label { fill: #645f56; font-size: 10px; }
 .check-title { fill: #17494d; font-size: 11px; font-weight: 850; }
 .check-danger { fill: var(--danger); font-size: 11px; font-weight: 850; }
 .check-target-window { fill: rgba(47, 111, 115, .10); }
-.multi-target-cell { fill: rgba(47, 111, 115, .12); stroke: rgba(47, 111, 115, .36); stroke-width: 1; }
+.check-target-window.overlap { fill: rgba(155, 61, 63, .13); }
 .check-target-line { stroke: var(--accent-2); stroke-width: 1.3; stroke-dasharray: 5 4; }
 .check-clutter-tail { fill: url(#clutter-tail); stroke: var(--danger); stroke-width: 1.3; }
 .check-target-tail { fill: url(#target-tail); stroke: var(--accent-2); stroke-width: 1.3; }
-.check-clutter-center { fill: var(--danger); stroke: #6d2023; stroke-width: 1.8; }
+.check-clutter-center { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.8; }
+.check-clutter-center.overlap { fill: var(--danger); stroke: #6d2023; }
 .check-target-center { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.7; }
 .check-motion-guide { stroke: var(--danger); stroke-width: 1.1; stroke-dasharray: 4 4; opacity: .45; }
-.check-moving-clutter { fill: var(--danger); stroke: #6d2023; stroke-width: 2.2; }
-.check-moving-clutter.overlap { filter: drop-shadow(0 0 7px rgba(155,61,63,.65)); }
+.check-moving-clutter { fill: var(--copper); stroke: #6d4a0d; stroke-width: 2.2; }
+.check-moving-clutter.overlap { fill: var(--danger); stroke: #6d2023; filter: drop-shadow(0 0 7px rgba(155,61,63,.65)); }
 .check-cluster-dot, .check-cluster-sample { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.2; opacity: .52; }
+.check-cluster-dot.selected, .check-cluster-sample.selected { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.8; opacity: .92; }
 .check-cluster-dot.overlap, .check-cluster-sample.overlap { fill: var(--danger); stroke: #6d2023; opacity: .95; filter: drop-shadow(0 0 6px rgba(155,61,63,.45)); }
 .check-trace-intersection { fill: #fffefa; stroke: #8d681e; stroke-width: 1.4; opacity: .8; }
-.check-trace-intersection.selected { fill: var(--danger); stroke: #6d2023; stroke-width: 2; opacity: 1; }
+.check-trace-intersection.selected { fill: var(--copper); stroke: #6d4a0d; stroke-width: 2; opacity: 1; }
+.check-stack-label, .bin-stack-label { fill: var(--danger); font-size: 10px; font-weight: 850; }
 .check-trace-target-marker { fill: var(--accent-2); stroke: #fffefa; stroke-width: 1.7; }
 .processing-frame { fill: #fffefa; stroke: #9a907f; stroke-width: 1.1; }
 .processing-grid-line { stroke: #e4dcca; stroke-width: 1; }
@@ -170,8 +175,10 @@
 .bin-grid { stroke: #e4dcca; stroke-width: 1; }
 .bin-axis { stroke: #776f62; stroke-width: 1.3; }
 .bin-fold-link { fill: none; stroke: var(--danger); stroke-width: 1.7; stroke-dasharray: 5 4; opacity: .9; }
+.bin-cluster-fold-link { fill: none; stroke: #8a5a16; stroke-width: 1.05; stroke-dasharray: 4 5; opacity: .36; }
+.bin-cluster-fold-link.overlap { stroke: var(--danger); stroke-width: 1.35; opacity: .72; }
 .bin-cluster-marker { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.1; opacity: .50; }
-.bin-cluster-marker.selected { fill: var(--danger); stroke: #6d2023; opacity: .92; }
+.bin-cluster-marker.selected { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.8; opacity: .95; }
 .bin-cluster-marker.overlap { fill: var(--danger); stroke: #6d2023; opacity: 1; filter: drop-shadow(0 0 6px rgba(155,61,63,.50)); }
 .bin-surface-marker { fill: var(--copper); stroke: #6d4a0d; stroke-width: 1.8; }
 .bin-surface-marker.overlap { fill: var(--danger); stroke: #6d2023; filter: drop-shadow(0 0 7px rgba(155,61,63,.60)); }
