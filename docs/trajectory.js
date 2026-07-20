@@ -471,6 +471,7 @@
     const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Local side view of E19 altitude over groundtrack distance"
       data-curve-source="E19_FLYBY.samples"
       data-curve-fit="none"
+      data-curve-display="sample-points-only"
       data-sample-count="${samples.length}"
       data-core-ground-start-km="${coreStart ? coreStart.groundTrackKm : ''}"
       data-core-ground-end-km="${coreEnd ? coreEnd.groundTrackKm : ''}">`];
@@ -481,7 +482,6 @@
       yTitle: 'altitude above mean Europa (km)'
     });
     svg.push(`<line class="surface" x1="${margin.left}" y1="${scales.y(0)}" x2="${width - margin.right}" y2="${scales.y(0)}"></line>`);
-    svg.push(`<path class="trajectory-line" fill="none" d="${pathFor(samples, scales, 'groundTrackKm', 'altitudeKm')}"><title>Real E19 SPICE altitude samples connected in time order; no fitted parabola</title></path>`);
     samples.forEach((point, index) => {
       const showLabel = index % 24 === 0 || point.offsetS === 0;
       svg.push(`<circle class="trajectory-sample-dot" cx="${scales.x(point.groundTrackKm)}" cy="${scales.y(point.altitudeKm)}" r="${showLabel ? 2.1 : 1.35}"><title>SPICE sample ${signed(point.offsetS, 0)} s: ${signed(point.groundTrackKm, 1)} km, ${fmt(point.altitudeKm, 1)} km altitude</title></circle>`);
@@ -494,7 +494,7 @@
       [coreStart, coreEnd].forEach((point, index) => {
         svg.push(`<circle class="trajectory-window-end" cx="${scales.x(point.groundTrackKm)}" cy="${scales.y(point.altitudeKm)}" r="4.2"><title>${index ? 'Core end' : 'Core start'}: ${signed(point.groundTrackKm, 1)} km, ${fmt(point.altitudeKm, 1)} km altitude, ${fmt(point.incidenceDeg, 1)} deg incidence</title></circle>`);
       });
-      svg.push(`<text class="label-warning" x="${margin.left}" y="38">real SPICE samples; gold core ${signed(coreStart.groundTrackKm, 0)} to ${signed(coreEnd.groundTrackKm, 0)} km, red PRF folds</text>`);
+      svg.push(`<text class="label-warning" x="${margin.left}" y="38">SPICE sample dots only; gold core ${signed(coreStart.groundTrackKm, 0)} to ${signed(coreEnd.groundTrackKm, 0)} km, red PRF folds</text>`);
     }
     svg.push(`<line class="current-guide" x1="${scales.x(row.groundTrackKm)}" y1="${margin.top}" x2="${scales.x(row.groundTrackKm)}" y2="${height - margin.bottom}"></line>`);
     svg.push(satelliteIcon(scales.x(row.groundTrackKm), scales.y(row.altitudeKm), 11));
