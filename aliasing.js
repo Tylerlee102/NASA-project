@@ -287,6 +287,7 @@
     const verticalKm = Math.max(1, model.altitudeKm - elevationKm);
     const surfaceRangeKm = Math.hypot(verticalKm, surfaceDxKm);
     return {
+      xKm,
       elevationKm,
       surfaceDxKm,
       verticalKm,
@@ -294,6 +295,30 @@
       surfaceApparentDepthKm: (surfaceRangeKm - model.altitudeKm) / model.iceIndex,
       surfaceTrueDopplerHz: (2 * model.velocityKmS * 1000 / wavelengthM) * (surfaceDxKm / surfaceRangeKm)
     };
+  }
+
+  function surfaceSlopeAtKm(xKm) {
+    const sampleKm = 0.25;
+    return (
+      surfaceBumpElevationKm(xKm + sampleKm) -
+      surfaceBumpElevationKm(xKm - sampleKm)
+    ) / (2 * sampleKm);
+  }
+
+  function surfaceReturnPowerRatio(surfaceState, targetRangeKm) {
+    const rangeRatio = targetRangeKm / Math.max(surfaceState.surfaceRangeKm, 1e-6);
+    const rangePower = clamp(rangeRatio ** 4, 0.25, 6);
+    const slope = surfaceSlopeAtKm(surfaceState.xKm);
+    const normalCos = clamp(
+      (surfaceState.verticalKm + slope * surfaceState.surfaceDxKm) /
+      (surfaceState.surfaceRangeKm * Math.hypot(1, slope)),
+      0,
+      1
+    );
+    const heightRatio = model.bumpHeightKm > 0 ? surfaceState.elevationKm / model.bumpHeightKm : 0;
+    const heightPower = clamp(1 + 0.35 * heightRatio, 0.55, 1.35);
+    const facetPower = 0.34 + 0.92 * normalCos ** 2;
+    return clamp(0.42 * rangePower * heightPower * facetPower, 0.04, 4.5);
   }
 
   function computeFixedPoints() {
@@ -715,11 +740,22 @@
     const targetApexX = sx(0);
     const targetApexY = sy(model.targetDepthKm);
     const overlapCount = movingState.overlapCount || (movingState.overlapsTarget ? 1 : 0);
+    const overlapGroup = clusterPoints.filter((point) => point.overlapsTarget);
+    const powerSummary = (points) => {
+      const powers = points
+        .map((point) => point.surfacePowerRatio)
+        .filter(Number.isFinite);
+      if (!powers.length) return '';
+      if (powers.length === 1) return `; power ${fmt(powers[0], 2)}x`;
+      const sorted = [...powers].sort((a, b) => a - b);
+      if (powers.length === 2) return `; powers ${fmt(sorted[0], 2)}x / ${fmt(sorted[1], 2)}x`;
+      return `; powers ${fmt(sorted[0], 2)}-${fmt(sorted[sorted.length - 1], 2)}x`;
+    };
     const stateLabel = overlapCount > 1
       ? `${fmt(overlapCount, 0)} clutter traces have both range and folded Doppler match`
       : movingState.overlapsTarget ? 'range and folded Doppler both match' : 'range or folded Doppler remains separated';
     const clusterLabel = clusterCount
-      ? `${fmt(clusterCount, 0)} surface traces; ${fmt(overlapCount, 0)} highlighted trace${overlapCount === 1 ? '' : 's'} match the target cell`
+      ? `${fmt(clusterCount, 0)} surface traces; ${fmt(overlapCount, 0)} highlighted return${overlapCount === 1 ? '' : 's'} match${powerSummary(overlapGroup)}`
       : `current trace: ${stateLabel}`;
     const currentXKm = Math.max(xMinKm, Math.min(xMaxKm, movingState.planeXKm));
     const currentX = sx(currentXKm);
@@ -727,7 +763,6 @@
     const movingLabelAnchor = currentXKm >= 0 ? 'start' : 'end';
     const movingLabelX = currentX + (currentXKm >= 0 ? 10 : -10);
     const movingLabelY = clutterY + (movingState.overlapsTarget ? 20 : -9);
-    const overlapGroup = clusterPoints.filter((point) => point.overlapsTarget);
     const currentStackForPoint = (point) => (
       point.overlapsTarget && overlapGroup.length > 1
         ? {
@@ -782,7 +817,11 @@
         const traceClass = point.overlapsTarget
           ? `overlap ${isSelected ? 'selected' : 'secondary'}`
           : 'cluster';
-        svg += `<path class="check-clutter-curve ${traceClass}" data-point-index="${point.index}" data-target-match="${point.overlapsTarget}" d="${pathFor(clutterTraceDepthFor(point.xKm))}"><title>Surface point ${point.index + 1} range trace${point.overlapsTarget ? `; target-cell match ${overlapIndex + 1} of ${overlapGroup.length}` : ''}</title></path>`;
+        const returnPower = Number.isFinite(point.surfacePowerRatio) ? point.surfacePowerRatio : 1;
+        const traceWidth = point.overlapsTarget ? 1.8 + 1.8 * Math.min(1, Math.sqrt(returnPower / 2.4)) : null;
+        const traceOpacity = point.overlapsTarget ? 0.55 + 0.4 * Math.min(1, returnPower / 2.4) : null;
+        const traceStyle = point.overlapsTarget ? ` style="stroke-width:${traceWidth.toFixed(2)};opacity:${traceOpacity.toFixed(2)}"` : '';
+        svg += `<path class="check-clutter-curve ${traceClass}" data-point-index="${point.index}" data-target-match="${point.overlapsTarget}" data-return-power="${returnPower}" d="${pathFor(clutterTraceDepthFor(point.xKm))}"${traceStyle}><title>Surface point ${point.index + 1} range trace; bump power ${fmt(returnPower, 2)}x target${point.overlapsTarget ? `; target-cell match ${overlapIndex + 1} of ${overlapGroup.length}` : ''}</title></path>`;
       });
     } else {
       svg += `<path class="check-clutter-curve selected" d="${pathFor(clutterTraceDepth)}"><title>Selected surface clutter range trace</title></path>`;
@@ -792,7 +831,9 @@
       const isSelected = Math.abs(point.xKm - movingState.surfaceXKm) < 1e-6;
       if (isSelected) return;
       const currentStack = currentStackForPoint(point);
-      svg += `<circle class="check-cluster-dot ${point.overlapsTarget ? 'overlap' : ''}" cx="${currentX + currentStack.x}" cy="${sy(clutterTraceDepthFor(point.xKm)(currentXKm)) + currentStack.y}" r="${point.overlapsTarget ? 4.2 : 2.7}"><title>Cluster point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz</title></circle>`;
+      const returnPower = Number.isFinite(point.surfacePowerRatio) ? point.surfacePowerRatio : 1;
+      const radius = point.overlapsTarget ? 3.4 + 2.5 * Math.min(1, Math.sqrt(returnPower / 2.4)) : 2.7;
+      svg += `<circle class="check-cluster-dot ${point.overlapsTarget ? 'overlap' : ''}" cx="${currentX + currentStack.x}" cy="${sy(clutterTraceDepthFor(point.xKm)(currentXKm)) + currentStack.y}" r="${radius}"><title>Cluster point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz, bump power ${fmt(returnPower, 2)}x target</title></circle>`;
     });
     visibleTraceIntersections.forEach((entry) => {
       const stack = plotStack(
@@ -813,9 +854,11 @@
     svg += `<line class="check-motion-guide" x1="${currentX}" y1="${margin.top}" x2="${currentX}" y2="${height - margin.bottom}"></line>`;
     const selectedCurrentPoint = clusterPoints.find((point) => point.index === movingState.selectedPointIndex);
     const selectedStack = selectedCurrentPoint ? currentStackForPoint(selectedCurrentPoint) : { x: 0, y: 0, count: 1 };
-    svg += `<circle class="check-moving-clutter${movingState.overlapsTarget ? ' overlap' : ''}" cx="${currentX + selectedStack.x}" cy="${clutterY + selectedStack.y}" r="6"><title>Selected clutter: ${signed(movingState.surfaceAliasHz, 1)} Hz folded Doppler</title></circle>`;
+    const selectedPower = Number.isFinite(movingState.surfacePowerRatio) ? movingState.surfacePowerRatio : selectedCurrentPoint?.surfacePowerRatio;
+    const selectedPowerText = Number.isFinite(selectedPower) ? `, bump power ${fmt(selectedPower, 2)}x target` : '';
+    svg += `<circle class="check-moving-clutter${movingState.overlapsTarget ? ' overlap' : ''}" cx="${currentX + selectedStack.x}" cy="${clutterY + selectedStack.y}" r="6"><title>Selected clutter: ${signed(movingState.surfaceAliasHz, 1)} Hz folded Doppler${selectedPowerText}</title></circle>`;
     if (overlapCount > 1) {
-      svg += `<text class="check-stack-label" x="${currentX + 13}" y="${Math.min(height - margin.bottom - 8, clutterY + 27)}">${fmt(overlapCount, 0)} matching clutter echoes</text>`;
+      svg += `<text class="check-stack-label" x="${currentX + 13}" y="${Math.min(height - margin.bottom - 8, clutterY + 27)}">${fmt(overlapCount, 0)} matching echoes, unequal power</text>`;
     } else {
       svg += `<text class="${movingState.overlapsTarget ? 'check-danger' : 'check-title'}" x="${movingLabelX}" y="${movingLabelY}" text-anchor="${movingLabelAnchor}">current selected surface point</text>`;
     }
@@ -902,7 +945,9 @@
     clusterPoints.forEach((point) => {
       const css = point.overlapsTarget ? 'overlap' : point.index === movingState.selectedPointIndex ? 'selected' : '';
       const stack = stackForPoint(point);
-      svg += `<circle class="check-cluster-sample ${css}" cx="${sx(relativeDopplerHz(point.surfaceAliasHz)) + stack.x}" cy="${sy(point.surfaceApparentDepthKm) + stack.y}" r="${point.overlapsTarget ? 4.2 : point.index === movingState.selectedPointIndex ? 3.8 : 3}"><title>Surface point ${point.index + 1}: target-relative Doppler ${signed(relativeDopplerHz(point.surfaceAliasHz), 1)} Hz at ${fmt(point.surfaceApparentDepthKm, 2)} km</title></circle>`;
+      const returnPower = Number.isFinite(point.surfacePowerRatio) ? point.surfacePowerRatio : 1;
+      const radius = point.overlapsTarget ? 3.3 + 2.4 * Math.min(1, Math.sqrt(returnPower / 2.4)) : point.index === movingState.selectedPointIndex ? 3.8 : 3;
+      svg += `<circle class="check-cluster-sample ${css}" cx="${sx(relativeDopplerHz(point.surfaceAliasHz)) + stack.x}" cy="${sy(point.surfaceApparentDepthKm) + stack.y}" r="${radius}"><title>Surface point ${point.index + 1}: target-relative Doppler ${signed(relativeDopplerHz(point.surfaceAliasHz), 1)} Hz at ${fmt(point.surfaceApparentDepthKm, 2)} km, bump power ${fmt(returnPower, 2)}x target</title></circle>`;
     });
     svg += '</g>';
     if (!clusterCount) {
@@ -962,6 +1007,8 @@
     const surfaceTrueDopplerHz = surfaceState.surfaceTrueDopplerHz;
     const surfaceAliasHz = alias(surfaceTrueDopplerHz, effectivePrfHz);
     const surfaceApparentDepthKm = surfaceState.surfaceApparentDepthKm;
+    const surfacePowerRatio = surfaceReturnPowerRatio(surfaceState, targetState.targetRangeKm);
+    const surfaceAmplitudeRatio = Math.sqrt(surfacePowerRatio);
     const dopplerDeltaHz = Math.abs(alias(surfaceAliasHz - targetState.targetAliasHz, effectivePrfHz));
     const depthDeltaKm = Math.abs(surfaceApparentDepthKm - targetState.targetApparentDepthKm);
     const normalizedDistance = Math.hypot(
@@ -977,6 +1024,8 @@
       surfaceTrueDopplerHz,
       surfaceAliasHz,
       surfaceApparentDepthKm,
+      surfacePowerRatio,
+      surfaceAmplitudeRatio,
       targetState,
       dopplerDeltaHz,
       depthDeltaKm,
@@ -1049,6 +1098,7 @@
       surfaceTrueDopplerHz: selectedPoint.surfaceTrueDopplerHz,
       surfaceAliasHz: selectedPoint.surfaceAliasHz,
       surfaceApparentDepthKm: selectedPoint.surfaceApparentDepthKm,
+      surfacePowerRatio: selectedPoint.surfacePowerRatio,
       targetXKm: selectedTarget.xKm,
       targetTrueDopplerHz: selectedTarget.targetTrueDopplerHz,
       targetAliasHz: selectedTarget.targetAliasHz,
@@ -1110,7 +1160,7 @@
     state.points.forEach((point) => {
       const css = point.overlapsTarget ? 'overlap' : point.index === nearest.index ? 'nearest' : '';
       const radius = point.overlapsTarget ? 7.4 : point.index === nearest.index ? 6.6 : 4.8;
-      svg += `<circle class="multi-clutter-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceYFor(point.xKm)}" r="${radius}"><title>Surface point ${point.index + 1}: x=${fmt(point.xKm, 1)} km, bump ${signed(point.elevationKm, 2)} km, alias ${signed(point.surfaceAliasHz, 1)} Hz, apparent depth ${fmt(point.surfaceApparentDepthKm, 2)} km</title></circle>`;
+      svg += `<circle class="multi-clutter-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceYFor(point.xKm)}" r="${radius}"><title>Surface point ${point.index + 1}: x=${fmt(point.xKm, 1)} km, bump ${signed(point.elevationKm, 2)} km, power ${fmt(point.surfacePowerRatio, 2)}x target, alias ${signed(point.surfaceAliasHz, 1)} Hz, apparent depth ${fmt(point.surfaceApparentDepthKm, 2)} km</title></circle>`;
     });
     svg += `<rect class="geometry-target ${state.targetState.overlapsSurface ? 'overlap' : ''}" x="${targetX - 8}" y="${targetY - 8}" width="16" height="16" transform="rotate(45 ${targetX} ${targetY})"><title>One fixed subsurface target: physical depth ${fmt(model.targetDepthKm, 2)} km; current apparent echo ${fmt(state.targetState.targetApparentDepthKm, 2)} km</title></rect>`;
     svg += `<line class="geometry-fold-line" x1="${left}" y1="${nearestDepthY}" x2="${width - right}" y2="${nearestDepthY}"></line>`;
@@ -1173,7 +1223,7 @@
       const css = point.overlapsTarget ? 'overlap' : point.index === nearest.index ? 'nearest' : '';
       const radius = point.overlapsTarget ? 5.6 : point.index === nearest.index ? 5 : 3.5;
       const stack = stackForPoint(point);
-      svg += `<circle class="multi-clutter-point ${css}" cx="${sx(point.surfaceAliasHz) + stack.x}" cy="${sy(point.surfaceApparentDepthKm) + stack.y}" r="${radius}"><title>Surface point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz, apparent depth ${fmt(point.surfaceApparentDepthKm, 2)} km, bump ${signed(point.elevationKm, 2)} km</title></circle>`;
+      svg += `<circle class="multi-clutter-point ${css}" cx="${sx(point.surfaceAliasHz) + stack.x}" cy="${sy(point.surfaceApparentDepthKm) + stack.y}" r="${radius}"><title>Surface point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz, apparent depth ${fmt(point.surfaceApparentDepthKm, 2)} km, bump ${signed(point.elevationKm, 2)} km, power ${fmt(point.surfacePowerRatio, 2)}x target</title></circle>`;
       if (stack.count > 1 && stack.index === 0) {
         svg += `<text class="check-stack-label" x="${sx(point.surfaceAliasHz) + 11}" y="${sy(point.surfaceApparentDepthKm) - 10}">${fmt(stack.count, 0)} stacked</text>`;
       }
@@ -1196,9 +1246,18 @@
     if (bumpHeightOutput) bumpHeightOutput.textContent = `${fmt(model.bumpHeightKm, 1)} km`;
     if (multiClutterStatus) {
       const nearest = state.overlappingPoints[0] || state.nearestPoint;
+      const overlapPowers = state.overlappingPoints
+        .map((point) => point.surfacePowerRatio)
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+      const powerRange = overlapPowers.length > 1
+        ? ` Relative bump powers span ${fmt(overlapPowers[0], 2)}-${fmt(overlapPowers[overlapPowers.length - 1], 2)}x target.`
+        : overlapPowers.length === 1
+        ? ` Relative bump power is ${fmt(overlapPowers[0], 2)}x target.`
+        : '';
       multiClutterStatus.className = `multi-clutter-status${state.overlappingPoints.length ? ' is-overlap' : ''}`;
       multiClutterStatus.textContent = state.overlappingPoints.length
-        ? `${fmt(state.overlappingPoints.length, 0)} bumpy surface point${state.overlappingPoints.length === 1 ? '' : 's'} alias into the one subsurface object at ${fmt(flyby.timeS, 1)} s.`
+        ? `${fmt(state.overlappingPoints.length, 0)} bumpy surface point${state.overlappingPoints.length === 1 ? '' : 's'} alias into the one subsurface object at ${fmt(flyby.timeS, 1)} s.${powerRange}`
         : `No bumpy surface point is in the one target cell at ${fmt(flyby.timeS, 1)} s; nearest is ${fmt(nearest.dopplerDeltaHz, 1)} Hz and ${fmt(nearest.depthDeltaKm, 2)} km away.`;
     }
     renderMultiClutterGeometry(state);
@@ -1218,19 +1277,33 @@
         (point.dopplerDeltaHz / dopplerSigmaHz) ** 2 +
         (point.depthDeltaKm / depthSigmaKm) ** 2
       ));
+      const surfaceAmplitudeRatio = Number.isFinite(point.surfaceAmplitudeRatio)
+        ? point.surfaceAmplitudeRatio
+        : 1;
+      const surfacePowerRatio = Number.isFinite(point.surfacePowerRatio)
+        ? point.surfacePowerRatio
+        : surfaceAmplitudeRatio ** 2;
+      const cellAmplitude = cellWeight * surfaceAmplitudeRatio;
+      const cellPower = cellAmplitude ** 2;
       return {
         ...point,
         phaseRad: relativePhaseRad,
         phaseDeg: phaseDeg(relativePhaseRad),
         cellWeight,
-        coherentRe: cellWeight * Math.cos(relativePhaseRad),
-        coherentIm: cellWeight * Math.sin(relativePhaseRad)
+        surfacePowerRatio,
+        surfaceAmplitudeRatio,
+        cellAmplitude,
+        cellPower,
+        coherentRe: cellAmplitude * Math.cos(relativePhaseRad),
+        coherentIm: cellAmplitude * Math.sin(relativePhaseRad)
       };
     });
+    const overlappingPoints = points.filter((point) => point.overlapsTarget);
     const surfaceSum = points.reduce((sum, point) => ({
       re: sum.re + point.coherentRe,
       im: sum.im + point.coherentIm
     }), { re: 0, im: 0 });
+    const incoherentSurfacePower = points.reduce((sum, point) => sum + point.cellPower, 0);
     const combined = {
       re: 1 + surfaceSum.re,
       im: surfaceSum.im
@@ -1251,28 +1324,35 @@
       im: combined.im - surfaceSum.im
     });
     const targetPower = targetVector.magnitude ** 2;
-    const surfacePower = surfaceVector.magnitude ** 2;
-    const interferencePower = 2 * (
+    const coherentSurfacePower = surfaceVector.magnitude ** 2;
+    const surfaceCrossPower = coherentSurfacePower - incoherentSurfacePower;
+    const targetSurfaceInterferencePower = 2 * (
       targetVector.re * surfaceVector.re + targetVector.im * surfaceVector.im
     );
     const observedPower = combinedVector.magnitude ** 2;
+    const interferencePower = targetSurfaceInterferencePower + surfaceCrossPower;
     const residualPower = residualVector.magnitude ** 2;
     return {
       ...state,
       points,
+      overlappingPoints,
       targetPhaseRad,
       targetVector,
       surfaceVector,
       combinedVector,
       residualVector,
       targetPower,
-      surfacePower,
+      surfacePower: incoherentSurfacePower,
+      incoherentSurfacePower,
+      coherentSurfacePower,
+      surfaceCrossPower,
+      targetSurfaceInterferencePower,
       interferencePower,
       observedPower,
       residualPower,
-      powerOnlyResidual: observedPower - surfacePower,
+      powerOnlyResidual: observedPower - incoherentSurfacePower,
       removedPower: observedPower - residualPower,
-      powerClosureError: observedPower - (targetPower + surfacePower + interferencePower)
+      powerClosureError: observedPower - (targetPower + incoherentSurfacePower + interferencePower)
     };
   }
 
@@ -1323,9 +1403,10 @@
         <circle class="geometry-plane-window" cx="10" cy="0" r="2.7"></circle>
       </g>`;
     solution.points.forEach((point) => {
-      const radius = point.overlapsTarget ? 7.6 : 4.6 + 4.2 * Math.sqrt(point.cellWeight);
-      const css = point.overlapsTarget ? 'overlap' : point.cellWeight > 0.12 ? 'weighted' : '';
-      svg += `<circle class="phase-surface-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceYFor(point.xKm)}" r="${radius}" style="fill:${phaseColor(point.phaseRad)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, cell weight ${fmt(point.cellWeight, 2)}, alias ${signed(point.surfaceAliasHz, 1)} Hz</title></circle>`;
+      const amplitude = Math.min(1.8, point.cellAmplitude);
+      const radius = point.overlapsTarget ? 5.2 + 3.4 * Math.sqrt(amplitude / 1.8) : 4.3 + 3.8 * Math.sqrt(Math.min(1, point.cellWeight));
+      const css = point.overlapsTarget ? 'overlap' : point.cellPower > 0.12 ? 'weighted' : '';
+      svg += `<circle class="phase-surface-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceYFor(point.xKm)}" r="${radius}" style="fill:${phaseColor(point.phaseRad)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, cell response ${fmt(point.cellWeight, 2)}, bump power ${fmt(point.surfacePowerRatio, 2)}x target, cell power ${fmt(point.cellPower, 2)}x, alias ${signed(point.surfaceAliasHz, 1)} Hz</title></circle>`;
     });
     svg += `<rect class="geometry-target ${solution.targetState.overlapsSurface ? 'overlap' : ''}" x="${targetX - 8}" y="${targetY - 8}" width="16" height="16" transform="rotate(45 ${targetX} ${targetY})"><title>Target phase reference: 0 deg</title></rect>`;
     svg += `<text class="geometry-title" x="${left}" y="20">color = phase relative to target echo</text>`;
@@ -1376,12 +1457,12 @@
     solution.points.forEach((point) => {
       const x = sx(relativeDopplerHz(point.surfaceAliasHz));
       const y = sy(point.surfaceApparentDepthKm);
-      const radius = 3 + 6 * Math.sqrt(point.cellWeight);
-      const css = point.overlapsTarget ? 'overlap' : point.cellWeight > 0.12 ? 'weighted' : '';
-      svg += `<circle class="phase-cell-point ${css}" cx="${x}" cy="${y}" r="${radius}" style="fill:${phaseColor(point.phaseRad)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, weight ${fmt(point.cellWeight, 2)}, relative Doppler ${signed(relativeDopplerHz(point.surfaceAliasHz), 1)} Hz</title></circle>`;
+      const radius = 3 + 6 * Math.sqrt(Math.min(1.8, point.cellPower) / 1.8);
+      const css = point.overlapsTarget ? 'overlap' : point.cellPower > 0.12 ? 'weighted' : '';
+      svg += `<circle class="phase-cell-point ${css}" cx="${x}" cy="${y}" r="${radius}" style="fill:${phaseColor(point.phaseRad)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, cell response ${fmt(point.cellWeight, 2)}, bump power ${fmt(point.surfacePowerRatio, 2)}x target, cell power ${fmt(point.cellPower, 2)}x, relative Doppler ${signed(relativeDopplerHz(point.surfaceAliasHz), 1)} Hz</title></circle>`;
     });
     svg += `<rect class="check-target-center" x="${sx(0) - 5}" y="${sy(targetState.targetApparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${sx(0)} ${sy(targetState.targetApparentDepthKm)})"><title>Target phase reference: 0 deg</title></rect>`;
-    svg += `<text class="check-title" x="${margin.left}" y="18">dot color = wrapped carrier phase, dot size = target-cell weight</text>`;
+    svg += `<text class="check-title" x="${margin.left}" y="18">dot color = wrapped carrier phase, dot size = weighted bump power</text>`;
     svg += `<text class="${solution.overlappingPoints.length ? 'check-danger' : 'check-title'}" x="${margin.left}" y="36">${fmt(solution.overlappingPoints.length, 0)} phase-weighted surface return${solution.overlappingPoints.length === 1 ? '' : 's'} in the target cell</text>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
@@ -1425,17 +1506,18 @@
     svg += `<text class="phase-label" x="${centerX + circleRadius + 18}" y="${centerY + 4}">0 deg</text>`;
     svg += `<text class="phase-label" x="${centerX - 6}" y="${centerY - circleRadius - 18}" text-anchor="end">+90</text>`;
     solution.points.forEach((point) => {
-      if (point.cellWeight < 0.02) return;
+      if (point.cellAmplitude < 0.02) return;
       const end = endpoint({ re: point.coherentRe, im: point.coherentIm });
       const css = point.overlapsTarget ? 'overlap' : 'surface';
-      svg += `<line class="phase-vector ${css}" x1="${centerX}" y1="${centerY}" x2="${end.x}" y2="${end.y}" style="stroke:${phaseColor(point.phaseRad)};stroke-width:${(1 + 3 * Math.sqrt(point.cellWeight)).toFixed(2)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, coherent weight ${fmt(point.cellWeight, 2)}</title></line>`;
-      svg += `<circle class="phase-vector-tip ${css}" cx="${end.x}" cy="${end.y}" r="${2.5 + 2.5 * Math.sqrt(point.cellWeight)}" style="fill:${phaseColor(point.phaseRad)}"></circle>`;
+      const strokeWidth = 1 + 3 * Math.sqrt(Math.min(1.8, point.cellPower) / 1.8);
+      svg += `<line class="phase-vector ${css}" x1="${centerX}" y1="${centerY}" x2="${end.x}" y2="${end.y}" style="stroke:${phaseColor(point.phaseRad)};stroke-width:${strokeWidth.toFixed(2)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, bump power ${fmt(point.surfacePowerRatio, 2)}x target, cell amplitude ${fmt(point.cellAmplitude, 2)}</title></line>`;
+      svg += `<circle class="phase-vector-tip ${css}" cx="${end.x}" cy="${end.y}" r="${2.5 + 2.5 * Math.sqrt(Math.min(1.8, point.cellPower) / 1.8)}" style="fill:${phaseColor(point.phaseRad)}"></circle>`;
     });
     svg += `<line class="phase-vector target" x1="${centerX}" y1="${centerY}" x2="${targetEnd.x}" y2="${targetEnd.y}" marker-end="url(#phase-arrow)"></line>`;
     svg += `<line class="phase-vector sum" x1="${centerX}" y1="${centerY}" x2="${surfaceEnd.x}" y2="${surfaceEnd.y}" marker-end="url(#phase-arrow)"></line>`;
     svg += `<line class="phase-vector combined" x1="${centerX}" y1="${centerY}" x2="${combinedEnd.x}" y2="${combinedEnd.y}" marker-end="url(#phase-arrow)"></line>`;
     svg += `<text class="phase-title" x="38" y="22">coherent vector plane</text>`;
-    svg += `<text class="phase-note" x="38" y="40">${fmt(solution.overlappingPoints.length, 0)} target-cell surface phasor${solution.overlappingPoints.length === 1 ? '' : 's'} weighted by Doppler/depth match</text>`;
+    svg += `<text class="phase-note" x="38" y="40">${fmt(solution.overlappingPoints.length, 0)} target-cell surface phasor${solution.overlappingPoints.length === 1 ? '' : 's'} weighted by cell match and bump power</text>`;
     barRows.forEach((row, index) => {
       const y = 84 + index * 58;
       const length = Math.max(1, row.vector.magnitude * barScale);
@@ -1462,6 +1544,8 @@
       1,
       solution.targetPower,
       solution.surfacePower,
+      solution.incoherentSurfacePower,
+      solution.coherentSurfacePower,
       solution.observedPower,
       solution.residualPower,
       solution.interferencePower,
@@ -1476,22 +1560,25 @@
       : zeroX + (value / axisMagnitude) * negativeWidth;
     const powerRows = [
       { label: 'target self-power', value: solution.targetPower, css: 'target' },
-      { label: 'surface self-power', value: solution.surfacePower, css: 'surface' },
-      { label: 'phase interference', value: solution.interferencePower, css: 'interference' },
+      { label: 'summed bump power', value: solution.incoherentSurfacePower, css: 'surface' },
+      { label: 'phase cross-terms', value: solution.interferencePower, css: 'interference' },
       { label: 'observed overlap', value: solution.observedPower, css: 'observed' }
     ];
     const rowStartY = 78;
     const rowGap = 46;
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Power budget before and after coherent phase subtraction of surface clutter"
       data-target-power="${solution.targetPower}"
-      data-surface-power="${solution.surfacePower}"
+      data-surface-power="${solution.incoherentSurfacePower}"
+      data-coherent-surface-power="${solution.coherentSurfacePower}"
+      data-surface-cross-power="${solution.surfaceCrossPower}"
+      data-target-surface-interference-power="${solution.targetSurfaceInterferencePower}"
       data-interference-power="${solution.interferencePower}"
       data-observed-power="${solution.observedPower}"
       data-power-only-residual="${solution.powerOnlyResidual}"
       data-residual-power="${solution.residualPower}"
       data-power-closure-error="${solution.powerClosureError}">`;
     svg += `<text class="phase-title" x="${left}" y="22">power in the target Doppler/depth cell, normalized to target-only power</text>`;
-    svg += `<text class="phase-note" x="${left}" y="41">observed = target self-power + surface self-power + phase interference</text>`;
+    svg += `<text class="phase-note" x="${left}" y="41">observed = target power + individual bump powers + coherent phase cross-terms</text>`;
     svg += `<line class="phase-power-zero" x1="${zeroX}" y1="56" x2="${zeroX}" y2="${rowStartY + (powerRows.length - 1) * rowGap + 17}"></line>`;
     svg += `<text class="phase-label" x="${zeroX}" y="69" text-anchor="middle">0</text>`;
     powerRows.forEach((row, index) => {
@@ -1512,8 +1599,8 @@
     svg += `<line class="phase-power-divider" x1="${left}" y1="${dividerY}" x2="${width - right}" y2="${dividerY}"></line>`;
     svg += `<line class="phase-power-comparison-line" x1="${comparisonSplitX}" y1="${comparisonTop - 13}" x2="${comparisonSplitX}" y2="${height - 22}"></line>`;
     svg += `<text class="phase-title" x="${left}" y="${comparisonTop}">power-only subtraction</text>`;
-    svg += `<text class="phase-note" x="${left}" y="${comparisonTop + 23}">observed power - surface self-power</text>`;
-    svg += `<text class="phase-power-comparison-value warning" x="${left}" y="${comparisonTop + 58}">${fmt(solution.observedPower, 2)} - ${fmt(solution.surfacePower, 2)} = ${fmt(solution.powerOnlyResidual, 2)} x</text>`;
+    svg += `<text class="phase-note" x="${left}" y="${comparisonTop + 23}">observed power - summed bump powers</text>`;
+    svg += `<text class="phase-power-comparison-value warning" x="${left}" y="${comparisonTop + 58}">${fmt(solution.observedPower, 2)} - ${fmt(solution.incoherentSurfacePower, 2)} = ${fmt(solution.powerOnlyResidual, 2)} x</text>`;
     svg += `<text class="phase-note" x="${left}" y="${comparisonTop + 83}">wrong by ${signed(solution.powerOnlyResidual - solution.targetPower, 2)} x because phase interference remains</text>`;
     svg += `<text class="phase-title" x="${comparisonSplitX + 34}" y="${comparisonTop}">phase-aware subtraction</text>`;
     svg += `<text class="phase-note" x="${comparisonSplitX + 34}" y="${comparisonTop + 23}">|observed phasor - surface phasor| squared</text>`;
@@ -1637,6 +1724,7 @@
   }
 
   function validationRecovery(solution, phaseErrorDegValue, amplitudeErrorFractionValue, noiseVector = { re: 0, im: 0 }) {
+    const amplitudeScale = Math.max(0, 1 + amplitudeErrorFractionValue);
     const estimatedSurface = estimatedClutterVector(
       solution.surfaceVector,
       phaseErrorDegValue,
@@ -1658,10 +1746,12 @@
       re: recovered.re - solution.targetVector.re,
       im: recovered.im - solution.targetVector.im
     });
-    const powerOnlyResidual = observed.power - estimatedSurface.power;
+    const estimatedSurfacePower = solution.incoherentSurfacePower * amplitudeScale ** 2;
+    const powerOnlyResidual = observed.power - estimatedSurfacePower;
     return {
       solution,
       estimatedSurface,
+      estimatedSurfacePower,
       observed,
       recovered,
       recoveredWithoutTarget,
@@ -1949,6 +2039,15 @@
     const solution = phaseSolutionState(state);
     if (!solution) return;
     if (phaseSolutionStatus) {
+      const overlapPowers = solution.overlappingPoints
+        .map((point) => point.surfacePowerRatio)
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+      const powerSpread = overlapPowers.length > 1
+        ? ` Individual bump powers span ${fmt(overlapPowers[0], 2)}-${fmt(overlapPowers[overlapPowers.length - 1], 2)}x target.`
+        : overlapPowers.length === 1
+        ? ` Individual bump power is ${fmt(overlapPowers[0], 2)}x target.`
+        : '';
       const surfaceSummary = solution.surfaceVector.magnitude < 0.005
         ? 'coherent surface sum is below 0.01'
         : `coherent surface sum is ${fmt(solution.surfaceVector.magnitude, 2)} at ${signed(phaseDeg(solution.surfaceVector.phaseRad), 0)} deg`;
@@ -1956,7 +2055,7 @@
         ? `${fmt(solution.overlappingPoints.length, 0)} surface return${solution.overlappingPoints.length === 1 ? '' : 's'} are in the target Doppler/depth cell`
         : 'No surface returns are in the target Doppler/depth cell';
       phaseSolutionStatus.className = `multi-clutter-status phase-solution-status${solution.overlappingPoints.length ? ' is-overlap' : ''}`;
-      phaseSolutionStatus.textContent = `${overlapText}. The ${surfaceSummary}; observed cell power is ${fmt(solution.observedPower, 2)} x target. Power-only subtraction leaves ${fmt(solution.powerOnlyResidual, 2)} x, while phase-aware subtraction recovers ${fmt(solution.residualPower, 2)} x.`;
+      phaseSolutionStatus.textContent = `${overlapText}.${powerSpread} The ${surfaceSummary}; observed cell power is ${fmt(solution.observedPower, 2)} x target. Power-only subtraction leaves ${fmt(solution.powerOnlyResidual, 2)} x, while phase-aware subtraction recovers ${fmt(solution.residualPower, 2)} x.`;
     }
     renderPhaseGeometry(solution);
     renderPhaseCell(solution);
