@@ -218,6 +218,16 @@
     return samples.filter((row) => row.offsetS >= windowInfo.startOffsetS && row.offsetS <= windowInfo.endOffsetS);
   }
 
+  function rowsInWindowWithEdges(windowInfo) {
+    if (!windowInfo) return [];
+    const rows = [
+      interpolateRow(windowInfo.startOffsetS),
+      ...samples.filter((row) => row.offsetS > windowInfo.startOffsetS && row.offsetS < windowInfo.endOffsetS),
+      interpolateRow(windowInfo.endOffsetS)
+    ];
+    return rows.sort((a, b) => a.offsetS - b.offsetS);
+  }
+
   function rowsInSector(sector) {
     const rows = [
       interpolateRow(sector.startS),
@@ -454,10 +464,16 @@
     const groundMax = Math.ceil(Math.max(...samples.map((entry) => entry.groundTrackKm)) / 100) * 100;
     const altMax = Math.ceil(Math.max(...samples.map((entry) => entry.altitudeKm)) / 100) * 100;
     const scales = chartScales(width, height, margin, groundMin, groundMax, altMax, 0);
-    const coreRows = rowsInWindow(coreWindow);
+    const coreRows = rowsInWindowWithEdges(coreWindow);
     const coreStart = coreWindow ? interpolateRow(coreWindow.startOffsetS) : null;
     const coreEnd = coreWindow ? interpolateRow(coreWindow.endOffsetS) : null;
-    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Local side view of E19 altitude over groundtrack distance">`];
+    const strongestFold = aliasAnalysis.zeroFoldSectors.find((sector) => sector.strongest);
+    const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Local side view of E19 altitude over groundtrack distance"
+      data-curve-source="E19_FLYBY.samples"
+      data-curve-fit="none"
+      data-sample-count="${samples.length}"
+      data-core-ground-start-km="${coreStart ? coreStart.groundTrackKm : ''}"
+      data-core-ground-end-km="${coreEnd ? coreEnd.groundTrackKm : ''}">`];
     axis(svg, width, height, margin, scales, [-1000, -500, 0, 500, 1000], [0, 100, 200, 300], {
       x: (value) => signed(value, 0),
       y: (value) => fmt(value, 0),
@@ -465,18 +481,25 @@
       yTitle: 'altitude above mean Europa (km)'
     });
     svg.push(`<line class="surface" x1="${margin.left}" y1="${scales.y(0)}" x2="${width - margin.right}" y2="${scales.y(0)}"></line>`);
-    svg.push(`<path class="trajectory-line" fill="none" d="${pathFor(samples, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+    svg.push(`<path class="trajectory-line" fill="none" d="${pathFor(samples, scales, 'groundTrackKm', 'altitudeKm')}"><title>Real E19 SPICE altitude samples connected in time order; no fitted parabola</title></path>`);
+    samples.forEach((point, index) => {
+      const showLabel = index % 24 === 0 || point.offsetS === 0;
+      svg.push(`<circle class="trajectory-sample-dot" cx="${scales.x(point.groundTrackKm)}" cy="${scales.y(point.altitudeKm)}" r="${showLabel ? 2.1 : 1.35}"><title>SPICE sample ${signed(point.offsetS, 0)} s: ${signed(point.groundTrackKm, 1)} km, ${fmt(point.altitudeKm, 1)} km altitude</title></circle>`);
+    });
+    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
+      svg.push(`<path class="trajectory-alias-sector${sector.strongest ? ' is-strongest' : ''}" d="${pathFor(rowsInSector(sector), scales, 'groundTrackKm', 'altitudeKm')}"><title>${sector.label}: ${signed(sector.startS, 1)} to ${signed(sector.endS, 1)} s on the same SPICE curve</title></path>`);
+    });
     if (coreRows.length) {
       svg.push(`<path class="trajectory-reconable" d="${pathFor(coreRows, scales, 'groundTrackKm', 'altitudeKm')}"><title>Core SPICE window: ${signed(coreStart.groundTrackKm, 1)} to ${signed(coreEnd.groundTrackKm, 1)} km; ${signed(coreWindow.startOffsetS, 0)} to ${signed(coreWindow.endOffsetS, 0)} s</title></path>`);
       [coreStart, coreEnd].forEach((point, index) => {
         svg.push(`<circle class="trajectory-window-end" cx="${scales.x(point.groundTrackKm)}" cy="${scales.y(point.altitudeKm)}" r="4.2"><title>${index ? 'Core end' : 'Core start'}: ${signed(point.groundTrackKm, 1)} km, ${fmt(point.altitudeKm, 1)} km altitude, ${fmt(point.incidenceDeg, 1)} deg incidence</title></circle>`);
       });
-      svg.push(`<text class="label-warning" x="${margin.left}" y="38">core window ${signed(coreStart.groundTrackKm, 0)} to ${signed(coreEnd.groundTrackKm, 0)} km from SPICE altitude/incidence criteria</text>`);
+      svg.push(`<text class="label-warning" x="${margin.left}" y="38">real SPICE samples; gold core ${signed(coreStart.groundTrackKm, 0)} to ${signed(coreEnd.groundTrackKm, 0)} km, red PRF folds</text>`);
     }
     svg.push(`<line class="current-guide" x1="${scales.x(row.groundTrackKm)}" y1="${margin.top}" x2="${scales.x(row.groundTrackKm)}" y2="${height - margin.bottom}"></line>`);
     svg.push(satelliteIcon(scales.x(row.groundTrackKm), scales.y(row.altitudeKm), 11));
     svg.push(`<text class="label-strong" x="${Math.min(width - margin.right - 150, scales.x(row.groundTrackKm) + 12)}" y="${scales.y(row.altitudeKm) - 12}">Europa Clipper</text>`);
-    svg.push(`<text class="label" x="${margin.left}" y="22">closest altitude ${fmt(closest.altitudeKm, 1)} km, speed ${fmt(closest.speedKmS, 3)} km/s</text>`);
+    svg.push(`<text class="label" x="${margin.left}" y="22">closest altitude ${fmt(closest.altitudeKm, 1)} km, speed ${fmt(closest.speedKmS, 3)} km/s${strongestFold ? `; strongest fold center ${signed(strongestFold.centerS, 1)} s` : ''}</text>`);
     svg.push('</svg>');
     tracePlot.innerHTML = svg.join('');
   }
