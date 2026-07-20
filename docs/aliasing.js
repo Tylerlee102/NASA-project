@@ -26,6 +26,9 @@
     playbackSpeed: 2
   };
   const YOUTUBE_PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  const pageParams = new URLSearchParams(window.location.search);
+  const isPowerPointCapture = pageParams.get('capture') === 'powerpoint';
+  document.body.classList.toggle('is-powerpoint-capture', isPowerPointCapture);
 
   const prfSlider = document.getElementById('effective-prf-slider');
   const prfPlayButton = document.getElementById('prf-play-button');
@@ -50,6 +53,8 @@
   const dopplerBinsPlot = document.getElementById('doppler-bins-plot');
   const traceCheckPlot = document.getElementById('trace-check-plot');
   const dopplerCheckPlot = document.getElementById('doppler-check-plot');
+  const recordingHorizontalPlot = document.getElementById('recording-horizontal-plot');
+  const recordingTraceCheckPlot = document.getElementById('recording-trace-check-plot');
   const multiClutterCountSlider = document.getElementById('multi-clutter-count-slider');
   const multiClutterCountOutput = document.getElementById('multi-clutter-count-output');
   const bumpHeightSlider = document.getElementById('bump-height-slider');
@@ -162,6 +167,7 @@
     if (value === 1) return 'Normal';
     return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}x`;
   };
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
   function updatePlaybackSpeedControl() {
     if (playbackSpeedOutput) playbackSpeedOutput.textContent = formatPlaybackSpeed(flyby.playbackSpeed);
@@ -218,6 +224,25 @@
     lastPlaybackTime = null;
     setPlaybackActive(true);
     playbackFrameId = requestAnimationFrame(playbackStep);
+  }
+
+  function syncRecordingPair() {
+    if (recordingHorizontalPlot && plot) recordingHorizontalPlot.innerHTML = plot.innerHTML;
+    if (recordingTraceCheckPlot && traceCheckPlot) recordingTraceCheckPlot.innerHTML = traceCheckPlot.innerHTML;
+  }
+
+  function setFlybyFrame(timeS, effectivePrfHz = Number(prfSlider.value)) {
+    stopPlayback();
+    const minTime = Number(timeSlider?.min || 0);
+    const maxTime = Number(timeSlider?.max || flyby.durationS);
+    flyby.timeS = clamp(Number(timeS), minTime, maxTime);
+    if (timeSlider) timeSlider.value = flyby.timeS.toFixed(2);
+    if (Number.isFinite(effectivePrfHz)) prfSlider.value = String(effectivePrfHz);
+    draw(Number(prfSlider.value));
+    return {
+      timeS: flyby.timeS,
+      effectivePrfHz: Number(prfSlider.value)
+    };
   }
 
   let fixedPoints = [];
@@ -2423,6 +2448,7 @@
     renderDopplerBins(diagnosticState, multiState);
     renderTraceCheck(diagnosticState, multiState);
     renderFastTimeDopplerCheck(diagnosticState, multiState);
+    syncRecordingPair();
     renderPhaseSolution(multiState);
     if (!processingRendered) {
       if (radargramPlot && fftPlot && decimatedFftPlot && reconstructionPlot) {
@@ -2478,6 +2504,14 @@
     });
   });
   refreshDerivedModel(true);
+  const initialTime = Number(pageParams.get('time'));
+  if (Number.isFinite(initialTime) && timeSlider) {
+    flyby.timeS = clamp(initialTime, Number(timeSlider.min), Number(timeSlider.max));
+    timeSlider.value = flyby.timeS.toFixed(2);
+  }
+  const initialPrf = Number(pageParams.get('prf'));
+  if (Number.isFinite(initialPrf)) prfSlider.value = String(initialPrf);
+  window.setAliasingCaptureTime = setFlybyFrame;
   if (prfPlayButton) {
     prfPlayButton.addEventListener('click', () => {
       if (playbackFrameId === null) startPlayback();
