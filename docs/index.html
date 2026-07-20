@@ -8,7 +8,7 @@
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=isotropic-layer-20260717"></script>
+    <script defer src="app.js?v=validation-proof-20260719"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -17,18 +17,13 @@
         <div class="rail-sticky" id="site-rail-content">
           <p class="eyebrow">NASA project</p>
           <h1>Europa Doppler Aliasing Lab</h1>
-          <div class="hero-actions" aria-label="Project actions">
-            <a class="secondary-link" href="?page=aliasing-lab" data-tab-jump="aliasing-lab">View aliasing simulator</a>
-            <a class="secondary-link" href="?page=trajectory-lab" data-tab-jump="trajectory-lab">Run E19 Cilix flyby</a>
-            <a class="secondary-link" href="?page=radargram-lab" data-tab-jump="radargram-lab">Compare radargram PRFs</a>
-            <a class="secondary-link" href="?page=owner-access" data-tab-jump="owner-access">Open owner archive</a>
-          </div>
           <section class="section-menu" aria-labelledby="section-menu-title">
             <p id="section-menu-title" class="section-menu-title">Section pages</p>
             <nav class="tabs" aria-label="Section pages">
               <a class="tab is-active" href="?page=aliasing-lab" data-target="aliasing-lab">Doppler Aliasing Lab</a>
               <div class="section-subtabs" aria-label="Doppler Aliasing Lab sections">
                 <a class="tab sub-tab" href="?page=aliasing-clutter-lab" data-target="aliasing-clutter-lab">Surface clutter points</a>
+                <a class="tab sub-tab" href="?page=aliasing-phase-lab" data-target="aliasing-phase-lab">Phase solution</a>
               </div>
               <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">E19 Cilix Flyby</a>
               <div class="section-subtabs" aria-label="E19 Cilix Flyby sections">
@@ -57,13 +52,19 @@
       <main class="content-shell">
       <section id="aliasing-lab" class="page-section is-active embedded-lab-section">
         <div class="aliasing-embed-shell">
-          <iframe id="aliasing-frame" class="aliasing-frame" src="aliasing.html?v=doppler-bumpy-surface-20260718" title="Interactive Doppler aliasing simulator" loading="eager" scrolling="no"></iframe>
+          <iframe id="aliasing-frame" class="aliasing-frame" src="aliasing.html?v=validation-proof-20260719" title="Interactive Doppler aliasing simulator" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 
       <section id="aliasing-clutter-lab" class="page-section embedded-lab-section">
         <div class="aliasing-embed-shell">
-          <iframe id="aliasing-clutter-frame" class="aliasing-frame" src="aliasing-clutter.html?v=doppler-bumpy-surface-20260718" title="Multi-point surface clutter folding subsection" loading="eager" scrolling="no"></iframe>
+          <iframe id="aliasing-clutter-frame" class="aliasing-frame" src="aliasing-clutter.html?v=validation-proof-20260719" title="Multi-point surface clutter folding subsection" loading="eager" scrolling="no"></iframe>
+        </div>
+      </section>
+
+      <section id="aliasing-phase-lab" class="page-section embedded-lab-section">
+        <div class="aliasing-embed-shell">
+          <iframe id="aliasing-phase-frame" class="aliasing-frame" src="aliasing-phase.html?v=validation-proof-20260719" title="Phase-aware surface clutter solution" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 
