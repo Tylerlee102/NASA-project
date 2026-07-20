@@ -16,6 +16,7 @@
     iceIndex: 1.78,
     pointCount: 12,
     spreadKm: 60,
+    bumpHeightKm: 1.2,
     dopplerToleranceHz: 0,
     depthToleranceKm: 0
   };
@@ -25,6 +26,9 @@
     playbackSpeed: 2
   };
   const YOUTUBE_PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  const pageParams = new URLSearchParams(window.location.search);
+  const isPowerPointCapture = pageParams.get('capture') === 'powerpoint';
+  document.body.classList.toggle('is-powerpoint-capture', isPowerPointCapture);
 
   const prfSlider = document.getElementById('effective-prf-slider');
   const prfPlayButton = document.getElementById('prf-play-button');
@@ -49,16 +53,67 @@
   const dopplerBinsPlot = document.getElementById('doppler-bins-plot');
   const traceCheckPlot = document.getElementById('trace-check-plot');
   const dopplerCheckPlot = document.getElementById('doppler-check-plot');
+  const recordingHorizontalPlot = document.getElementById('recording-horizontal-plot');
+  const recordingTraceCheckPlot = document.getElementById('recording-trace-check-plot');
   const multiClutterCountSlider = document.getElementById('multi-clutter-count-slider');
   const multiClutterCountOutput = document.getElementById('multi-clutter-count-output');
+  const bumpHeightSlider = document.getElementById('bump-height-slider');
+  const bumpHeightOutput = document.getElementById('bump-height-output');
   const multiClutterStatus = document.getElementById('multi-clutter-status');
   const multiClutterGeometryPlot = document.getElementById('multi-clutter-geometry-plot');
   const multiClutterDopplerPlot = document.getElementById('multi-clutter-doppler-plot');
+  const phaseSolutionStatus = document.getElementById('phase-solution-status');
+  const phaseGeometryPlot = document.getElementById('phase-geometry-plot');
+  const phaseCellPlot = document.getElementById('phase-cell-plot');
+  const phasePhasorPlot = document.getElementById('phase-phasor-plot');
+  const phasePowerPlot = document.getElementById('phase-power-plot');
+  const phaseSweepPlot = document.getElementById('phase-sweep-plot');
+  const phaseValidationStatus = document.getElementById('phase-validation-status');
+  const phaseErrorSlider = document.getElementById('phase-error-slider');
+  const phaseErrorOutput = document.getElementById('phase-error-output');
+  const amplitudeErrorSlider = document.getElementById('amplitude-error-slider');
+  const amplitudeErrorOutput = document.getElementById('amplitude-error-output');
+  const validationNoiseSlider = document.getElementById('validation-noise-slider');
+  const validationNoiseOutput = document.getElementById('validation-noise-output');
+  const criticalWindowPlot = document.getElementById('critical-window-plot');
+  const truthEstimatePlot = document.getElementById('truth-estimate-plot');
+  const phaseErrorMap = document.getElementById('phase-error-map');
+  const uncertaintyTrialsPlot = document.getElementById('uncertainty-trials-plot');
+  const summaryObservedPower = document.getElementById('summary-observed-power');
+  const summaryObservedError = document.getElementById('summary-observed-error');
+  const summaryPowerOnly = document.getElementById('summary-power-only');
+  const summaryPowerOnlyError = document.getElementById('summary-power-only-error');
+  const summaryPhaseAware = document.getElementById('summary-phase-aware');
+  const summaryPhaseAwareError = document.getElementById('summary-phase-aware-error');
+  const summaryTargetAbsent = document.getElementById('summary-target-absent');
+  const summaryTargetAbsentError = document.getElementById('summary-target-absent-error');
+  const phaseValidation = {
+    phaseErrorDeg: 10,
+    amplitudeErrorFraction: 0.10,
+    noiseRms: 0.08,
+    comparisonTimesS: [5.5, 6.0, 6.5],
+    trialCount: 240
+  };
+  const usesMultiClutterState = Boolean(
+    multiClutterGeometryPlot ||
+    multiClutterDopplerPlot ||
+    phaseGeometryPlot ||
+    phaseCellPlot ||
+    phasePhasorPlot ||
+    phasePowerPlot ||
+    phaseSweepPlot ||
+    criticalWindowPlot ||
+    truthEstimatePlot ||
+    phaseErrorMap ||
+    uncertaintyTrialsPlot
+  );
+  const isMultiClutterView = Boolean(multiClutterGeometryPlot && multiClutterDopplerPlot);
   const radargramPlot = document.getElementById('radargram-plot');
   const fftPlot = document.getElementById('fft-plot');
   const decimatedFftPlot = document.getElementById('decimated-fft-plot');
   const reconstructionPlot = document.getElementById('reconstruction-plot');
   const wavelengthM = C / (model.frequencyMhz * 1e6);
+  const TWO_PI = Math.PI * 2;
   let processingRendered = false;
   const mod = (value, divisor) => ((value % divisor) + divisor) % divisor;
   const alias = (dopplerHz, prfHz) => mod(dopplerHz + prfHz / 2, prfHz) - prfHz / 2;
@@ -80,10 +135,39 @@
     const cleaned = Math.abs(value) < 0.05 ? 0 : value;
     return `${cleaned > 0 ? '+' : ''}${fmt(cleaned, digits)}`;
   };
+  const phaseWrap = (phaseRad) => mod(phaseRad + Math.PI, TWO_PI) - Math.PI;
+  const phaseDeg = (phaseRad) => phaseWrap(phaseRad) * 180 / Math.PI;
+  const phaseColor = (phaseRad) => {
+    const normalized = (phaseWrap(phaseRad) + Math.PI) / TWO_PI;
+    const hue = 210 - normalized * 220;
+    return `hsl(${hue.toFixed(1)} 62% 43%)`;
+  };
+  const stackOffset = (index, count, radiusPx = 5) => {
+    if (count <= 1) return { x: 0, y: 0 };
+    const angle = -Math.PI / 2 + (2 * Math.PI * index) / count;
+    return {
+      x: Math.cos(angle) * radiusPx,
+      y: Math.sin(angle) * radiusPx
+    };
+  };
+  const plotStack = (items, item, xFor, yFor, tolerancePx = 1.2, radiusPx = 5) => {
+    const itemX = xFor(item);
+    const itemY = yFor(item);
+    const group = items.filter((other) => (
+      Math.hypot(xFor(other) - itemX, yFor(other) - itemY) <= tolerancePx
+    ));
+    const index = Math.max(0, group.findIndex((other) => other.index === item.index));
+    return {
+      ...stackOffset(index, group.length, radiusPx),
+      count: group.length,
+      index
+    };
+  };
   const formatPlaybackSpeed = (value) => {
     if (value === 1) return 'Normal';
     return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}x`;
   };
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
   function updatePlaybackSpeedControl() {
     if (playbackSpeedOutput) playbackSpeedOutput.textContent = formatPlaybackSpeed(flyby.playbackSpeed);
@@ -142,6 +226,25 @@
     playbackFrameId = requestAnimationFrame(playbackStep);
   }
 
+  function syncRecordingPair() {
+    if (recordingHorizontalPlot && plot) recordingHorizontalPlot.innerHTML = plot.innerHTML;
+    if (recordingTraceCheckPlot && traceCheckPlot) recordingTraceCheckPlot.innerHTML = traceCheckPlot.innerHTML;
+  }
+
+  function setFlybyFrame(timeS, effectivePrfHz = Number(prfSlider.value)) {
+    stopPlayback();
+    const minTime = Number(timeSlider?.min || 0);
+    const maxTime = Number(timeSlider?.max || flyby.durationS);
+    flyby.timeS = clamp(Number(timeS), minTime, maxTime);
+    if (timeSlider) timeSlider.value = flyby.timeS.toFixed(2);
+    if (Number.isFinite(effectivePrfHz)) prfSlider.value = String(effectivePrfHz);
+    draw(Number(prfSlider.value));
+    return {
+      timeS: flyby.timeS,
+      effectivePrfHz: Number(prfSlider.value)
+    };
+  }
+
   let fixedPoints = [];
   let selectedFoldingPoint = null;
   let foldingIndexes = new Set();
@@ -160,12 +263,37 @@
     const outputs = {
       'model-speed-output': `${fmt(model.velocityKmS, 1)} km/s`,
       'model-altitude-output': `${fmt(model.altitudeKm, 0)} km`,
-      'model-depth-output': `${fmt(model.targetDepthKm, 2)} km`
+      'model-depth-output': `${fmt(model.targetDepthKm, 2)} km`,
+      'bump-height-output': `${fmt(model.bumpHeightKm, 1)} km`
     };
     Object.entries(outputs).forEach(([id, text]) => {
       const outputEl = document.getElementById(id);
       if (outputEl) outputEl.textContent = text;
     });
+  }
+
+  function surfaceBumpElevationKm(xKm) {
+    if (model.bumpHeightKm <= 0) return 0;
+    const roughness =
+      0.48 * Math.sin((xKm + 18) * 0.16) +
+      0.33 * Math.sin((xKm - 7) * 0.31) +
+      0.19 * Math.cos((xKm + 3) * 0.49);
+    return model.bumpHeightKm * roughness;
+  }
+
+  function surfaceRangeState(xKm, planeXKm = 0) {
+    const elevationKm = surfaceBumpElevationKm(xKm);
+    const surfaceDxKm = xKm - planeXKm;
+    const verticalKm = Math.max(1, model.altitudeKm - elevationKm);
+    const surfaceRangeKm = Math.hypot(verticalKm, surfaceDxKm);
+    return {
+      elevationKm,
+      surfaceDxKm,
+      verticalKm,
+      surfaceRangeKm,
+      surfaceApparentDepthKm: (surfaceRangeKm - model.altitudeKm) / model.iceIndex,
+      surfaceTrueDopplerHz: (2 * model.velocityKmS * 1000 / wavelengthM) * (surfaceDxKm / surfaceRangeKm)
+    };
   }
 
   function computeFixedPoints() {
@@ -259,6 +387,24 @@
     return Math.ceil(Math.max(12, model.targetDepthKm, maxSurfaceDepthKm, maxTargetDepthKm) + 1);
   }
 
+  function multiClutterGeometryDepthMaxKm() {
+    const halfDistanceKm = flybyHalfDistanceKm();
+    const maxSurfaceDepthKm = equalDistanceClutterPoints(multiClutterPointCount).reduce((maxDepthKm, point) => {
+      const maxSurfaceDxKm = Math.max(
+        Math.abs(point.xKm + halfDistanceKm),
+        Math.abs(point.xKm - halfDistanceKm)
+      );
+      const verticalKm = Math.max(1, model.altitudeKm - point.elevationKm);
+      const depthKm = (Math.hypot(verticalKm, maxSurfaceDxKm) - model.altitudeKm) / model.iceIndex;
+      return Math.max(maxDepthKm, depthKm);
+    }, 0);
+    const targetOpticalHeightKm = model.altitudeKm + model.iceIndex * model.targetDepthKm;
+    const maxTargetDepthKm = (
+      Math.hypot(targetOpticalHeightKm, halfDistanceKm) - model.altitudeKm
+    ) / model.iceIndex;
+    return Math.ceil(Math.max(12, model.targetDepthKm, maxSurfaceDepthKm, maxTargetDepthKm) + 1);
+  }
+
   function apparentDepthForDopplerHz(dopplerHz) {
     const sinTheta = Math.abs(dopplerHz) * wavelengthM / (2 * model.velocityKmS * 1000);
     if (sinTheta <= 0 || sinTheta >= 1) return null;
@@ -267,8 +413,8 @@
   }
 
   // Search all physically possible alias orders. A continuous surface return
-  // lies at zero aliased Doppler when |fD| = order Ã— effectivePRF. The returned
-  // band converts the stated Â±Doppler tolerance into an apparent-depth span.
+  // lies at zero aliased Doppler when |fD| = order x effectivePRF. The returned
+  // band converts the stated +/- Doppler tolerance into an apparent-depth span.
   function continuousFoldBand(effectivePrfHz) {
     const maximumDopplerHz = 2 * model.velocityKmS * 1000 / wavelengthM;
     const maximumOrder = Math.floor((maximumDopplerHz * (1 - 1e-9)) / effectivePrfHz);
@@ -323,6 +469,13 @@
     if (resetPrf || Number(prfSlider.value) < sliderMinHz || Number(prfSlider.value) > sliderMaxHz) {
       prfSlider.value = selectedFoldPrfHz.toFixed(1);
     }
+    if (resetPrf && usesMultiClutterState) {
+      const recommendedStart = recommendedMultiClutterStart(sliderMinHz, sliderMaxHz);
+      if (recommendedStart) {
+        prfSlider.value = recommendedStart.prfHz.toFixed(1);
+        flyby.timeS = recommendedStart.timeS;
+      }
+    }
     if (prfMinLabel) prfMinLabel.textContent = `${fmt(sliderMinHz, 0)} Hz`;
     if (prfMaxLabel) prfMaxLabel.textContent = `${fmt(sliderMaxHz, 0)} Hz`;
 
@@ -342,7 +495,7 @@
     document.getElementById('given-depth').textContent = `${fmt(model.targetDepthKm, 2)} km`;
     document.getElementById('given-index').textContent = fmt(model.iceIndex, 2);
     updateModelControlOutputs();
-    updateFlybyControl(resetPrf);
+    updateFlybyControl(resetPrf && !usesMultiClutterState);
   }
 
   function calculate(effectivePrfHz) {
@@ -387,7 +540,7 @@
     svg += `<line class="blur-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
     svg += `<rect class="blur-target-window" x="${margin.left}" y="${sy(targetApparentDepthKm - model.depthToleranceKm)}" width="${width - margin.left - margin.right}" height="${sy(targetApparentDepthKm + model.depthToleranceKm) - sy(targetApparentDepthKm - model.depthToleranceKm)}"></rect>`;
     svg += `<line class="blur-target-depth" x1="${margin.left}" y1="${sy(targetApparentDepthKm)}" x2="${width - margin.right}" y2="${sy(targetApparentDepthKm)}"></line>`;
-    svg += `<text class="blur-title-text" x="${width - margin.right}" y="${sy(targetApparentDepthKm) - 7}" text-anchor="end">target apparent echo ${fmt(targetApparentDepthKm, 2)} km Â± ${fmt(model.depthToleranceKm, 2)} km</text>`;
+    svg += `<text class="blur-title-text" x="${width - margin.right}" y="${sy(targetApparentDepthKm) - 7}" text-anchor="end">target apparent echo ${fmt(targetApparentDepthKm, 2)} km +/- ${fmt(model.depthToleranceKm, 2)} km</text>`;
 
     if (clutterVisible) {
       const clutterTop = sy(movingState.surfaceApparentDepthKm - model.depthToleranceKm);
@@ -428,10 +581,13 @@
     const aliasY = 212;
     const binHeight = 54;
     const binStep = prf / 8;
+    const overlapCount = movingState.overlapCount || (movingState.overlapsTarget ? 1 : 0);
     const foldText = movingState.foldOrder === 0
       ? 'no fold: surface true Doppler is already inside the sampled interval'
       : `fold order ${movingState.foldOrder}: surface Doppler is shifted by ${signed(movingState.foldOrder * prf, 1)} Hz into the sampled interval`;
-    const overlapText = movingState.overlapsTarget
+    const overlapText = overlapCount > 1
+      ? `${fmt(overlapCount, 0)} clutter points land in the target Doppler-depth cell`
+      : movingState.overlapsTarget
       ? 'alias overlap: surface and target land in the same Doppler-depth cell'
       : 'separate bins/cells: clutter is not on the target response';
 
@@ -442,7 +598,10 @@
     svg += `<text class="bin-title" x="${margin.left}" y="18">${foldText}</text>`;
     svg += `<text class="${movingState.overlapsTarget ? 'bin-danger' : 'bin-note'}" x="${width - margin.right}" y="18" text-anchor="end">${overlapText}</text>`;
     if (clusterCount) {
-      svg += `<text class="bin-cluster-label" x="${margin.left}" y="34">${fmt(clusterCount, 0)} equal-distance surface clutter points; highlighted point drives the two-return fold check</text>`;
+      const clusterLabel = overlapCount > 1
+        ? `All ${fmt(clusterCount, 0)} bumpy-surface aliases shown against one subsurface object; ${fmt(overlapCount, 0)} red markers hit the target cell`
+        : `All ${fmt(clusterCount, 0)} bumpy-surface aliases shown against one subsurface object`;
+      svg += `<text class="bin-cluster-label" x="${margin.left}" y="34">${clusterLabel}</text>`;
     }
 
     for (let order = trueMinOrder; order <= trueMaxOrder; order += 1) {
@@ -470,12 +629,36 @@
     svg += `<text class="bin-lane-label" x="${margin.left - 12}" y="${trueY + 4}" text-anchor="end">true Doppler</text>`;
     svg += `<text class="bin-lane-label" x="${margin.left - 12}" y="${aliasY + 4}" text-anchor="end">sampled bin</text>`;
     clusterPoints.forEach((point) => {
+      const aliasStack = plotStack(
+        clusterPoints,
+        point,
+        (entry) => sxAlias(entry.surfaceAliasHz),
+        () => aliasY,
+        1.2,
+        6
+      );
+      svg += `<path class="bin-cluster-fold-link ${point.overlapsTarget ? 'overlap' : ''}" d="M ${sxTrue(point.surfaceTrueDopplerHz)} ${trueY + 7} C ${sxTrue(point.surfaceTrueDopplerHz)} 139, ${sxAlias(point.surfaceAliasHz) + aliasStack.x} 162, ${sxAlias(point.surfaceAliasHz) + aliasStack.x} ${aliasY - 9}"><title>Point ${point.index + 1} folds from ${signed(point.surfaceTrueDopplerHz, 1)} Hz to ${signed(point.surfaceAliasHz, 1)} Hz</title></path>`;
+    });
+    clusterPoints.forEach((point) => {
       const isSelected = Math.abs(point.xKm - movingState.surfaceXKm) < 1e-6;
       const css = point.overlapsTarget ? 'overlap' : isSelected ? 'selected' : '';
+      const aliasStack = plotStack(
+        clusterPoints,
+        point,
+        (entry) => sxAlias(entry.surfaceAliasHz),
+        () => aliasY,
+        1.2,
+        6
+      );
       svg += `<circle class="bin-cluster-marker ${css}" cx="${sxTrue(point.surfaceTrueDopplerHz)}" cy="${trueY}" r="${isSelected ? 5 : 3.2}"><title>Cluster point ${point.index + 1}: true ${signed(point.surfaceTrueDopplerHz, 1)} Hz</title></circle>`;
-      svg += `<circle class="bin-cluster-marker ${css}" cx="${sxAlias(point.surfaceAliasHz)}" cy="${aliasY}" r="${isSelected ? 5.4 : 3.4}"><title>Cluster point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz</title></circle>`;
+      svg += `<circle class="bin-cluster-marker ${css}" cx="${sxAlias(point.surfaceAliasHz) + aliasStack.x}" cy="${aliasY + aliasStack.y}" r="${isSelected ? 5.4 : 3.4}"><title>Cluster point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz</title></circle>`;
+      if (aliasStack.count > 1 && aliasStack.index === 0) {
+        svg += `<text class="bin-stack-label" x="${sxAlias(point.surfaceAliasHz) + 9}" y="${aliasY - 11}">${fmt(aliasStack.count, 0)} pts</text>`;
+      }
     });
-    svg += `<path class="bin-fold-link" d="M ${sxTrue(movingState.surfaceTrueDopplerHz)} ${trueY + 8} C ${sxTrue(movingState.surfaceTrueDopplerHz)} 145, ${sxAlias(movingState.surfaceAliasHz)} 160, ${sxAlias(movingState.surfaceAliasHz)} ${aliasY - 10}" marker-end="url(#fold-arrow)"></path>`;
+    if (!clusterCount) {
+      svg += `<path class="bin-fold-link" d="M ${sxTrue(movingState.surfaceTrueDopplerHz)} ${trueY + 8} C ${sxTrue(movingState.surfaceTrueDopplerHz)} 145, ${sxAlias(movingState.surfaceAliasHz)} 160, ${sxAlias(movingState.surfaceAliasHz)} ${aliasY - 10}" marker-end="url(#fold-arrow)"></path>`;
+    }
 
     svg += `<circle class="bin-surface-marker" cx="${sxTrue(movingState.surfaceTrueDopplerHz)}" cy="${trueY}" r="7"></circle>`;
     svg += `<text class="bin-note" x="${sxTrue(movingState.surfaceTrueDopplerHz) + 10}" y="${trueY - 10}">surface true ${signed(movingState.surfaceTrueDopplerHz, 1)} Hz</text>`;
@@ -517,31 +700,60 @@
     const clusterPoints = clusterState?.points || [];
     const clusterCount = clusterPoints.length;
     const clutterTraceDepthFor = (surfaceXKm) => (platformXKm) => (
-      Math.hypot(model.altitudeKm, platformXKm - surfaceXKm) - model.altitudeKm
+      surfaceRangeState(surfaceXKm, platformXKm).surfaceRangeKm - model.altitudeKm
     ) / model.iceIndex;
     const clutterTraceDepth = clutterTraceDepthFor(movingState.surfaceXKm);
     const targetEquivalentRangeKm = model.altitudeKm + model.iceIndex * model.targetDepthKm;
     const targetTraceDepth = (platformXKm) => (
       Math.hypot(targetEquivalentRangeKm, platformXKm) - model.altitudeKm
     ) / model.iceIndex;
-    const intersectionConstantKm2 = targetEquivalentRangeKm ** 2 - model.altitudeKm ** 2;
-    const traceIntersectionFor = (surfaceXKm) => (
-      Math.abs(surfaceXKm) < 1e-9 ? null : (surfaceXKm ** 2 - intersectionConstantKm2) / (2 * surfaceXKm)
-    );
+    const traceIntersectionFor = (surfaceXKm) => {
+      if (Math.abs(surfaceXKm) < 1e-9) return null;
+      const verticalKm = Math.max(1, model.altitudeKm - surfaceBumpElevationKm(surfaceXKm));
+      return (verticalKm ** 2 + surfaceXKm ** 2 - targetEquivalentRangeKm ** 2) / (2 * surfaceXKm);
+    };
     const targetApexX = sx(0);
     const targetApexY = sy(model.targetDepthKm);
-    const stateLabel = movingState.overlapsTarget ? 'range and folded Doppler both match' : 'range or folded Doppler remains separated';
+    const overlapCount = movingState.overlapCount || (movingState.overlapsTarget ? 1 : 0);
+    const stateLabel = overlapCount > 1
+      ? `${fmt(overlapCount, 0)} clutter traces have both range and folded Doppler match`
+      : movingState.overlapsTarget ? 'range and folded Doppler both match' : 'range or folded Doppler remains separated';
     const clusterLabel = clusterCount
-      ? `${fmt(clusterCount, 0)} cluster traces; highlighted: ${stateLabel}`
+      ? `${fmt(clusterCount, 0)} surface traces; ${fmt(overlapCount, 0)} highlighted trace${overlapCount === 1 ? '' : 's'} match the target cell`
       : `current trace: ${stateLabel}`;
     const currentXKm = Math.max(xMinKm, Math.min(xMaxKm, movingState.planeXKm));
     const currentX = sx(currentXKm);
     const clutterY = sy(clutterTraceDepth(currentXKm));
-    const targetCurrentY = sy(targetTraceDepth(currentXKm));
     const movingLabelAnchor = currentXKm >= 0 ? 'start' : 'end';
     const movingLabelX = currentX + (currentXKm >= 0 ? 10 : -10);
     const movingLabelY = clutterY + (movingState.overlapsTarget ? 20 : -9);
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Physical range histories for the equal-distance surface clutter points and the fixed subsurface target">
+    const overlapGroup = clusterPoints.filter((point) => point.overlapsTarget);
+    const currentStackForPoint = (point) => (
+      point.overlapsTarget && overlapGroup.length > 1
+        ? {
+          ...stackOffset(
+            Math.max(0, overlapGroup.findIndex((entry) => entry.index === point.index)),
+            overlapGroup.length,
+            5.8
+          ),
+          count: overlapGroup.length
+        }
+        : { x: 0, y: 0, count: 1 }
+    );
+    const visibleTraceIntersections = clusterPoints.map((point) => {
+      const intersectionKm = traceIntersectionFor(point.xKm);
+      if (!Number.isFinite(intersectionKm) || intersectionKm < xMinKm || intersectionKm > xMaxKm) return null;
+      const intersectionDepthKm = targetTraceDepth(intersectionKm);
+      if (intersectionDepthKm < depthMinKm || intersectionDepthKm > depthMaxKm) return null;
+      return {
+        point,
+        intersectionKm,
+        intersectionDepthKm,
+        plotX: sx(intersectionKm),
+        plotY: sy(intersectionDepthKm)
+      };
+    }).filter(Boolean);
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Physical range histories for the bumpy equal-distance surface clutter points and one fixed subsurface target">
       <defs><clipPath id="trace-check-clip"><rect x="${margin.left}" y="${margin.top}" width="${width - margin.left - margin.right}" height="${height - margin.top - margin.bottom}"></rect></clipPath></defs>`;
 
     svg += `<line class="check-clutter-curve selected" x1="${margin.left}" y1="16" x2="${margin.left + 28}" y2="16"></line>`;
@@ -563,33 +775,52 @@
     svg += `<line class="check-guide" x1="${targetApexX}" y1="${margin.top}" x2="${targetApexX}" y2="${height - margin.bottom}"></line>`;
     svg += `<g clip-path="url(#trace-check-clip)">`;
     svg += `<path class="check-target-window" d="${bandPathFor(targetTraceDepth, model.depthToleranceKm)}"></path>`;
-    clusterPoints.forEach((point) => {
-      const isSelected = Math.abs(point.xKm - movingState.surfaceXKm) < 1e-6;
-      if (isSelected) return;
-      svg += `<path class="check-clutter-curve cluster" d="${pathFor(clutterTraceDepthFor(point.xKm))}"><title>Cluster point ${point.index + 1} range trace</title></path>`;
-    });
-    svg += `<path class="check-clutter-curve selected" d="${pathFor(clutterTraceDepth)}"><title>Selected surface clutter range trace</title></path>`;
+    if (clusterCount) {
+      clusterPoints.forEach((point) => {
+        const isSelected = Math.abs(point.xKm - movingState.surfaceXKm) < 1e-6;
+        const overlapIndex = overlapGroup.findIndex((entry) => entry.index === point.index);
+        const traceClass = point.overlapsTarget
+          ? `overlap ${isSelected ? 'selected' : 'secondary'}`
+          : 'cluster';
+        svg += `<path class="check-clutter-curve ${traceClass}" data-point-index="${point.index}" data-target-match="${point.overlapsTarget}" d="${pathFor(clutterTraceDepthFor(point.xKm))}"><title>Surface point ${point.index + 1} range trace${point.overlapsTarget ? `; target-cell match ${overlapIndex + 1} of ${overlapGroup.length}` : ''}</title></path>`;
+      });
+    } else {
+      svg += `<path class="check-clutter-curve selected" d="${pathFor(clutterTraceDepth)}"><title>Selected surface clutter range trace</title></path>`;
+    }
     svg += `<path class="check-target-curve" d="${pathFor(targetTraceDepth)}"><title>Fixed subsurface target range trace</title></path>`;
     clusterPoints.forEach((point) => {
       const isSelected = Math.abs(point.xKm - movingState.surfaceXKm) < 1e-6;
       if (isSelected) return;
-      svg += `<circle class="check-cluster-dot ${point.overlapsTarget ? 'overlap' : ''}" cx="${currentX}" cy="${sy(clutterTraceDepthFor(point.xKm)(currentXKm))}" r="${point.overlapsTarget ? 4.2 : 2.7}"><title>Cluster point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz</title></circle>`;
+      const currentStack = currentStackForPoint(point);
+      svg += `<circle class="check-cluster-dot ${point.overlapsTarget ? 'overlap' : ''}" cx="${currentX + currentStack.x}" cy="${sy(clutterTraceDepthFor(point.xKm)(currentXKm)) + currentStack.y}" r="${point.overlapsTarget ? 4.2 : 2.7}"><title>Cluster point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz</title></circle>`;
     });
-    clusterPoints.forEach((point) => {
-      const intersectionKm = traceIntersectionFor(point.xKm);
-      if (!Number.isFinite(intersectionKm) || intersectionKm < xMinKm || intersectionKm > xMaxKm) return;
-      const intersectionDepthKm = targetTraceDepth(intersectionKm);
-      if (intersectionDepthKm < depthMinKm || intersectionDepthKm > depthMaxKm) return;
-      const isSelected = Math.abs(point.xKm - movingState.surfaceXKm) < 1e-6;
-      svg += `<circle class="check-trace-intersection${isSelected ? ' selected' : ''}" cx="${sx(intersectionKm)}" cy="${sy(intersectionDepthKm)}" r="${isSelected ? 4.2 : 2.8}"><title>Range-only crossing for point ${point.index + 1} at along-track ${fmt(intersectionKm, 2)} km</title></circle>`;
+    visibleTraceIntersections.forEach((entry) => {
+      const stack = plotStack(
+        visibleTraceIntersections.map((item) => ({ ...item.point, plotX: item.plotX, plotY: item.plotY })),
+        { ...entry.point, plotX: entry.plotX, plotY: entry.plotY },
+        (item) => item.plotX,
+        (item) => item.plotY,
+        1.4,
+        5
+      );
+      const isSelected = Math.abs(entry.point.xKm - movingState.surfaceXKm) < 1e-6;
+      svg += `<circle class="check-trace-intersection${isSelected ? ' selected' : ''}" cx="${entry.plotX + stack.x}" cy="${entry.plotY + stack.y}" r="${isSelected ? 4.2 : 2.8}"><title>Range-only crossing for point ${entry.point.index + 1} at along-track ${fmt(entry.intersectionKm, 2)} km</title></circle>`;
+      if (stack.count > 1 && stack.index === 0) {
+        svg += `<text class="check-stack-label" x="${entry.plotX + 10}" y="${entry.plotY - 10}">${fmt(stack.count, 0)} crossings</text>`;
+      }
     });
     svg += '</g>';
     svg += `<line class="check-motion-guide" x1="${currentX}" y1="${margin.top}" x2="${currentX}" y2="${height - margin.bottom}"></line>`;
-    svg += `<rect class="check-trace-target-marker" x="${targetApexX - 5}" y="${targetApexY - 5}" width="10" height="10" transform="rotate(45 ${targetApexX} ${targetApexY})"><title>Subsurface target apex</title></rect>`;
-    svg += `<rect class="check-trace-target-marker" x="${currentX - 5}" y="${targetCurrentY - 5}" width="10" height="10" transform="rotate(45 ${currentX} ${targetCurrentY})"><title>Target at current plane trace</title></rect>`;
-    svg += `<circle class="check-moving-clutter${movingState.overlapsTarget ? ' overlap' : ''}" cx="${currentX}" cy="${clutterY}" r="6"><title>Selected clutter: ${signed(movingState.surfaceAliasHz, 1)} Hz folded Doppler</title></circle>`;
-    svg += `<text class="${movingState.overlapsTarget ? 'check-danger' : 'check-title'}" x="${movingLabelX}" y="${movingLabelY}" text-anchor="${movingLabelAnchor}">highlighted cluster point</text>`;
-    svg += `<text class="${movingState.overlapsTarget ? 'check-danger' : 'check-title'}" x="${targetApexX + 10}" y="${targetApexY - 9}">${fmt(model.targetDepthKm, 2)} km target apex</text>`;
+    const selectedCurrentPoint = clusterPoints.find((point) => point.index === movingState.selectedPointIndex);
+    const selectedStack = selectedCurrentPoint ? currentStackForPoint(selectedCurrentPoint) : { x: 0, y: 0, count: 1 };
+    svg += `<circle class="check-moving-clutter${movingState.overlapsTarget ? ' overlap' : ''}" cx="${currentX + selectedStack.x}" cy="${clutterY + selectedStack.y}" r="6"><title>Selected clutter: ${signed(movingState.surfaceAliasHz, 1)} Hz folded Doppler</title></circle>`;
+    if (overlapCount > 1) {
+      svg += `<text class="check-stack-label" x="${currentX + 13}" y="${Math.min(height - margin.bottom - 8, clutterY + 27)}">${fmt(overlapCount, 0)} matching clutter echoes</text>`;
+    } else {
+      svg += `<text class="${movingState.overlapsTarget ? 'check-danger' : 'check-title'}" x="${movingLabelX}" y="${movingLabelY}" text-anchor="${movingLabelAnchor}">current selected surface point</text>`;
+    }
+    svg += `<rect class="check-trace-target-marker" data-fixed-depth-km="${model.targetDepthKm}" x="${targetApexX - 6}" y="${targetApexY - 6}" width="12" height="12" transform="rotate(45 ${targetApexX} ${targetApexY})"><title>Fixed subsurface object at ${fmt(model.targetDepthKm, 2)} km physical depth</title></rect>`;
+    svg += `<text class="check-title" x="${targetApexX - 12}" y="${targetApexY - 13}" text-anchor="end">fixed target ${fmt(model.targetDepthKm, 2)} km</text>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
     svg += `<text class="check-title" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${height - 5}" text-anchor="middle">along-track position (km)</text>`;
@@ -604,41 +835,50 @@
     if (!dopplerCheckPlot) return;
     const width = 560;
     const height = 350;
-    const margin = { left: 68, right: 25, top: 55, bottom: 48 };
+    const margin = { left: 68, right: 25, top: clusterState?.points?.length ? 72 : 55, bottom: 48 };
     const clusterPoints = clusterState?.points || [];
     const clusterCount = clusterPoints.length;
     const prf = movingState.effectivePrfHz;
     const relativeDopplerHz = (valueHz) => alias(valueHz - movingState.targetAliasHz, prf);
     const selectedRelativeHz = relativeDopplerHz(movingState.surfaceAliasHz);
-    const dopplerCenterHz = selectedRelativeHz / 2;
-    const dopplerHalfSpanHz = Math.max(60, Math.abs(selectedRelativeHz) / 2 + 45);
-    const dopplerMinHz = dopplerCenterHz - dopplerHalfSpanHz;
-    const dopplerMaxHz = dopplerCenterHz + dopplerHalfSpanHz;
-    const depthCenterKm = (movingState.surfaceApparentDepthKm + movingState.targetApparentDepthKm) / 2;
-    const depthHalfSpanKm = Math.max(0.55, Math.abs(movingState.surfaceApparentDepthKm - movingState.targetApparentDepthKm) / 2 + 0.34);
-    const depthMinKm = Math.max(0, depthCenterKm - depthHalfSpanKm);
-    const depthMaxKm = depthCenterKm + depthHalfSpanKm;
+    const dopplerMinHz = -prf / 2;
+    const dopplerMaxHz = prf / 2;
+    const depthMinKm = 0;
+    const depthMaxKm = Math.ceil(Math.max(
+      12,
+      movingState.targetApparentDepthKm + 1,
+      movingState.surfaceApparentDepthKm + 1,
+      ...clusterPoints.map((point) => point.surfaceApparentDepthKm)
+    ));
     const sx = (value) => margin.left + ((value - dopplerMinHz) / (dopplerMaxHz - dopplerMinHz)) * (width - margin.left - margin.right);
     const sy = (value) => margin.top + ((value - depthMinKm) / (depthMaxKm - depthMinKm)) * (height - margin.top - margin.bottom);
-    const visibleClusterCount = clusterPoints.filter((point) => (
-      relativeDopplerHz(point.surfaceAliasHz) >= dopplerMinHz
-      && relativeDopplerHz(point.surfaceAliasHz) <= dopplerMaxHz
-      && point.surfaceApparentDepthKm >= depthMinKm
-      && point.surfaceApparentDepthKm <= depthMaxKm
-    )).length;
+    const overlapCount = movingState.overlapCount || (movingState.overlapsTarget ? 1 : 0);
+    const overlapGroup = clusterPoints.filter((point) => point.overlapsTarget);
+    const stackForPoint = (point) => plotStack(
+      clusterPoints,
+      point,
+      (entry) => sx(relativeDopplerHz(entry.surfaceAliasHz)),
+      (entry) => sy(entry.surfaceApparentDepthKm),
+      1.4,
+      point.overlapsTarget && overlapGroup.length > 1 ? 5.8 : 4.2
+    );
     const aliasLabel = signed(movingState.surfaceAliasHz, 1);
-    const stateLabel = movingState.overlapsTarget ? 'selected clutter is inside the target resolution cell' : 'selected clutter is outside the target resolution cell';
+    const stateLabel = overlapCount > 1
+      ? `${fmt(overlapCount, 0)} clutter points are inside the target resolution cell`
+      : movingState.overlapsTarget
+      ? '1 clutter point is inside the target resolution cell'
+      : `${clusterCount ? '0' : 'Selected'} clutter points are inside the target resolution cell`;
     let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Fast-time by aliased Doppler check at ${fmt(movingState.effectivePrfHz, 1)} hertz; ${stateLabel}">
       <defs>
         <clipPath id="doppler-check-clip"><rect x="${margin.left}" y="${margin.top}" width="${width - margin.left - margin.right}" height="${height - margin.top - margin.bottom}"></rect></clipPath>
       </defs>`;
 
-    svg += `<text class="check-title" x="${margin.left}" y="18">selected alias ${aliasLabel} Hz; target-relative ${signed(selectedRelativeHz, 1)} Hz${clusterCount ? ` from ${fmt(clusterCount, 0)} points` : ''}</text>`;
+    svg += `<text class="check-title" x="${margin.left}" y="18">${clusterCount ? `All ${fmt(clusterCount, 0)} bumpy-surface aliases against one target cell` : `selected alias ${aliasLabel} Hz; target-relative ${signed(selectedRelativeHz, 1)} Hz`}</text>`;
     svg += `<text class="${movingState.overlapsTarget ? 'check-danger' : 'check-title'}" x="${margin.left}" y="39">${stateLabel}</text>`;
     if (clusterCount) {
-      svg += `<text class="check-title" x="${width - margin.right}" y="39" text-anchor="end">${fmt(visibleClusterCount, 0)} cluster echo${visibleClusterCount === 1 ? '' : 'es'} in this zoom</text>`;
+      svg += `<text class="check-title" x="${width - margin.right}" y="58" text-anchor="end">circles = bumpy surface, diamond = one target</text>`;
     }
-    Array.from({ length: 5 }, (_, index) => dopplerMinHz + (index * (dopplerMaxHz - dopplerMinHz)) / 4).forEach((value) => {
+    [-prf / 2, -prf / 4, 0, prf / 4, prf / 2].forEach((value) => {
       const x = sx(value);
       svg += `<line class="check-grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
       svg += `<text class="check-label" x="${x}" y="${height - margin.bottom + 17}" text-anchor="middle">${signed(value, 0)}</text>`;
@@ -649,17 +889,29 @@
       svg += `<text class="check-label" x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${fmt(value, 1)}</text>`;
     });
     svg += `<g clip-path="url(#doppler-check-clip)">`;
-    svg += `<rect class="check-target-window" x="${sx(-model.dopplerToleranceHz)}" y="${sy(movingState.targetApparentDepthKm - model.depthToleranceKm)}" width="${sx(model.dopplerToleranceHz) - sx(-model.dopplerToleranceHz)}" height="${sy(movingState.targetApparentDepthKm + model.depthToleranceKm) - sy(movingState.targetApparentDepthKm - model.depthToleranceKm)}"></rect>`;
+    const targetCell = {
+      targetAliasHz: movingState.targetAliasHz,
+      targetApparentDepthKm: movingState.targetApparentDepthKm,
+      overlapsSurface: movingState.overlapsTarget
+    };
+    periodicIntervalSegments(relativeDopplerHz(targetCell.targetAliasHz), model.dopplerToleranceHz, prf).forEach(([startHz, endHz]) => {
+      svg += `<rect class="check-target-window ${targetCell.overlapsSurface ? 'overlap' : ''}" x="${sx(startHz)}" y="${sy(targetCell.targetApparentDepthKm - model.depthToleranceKm)}" width="${Math.max(2, sx(endHz) - sx(startHz))}" height="${Math.max(2, sy(targetCell.targetApparentDepthKm + model.depthToleranceKm) - sy(targetCell.targetApparentDepthKm - model.depthToleranceKm))}"></rect>`;
+    });
     svg += `<line class="check-target-line" x1="${sx(0)}" y1="${margin.top}" x2="${sx(0)}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="check-target-line" x1="${margin.left}" y1="${sy(movingState.targetApparentDepthKm)}" x2="${width - margin.right}" y2="${sy(movingState.targetApparentDepthKm)}"></line>`;
     clusterPoints.forEach((point) => {
-      const isSelected = Math.abs(point.xKm - movingState.surfaceXKm) < 1e-6;
-      if (isSelected) return;
-      svg += `<circle class="check-cluster-sample ${point.overlapsTarget ? 'overlap' : ''}" cx="${sx(relativeDopplerHz(point.surfaceAliasHz))}" cy="${sy(point.surfaceApparentDepthKm)}" r="${point.overlapsTarget ? 4.2 : 2.8}"><title>Cluster point ${point.index + 1}: target-relative Doppler ${signed(relativeDopplerHz(point.surfaceAliasHz), 1)} Hz at ${fmt(point.surfaceApparentDepthKm, 2)} km</title></circle>`;
+      const css = point.overlapsTarget ? 'overlap' : point.index === movingState.selectedPointIndex ? 'selected' : '';
+      const stack = stackForPoint(point);
+      svg += `<circle class="check-cluster-sample ${css}" cx="${sx(relativeDopplerHz(point.surfaceAliasHz)) + stack.x}" cy="${sy(point.surfaceApparentDepthKm) + stack.y}" r="${point.overlapsTarget ? 4.2 : point.index === movingState.selectedPointIndex ? 3.8 : 3}"><title>Surface point ${point.index + 1}: target-relative Doppler ${signed(relativeDopplerHz(point.surfaceAliasHz), 1)} Hz at ${fmt(point.surfaceApparentDepthKm, 2)} km</title></circle>`;
     });
     svg += '</g>';
-    svg += `<circle class="check-clutter-center" cx="${sx(selectedRelativeHz)}" cy="${sy(movingState.surfaceApparentDepthKm)}" r="5"><title>Selected clutter center</title></circle>`;
+    if (!clusterCount) {
+      svg += `<circle class="check-clutter-center ${movingState.overlapsTarget ? 'overlap' : ''}" cx="${sx(selectedRelativeHz)}" cy="${sy(movingState.surfaceApparentDepthKm)}" r="5"><title>Selected clutter center</title></circle>`;
+    }
     svg += `<rect class="check-target-center" x="${sx(0) - 5}" y="${sy(movingState.targetApparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${sx(0)} ${sy(movingState.targetApparentDepthKm)})"><title>Target resolution-cell center</title></rect>`;
+    if (overlapCount > 1) {
+      svg += `<text class="check-stack-label" x="${sx(0) + 12}" y="${sy(movingState.targetApparentDepthKm) + 23}">${fmt(overlapCount, 0)} stacked echoes</text>`;
+    }
     svg += `<line class="check-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
     svg += `<text class="check-title" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${height - 7}" text-anchor="middle">folded Doppler relative to target (Hz)</text>`;
@@ -675,13 +927,14 @@
       const xKm = safeCount === 1
         ? (selectedFoldingPoint?.xKm || 0)
         : -model.spreadKm + spacingKm * index;
-      const rangeKm = Math.hypot(model.altitudeKm, xKm);
+      const rangeState = surfaceRangeState(xKm, 0);
       return {
         index,
         xKm,
-        rangeKm,
-        trueDopplerHz: (2 * model.velocityKmS * 1000 / wavelengthM) * (xKm / rangeKm),
-        apparentDepthKm: (rangeKm - model.altitudeKm) / model.iceIndex
+        elevationKm: rangeState.elevationKm,
+        rangeKm: rangeState.surfaceRangeKm,
+        trueDopplerHz: rangeState.surfaceTrueDopplerHz,
+        apparentDepthKm: rangeState.surfaceApparentDepthKm
       };
     });
   }
@@ -692,6 +945,10 @@
     const targetRangeKm = Math.hypot(targetOpticalHeightKm, targetDxKm);
     const targetTrueDopplerHz = (2 * model.velocityKmS * 1000 / wavelengthM) * (targetDxKm / targetRangeKm);
     return {
+      index: 0,
+      xKm: 0,
+      targetDxKm,
+      targetRangeKm,
       targetTrueDopplerHz,
       targetAliasHz: alias(targetTrueDopplerHz, effectivePrfHz),
       targetApparentDepthKm: (targetRangeKm - model.altitudeKm) / model.iceIndex
@@ -699,11 +956,12 @@
   }
 
   function clutterStateForPoint(point, planeXKm, effectivePrfHz, targetState) {
-    const surfaceDxKm = point.xKm - planeXKm;
-    const surfaceRangeKm = Math.hypot(model.altitudeKm, surfaceDxKm);
-    const surfaceTrueDopplerHz = (2 * model.velocityKmS * 1000 / wavelengthM) * (surfaceDxKm / surfaceRangeKm);
+    const surfaceState = surfaceRangeState(point.xKm, planeXKm);
+    const surfaceDxKm = surfaceState.surfaceDxKm;
+    const surfaceRangeKm = surfaceState.surfaceRangeKm;
+    const surfaceTrueDopplerHz = surfaceState.surfaceTrueDopplerHz;
     const surfaceAliasHz = alias(surfaceTrueDopplerHz, effectivePrfHz);
-    const surfaceApparentDepthKm = (surfaceRangeKm - model.altitudeKm) / model.iceIndex;
+    const surfaceApparentDepthKm = surfaceState.surfaceApparentDepthKm;
     const dopplerDeltaHz = Math.abs(alias(surfaceAliasHz - targetState.targetAliasHz, effectivePrfHz));
     const depthDeltaKm = Math.abs(surfaceApparentDepthKm - targetState.targetApparentDepthKm);
     const normalizedDistance = Math.hypot(
@@ -712,11 +970,14 @@
     );
     return {
       ...point,
+      elevationKm: surfaceState.elevationKm,
+      verticalKm: surfaceState.verticalKm,
       surfaceDxKm,
       surfaceRangeKm,
       surfaceTrueDopplerHz,
       surfaceAliasHz,
       surfaceApparentDepthKm,
+      targetState,
       dopplerDeltaHz,
       depthDeltaKm,
       normalizedDistance,
@@ -725,8 +986,8 @@
     };
   }
 
-  function multiClutterState(effectivePrfHz) {
-    const planeXKm = (flyby.timeS - flyby.durationS / 2) * model.velocityKmS;
+  function multiClutterStateAt(timeS, effectivePrfHz) {
+    const planeXKm = (timeS - flyby.durationS / 2) * model.velocityKmS;
     const targetState = targetStateForPlane(planeXKm, effectivePrfHz);
     const points = equalDistanceClutterPoints(multiClutterPointCount)
       .map((point) => clutterStateForPoint(point, planeXKm, effectivePrfHz, targetState));
@@ -737,31 +998,67 @@
     return {
       effectivePrfHz,
       planeXKm,
-      targetState,
+      targetState: {
+        ...targetState,
+        overlapsSurface: overlappingPoints.length > 0,
+        matchingSurfaceIndexes: overlappingPoints.map((point) => point.index)
+      },
       points,
       overlappingPoints,
       nearestPoint
     };
   }
 
+  function multiClutterState(effectivePrfHz) {
+    return multiClutterStateAt(flyby.timeS, effectivePrfHz);
+  }
+
+  function recommendedMultiClutterStart(prfMinHz, prfMaxHz) {
+    let best = null;
+    for (let timeS = 0; timeS <= flyby.durationS + 1e-9; timeS += 0.05) {
+      for (let prfHz = prfMinHz; prfHz <= prfMaxHz + 1e-9; prfHz += 0.1) {
+        const state = multiClutterStateAt(timeS, prfHz);
+        const overlapCount = state.overlappingPoints.length;
+        const distanceScore = state.nearestPoint ? state.nearestPoint.normalizedDistance : 999;
+        const centeredTimePenalty = Math.abs(timeS - flyby.durationS / 2) * 0.05;
+        const score = overlapCount * 1000 - distanceScore - centeredTimePenalty;
+        if (!best || score > best.score) {
+          best = {
+            score,
+            overlapCount,
+            timeS,
+            prfHz,
+            nearestDistance: distanceScore
+          };
+        }
+      }
+    }
+    return best && best.overlapCount > 0 ? best : null;
+  }
+
   function diagnosticStateFromMultiClutter(state) {
     const selectedPoint = state.overlappingPoints[0] || state.nearestPoint;
+    const selectedTarget = state.targetState;
     return {
       effectivePrfHz: state.effectivePrfHz,
       planeXKm: state.planeXKm,
       surfaceXKm: selectedPoint.xKm,
+      surfaceElevationKm: selectedPoint.elevationKm,
       surfaceDxKm: selectedPoint.surfaceDxKm,
       surfaceRangeKm: selectedPoint.surfaceRangeKm,
       surfaceTrueDopplerHz: selectedPoint.surfaceTrueDopplerHz,
       surfaceAliasHz: selectedPoint.surfaceAliasHz,
       surfaceApparentDepthKm: selectedPoint.surfaceApparentDepthKm,
-      targetTrueDopplerHz: state.targetState.targetTrueDopplerHz,
-      targetAliasHz: state.targetState.targetAliasHz,
-      targetApparentDepthKm: state.targetState.targetApparentDepthKm,
+      targetXKm: selectedTarget.xKm,
+      targetTrueDopplerHz: selectedTarget.targetTrueDopplerHz,
+      targetAliasHz: selectedTarget.targetAliasHz,
+      targetApparentDepthKm: selectedTarget.targetApparentDepthKm,
       dopplerDeltaHz: selectedPoint.dopplerDeltaHz,
       depthDeltaKm: selectedPoint.depthDeltaKm,
       foldOrder: selectedPoint.foldOrder,
-      overlapsTarget: selectedPoint.overlapsTarget
+      overlapsTarget: selectedPoint.overlapsTarget,
+      overlapCount: state.overlappingPoints.length,
+      selectedPointIndex: selectedPoint.index
     };
   }
 
@@ -772,24 +1069,33 @@
     const left = 62;
     const right = 32;
     const surfaceY = 138;
-    const aircraftY = 34;
-    const depthMaxKm = Math.max(12, currentFastTimeDepthMaxKm());
-    const furthestPointKm = Math.max(...state.points.map((point) => Math.abs(point.xKm)));
+    const aircraftY = 76;
+    const depthMaxKm = multiClutterGeometryDepthMaxKm();
+    const furthestPointKm = Math.max(
+      ...state.points.map((point) => Math.abs(point.xKm)),
+      Math.abs(state.targetState.xKm)
+    );
     const geometryHalfWidthKm = Math.ceil(Math.max(model.spreadKm, flybyHalfDistanceKm(), Math.abs(state.planeXKm), furthestPointKm) / 10) * 10;
     const sx = (xKm) => left + ((xKm + geometryHalfWidthKm) / (2 * geometryHalfWidthKm)) * (width - left - right);
+    const surfaceYFor = (xKm) => surfaceY - surfaceBumpElevationKm(xKm) * 9;
     const depthToY = (depthKm) => surfaceY + (depthKm / depthMaxKm) * 160;
-    const targetX = sx(0);
-    const targetY = depthToY(state.targetState.targetApparentDepthKm);
+    const targetX = sx(state.targetState.xKm);
+    const targetY = depthToY(model.targetDepthKm);
     const aircraftX = sx(state.planeXKm);
     const nearest = state.overlappingPoints[0] || state.nearestPoint;
     const nearestDepthY = depthToY(Math.min(depthMaxKm, nearest.surfaceApparentDepthKm));
     const labelClass = state.overlappingPoints.length ? 'geometry-danger' : 'geometry-value';
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Equal-distance surface clutter points during the current Doppler folding run">`;
+    const surfaceSamples = Array.from({ length: 161 }, (_, index) => -geometryHalfWidthKm + (2 * geometryHalfWidthKm * index) / 160);
+    const surfacePath = surfaceSamples.map((xKm, index) => (
+      `${index ? 'L' : 'M'} ${sx(xKm).toFixed(2)} ${surfaceYFor(xKm).toFixed(2)}`
+    )).join(' ');
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Equal-distance bumpy surface clutter points and one physically fixed subsurface target" data-target-y="${targetY}" data-target-depth-km="${model.targetDepthKm}">`;
     svg += `<line class="geometry-surface" x1="${left}" y1="${surfaceY}" x2="${width - right}" y2="${surfaceY}"></line>`;
+    svg += `<path class="geometry-bumpy-surface" d="${surfacePath}"></path>`;
     svg += `<line class="geometry-depth-guide" x1="${targetX}" y1="${surfaceY}" x2="${targetX}" y2="${targetY}"></line>`;
     svg += `<line class="geometry-target-ray" x1="${aircraftX}" y1="${aircraftY + 10}" x2="${targetX}" y2="${targetY - 10}"></line>`;
     state.overlappingPoints.forEach((point) => {
-      svg += `<line class="multi-clutter-ray" x1="${aircraftX}" y1="${aircraftY + 10}" x2="${sx(point.xKm)}" y2="${surfaceY - 7}"></line>`;
+      svg += `<line class="multi-clutter-ray" x1="${aircraftX}" y1="${aircraftY + 10}" x2="${sx(point.xKm)}" y2="${surfaceYFor(point.xKm) - 7}"></line>`;
     });
     svg += `<g class="geometry-plane" transform="translate(${aircraftX} ${aircraftY})">
         <path class="geometry-plane-wing" d="M -3 -5 L 9 -25 L 15 -23 L 8 -4 Z"></path>
@@ -799,17 +1105,18 @@
         <path class="geometry-plane-body" d="M -22 0 C -12 -8 8 -8 23 0 C 8 8 -12 8 -22 0 Z"></path>
         <circle class="geometry-plane-window" cx="10" cy="0" r="2.7"></circle>
       </g>`;
-    svg += `<text class="geometry-title" x="${left}" y="${surfaceY - 23}">${fmt(multiClutterPointCount, 0)} equally spaced surface points across ${fmt(2 * model.spreadKm, 0)} km</text>`;
+    svg += `<text class="geometry-title" x="${left}" y="${surfaceY - 23}">${fmt(multiClutterPointCount, 0)} equally spaced bumpy surface points across ${fmt(2 * model.spreadKm, 0)} km</text>`;
+    svg += `<text class="geometry-title" x="${left}" y="${surfaceY + 178}">one fixed subsurface object</text>`;
     state.points.forEach((point) => {
       const css = point.overlapsTarget ? 'overlap' : point.index === nearest.index ? 'nearest' : '';
       const radius = point.overlapsTarget ? 7.4 : point.index === nearest.index ? 6.6 : 4.8;
-      svg += `<circle class="multi-clutter-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceY}" r="${radius}"><title>Point ${point.index + 1}: x=${fmt(point.xKm, 1)} km, alias ${signed(point.surfaceAliasHz, 1)} Hz, depth ${fmt(point.surfaceApparentDepthKm, 2)} km</title></circle>`;
+      svg += `<circle class="multi-clutter-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceYFor(point.xKm)}" r="${radius}"><title>Surface point ${point.index + 1}: x=${fmt(point.xKm, 1)} km, bump ${signed(point.elevationKm, 2)} km, alias ${signed(point.surfaceAliasHz, 1)} Hz, apparent depth ${fmt(point.surfaceApparentDepthKm, 2)} km</title></circle>`;
     });
-    svg += `<rect class="geometry-target ${state.overlappingPoints.length ? 'overlap' : ''}" x="${targetX - 8}" y="${targetY - 8}" width="16" height="16" transform="rotate(45 ${targetX} ${targetY})"></rect>`;
+    svg += `<rect class="geometry-target ${state.targetState.overlapsSurface ? 'overlap' : ''}" x="${targetX - 8}" y="${targetY - 8}" width="16" height="16" transform="rotate(45 ${targetX} ${targetY})"><title>One fixed subsurface target: physical depth ${fmt(model.targetDepthKm, 2)} km; current apparent echo ${fmt(state.targetState.targetApparentDepthKm, 2)} km</title></rect>`;
     svg += `<line class="geometry-fold-line" x1="${left}" y1="${nearestDepthY}" x2="${width - right}" y2="${nearestDepthY}"></line>`;
-    svg += `<text class="${labelClass}" x="${left}" y="20">${fmt(state.overlappingPoints.length, 0)} / ${fmt(multiClutterPointCount, 0)} points in target cell</text>`;
-    svg += `<text class="geometry-value" x="${left}" y="38">nearest point x=${fmt(nearest.xKm, 1)} km, depth ${fmt(nearest.surfaceApparentDepthKm, 2)} km</text>`;
-    svg += `<text class="geometry-label" x="${targetX + 14}" y="${targetY + 31}">subsurface target cell</text>`;
+    svg += `<text class="${labelClass}" x="${left}" y="20">${fmt(state.overlappingPoints.length, 0)} / ${fmt(multiClutterPointCount, 0)} bumpy surface returns alias into the one target cell</text>`;
+    svg += `<text class="geometry-value" x="${left}" y="38">nearest surface x=${fmt(nearest.xKm, 1)} km, bump ${signed(nearest.elevationKm, 2)} km, df ${fmt(nearest.dopplerDeltaHz, 1)} Hz, ddepth ${fmt(nearest.depthDeltaKm, 2)} km</text>`;
+    svg += `<text class="geometry-label" x="${targetX + 14}" y="${targetY + 31}">single subsurface object</text>`;
     svg += '</svg>';
     multiClutterGeometryPlot.innerHTML = svg;
   }
@@ -822,40 +1129,58 @@
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
     const prf = state.effectivePrfHz;
+    const targetState = state.targetState;
+    const depthMinKm = Math.floor(Math.min(
+      0,
+      targetState.targetApparentDepthKm,
+      ...state.points.map((point) => point.surfaceApparentDepthKm)
+    ) * 10) / 10;
     const depthMaxKm = Math.ceil(Math.max(
       12,
-      state.targetState.targetApparentDepthKm + 1,
+      targetState.targetApparentDepthKm + 1,
       ...state.points.map((point) => point.surfaceApparentDepthKm)
     ));
     const sx = (value) => margin.left + ((value + prf / 2) / prf) * plotWidth;
-    const sy = (value) => margin.top + (value / depthMaxKm) * plotHeight;
-    const targetTop = sy(state.targetState.targetApparentDepthKm - model.depthToleranceKm);
-    const targetBottom = sy(state.targetState.targetApparentDepthKm + model.depthToleranceKm);
+    const sy = (value) => margin.top + ((value - depthMinKm) / (depthMaxKm - depthMinKm)) * plotHeight;
     const nearest = state.overlappingPoints[0] || state.nearestPoint;
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Equal-distance clutter points plotted by folded Doppler and apparent depth">`;
+    const stackForPoint = (point) => plotStack(
+      state.points,
+      point,
+      (entry) => sx(entry.surfaceAliasHz),
+      (entry) => sy(entry.surfaceApparentDepthKm),
+      1.4,
+      5.8
+    );
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Equal-distance bumpy surface clutter points plotted by folded Doppler and apparent depth">`;
     [-prf / 2, -prf / 4, 0, prf / 4, prf / 2].forEach((value) => {
       const x = sx(value);
       svg += `<line class="check-grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
       svg += `<text class="check-label" x="${x}" y="${height - margin.bottom + 17}" text-anchor="middle">${signed(value, 0)}</text>`;
     });
-    [0, depthMaxKm / 4, depthMaxKm / 2, (3 * depthMaxKm) / 4, depthMaxKm].forEach((value) => {
+    Array.from({ length: 5 }, (_, index) => depthMinKm + (index * (depthMaxKm - depthMinKm)) / 4).forEach((value) => {
       const y = sy(value);
       svg += `<line class="check-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
       svg += `<text class="check-label" x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${fmt(value, 1)}</text>`;
     });
-    periodicIntervalSegments(state.targetState.targetAliasHz, model.dopplerToleranceHz, prf).forEach(([startHz, endHz]) => {
-      svg += `<rect class="multi-target-cell" x="${sx(startHz)}" y="${targetTop}" width="${Math.max(2, sx(endHz) - sx(startHz))}" height="${Math.max(2, targetBottom - targetTop)}"></rect>`;
+    const targetTop = sy(targetState.targetApparentDepthKm - model.depthToleranceKm);
+    const targetBottom = sy(targetState.targetApparentDepthKm + model.depthToleranceKm);
+    periodicIntervalSegments(targetState.targetAliasHz, model.dopplerToleranceHz, prf).forEach(([startHz, endHz]) => {
+      svg += `<rect class="check-target-window ${targetState.overlapsSurface ? 'overlap' : ''}" x="${sx(startHz)}" y="${targetTop}" width="${Math.max(2, sx(endHz) - sx(startHz))}" height="${Math.max(2, targetBottom - targetTop)}"></rect>`;
     });
-    svg += `<line class="check-target-line" x1="${sx(state.targetState.targetAliasHz)}" y1="${margin.top}" x2="${sx(state.targetState.targetAliasHz)}" y2="${height - margin.bottom}"></line>`;
-    svg += `<line class="check-target-line" x1="${margin.left}" y1="${sy(state.targetState.targetApparentDepthKm)}" x2="${width - margin.right}" y2="${sy(state.targetState.targetApparentDepthKm)}"></line>`;
+    svg += `<line class="check-target-line" x1="${sx(targetState.targetAliasHz)}" y1="${margin.top}" x2="${sx(targetState.targetAliasHz)}" y2="${height - margin.bottom}"></line>`;
+    svg += `<line class="check-target-line" x1="${margin.left}" y1="${sy(targetState.targetApparentDepthKm)}" x2="${width - margin.right}" y2="${sy(targetState.targetApparentDepthKm)}"></line>`;
     state.points.forEach((point) => {
       const css = point.overlapsTarget ? 'overlap' : point.index === nearest.index ? 'nearest' : '';
       const radius = point.overlapsTarget ? 5.6 : point.index === nearest.index ? 5 : 3.5;
-      svg += `<circle class="multi-clutter-point ${css}" cx="${sx(point.surfaceAliasHz)}" cy="${sy(point.surfaceApparentDepthKm)}" r="${radius}"><title>Point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz, depth ${fmt(point.surfaceApparentDepthKm, 2)} km</title></circle>`;
+      const stack = stackForPoint(point);
+      svg += `<circle class="multi-clutter-point ${css}" cx="${sx(point.surfaceAliasHz) + stack.x}" cy="${sy(point.surfaceApparentDepthKm) + stack.y}" r="${radius}"><title>Surface point ${point.index + 1}: alias ${signed(point.surfaceAliasHz, 1)} Hz, apparent depth ${fmt(point.surfaceApparentDepthKm, 2)} km, bump ${signed(point.elevationKm, 2)} km</title></circle>`;
+      if (stack.count > 1 && stack.index === 0) {
+        svg += `<text class="check-stack-label" x="${sx(point.surfaceAliasHz) + 11}" y="${sy(point.surfaceApparentDepthKm) - 10}">${fmt(stack.count, 0)} stacked</text>`;
+      }
     });
-    svg += `<rect class="check-target-center" x="${sx(state.targetState.targetAliasHz) - 5}" y="${sy(state.targetState.targetApparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${sx(state.targetState.targetAliasHz)} ${sy(state.targetState.targetApparentDepthKm)})"></rect>`;
-    svg += `<text class="${state.overlappingPoints.length ? 'check-danger' : 'check-title'}" x="${margin.left}" y="18">${fmt(state.overlappingPoints.length, 0)} points folding into target cell</text>`;
-    svg += `<text class="check-title" x="${margin.left}" y="36">nearest alias ${signed(nearest.surfaceAliasHz, 1)} Hz, depth ${fmt(nearest.surfaceApparentDepthKm, 2)} km</text>`;
+    svg += `<rect class="check-target-center" x="${sx(targetState.targetAliasHz) - 5}" y="${sy(targetState.targetApparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${sx(targetState.targetAliasHz)} ${sy(targetState.targetApparentDepthKm)})"><title>One subsurface target cell</title></rect>`;
+    svg += `<text class="${state.overlappingPoints.length ? 'check-danger' : 'check-title'}" x="${margin.left}" y="18">${fmt(state.overlappingPoints.length, 0)} bumpy surface point${state.overlappingPoints.length === 1 ? '' : 's'} folding into one subsurface object</text>`;
+    svg += `<text class="check-title" x="${margin.left}" y="36">nearest surface alias ${signed(nearest.surfaceAliasHz, 1)} Hz; target alias ${signed(targetState.targetAliasHz, 1)} Hz</text>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
     svg += `<line class="check-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
     svg += `<text class="check-title" x="${margin.left + plotWidth / 2}" y="${height - 7}" text-anchor="middle">aliased Doppler (Hz)</text>`;
@@ -865,19 +1190,780 @@
   }
 
   function renderMultiClutterSweep(effectivePrfHz) {
-    if (!multiClutterGeometryPlot || !multiClutterDopplerPlot) return null;
+    if (!usesMultiClutterState) return null;
     const state = multiClutterState(effectivePrfHz);
     if (multiClutterCountOutput) multiClutterCountOutput.textContent = fmt(multiClutterPointCount, 0);
+    if (bumpHeightOutput) bumpHeightOutput.textContent = `${fmt(model.bumpHeightKm, 1)} km`;
     if (multiClutterStatus) {
       const nearest = state.overlappingPoints[0] || state.nearestPoint;
       multiClutterStatus.className = `multi-clutter-status${state.overlappingPoints.length ? ' is-overlap' : ''}`;
       multiClutterStatus.textContent = state.overlappingPoints.length
-        ? `${fmt(state.overlappingPoints.length, 0)} equal-distance surface point${state.overlappingPoints.length === 1 ? '' : 's'} fold into the subsurface cell at ${fmt(flyby.timeS, 1)} s.`
-        : `No equal-distance point is in the target cell at ${fmt(flyby.timeS, 1)} s; nearest is ${fmt(nearest.dopplerDeltaHz, 1)} Hz and ${fmt(nearest.depthDeltaKm, 2)} km away.`;
+        ? `${fmt(state.overlappingPoints.length, 0)} bumpy surface point${state.overlappingPoints.length === 1 ? '' : 's'} alias into the one subsurface object at ${fmt(flyby.timeS, 1)} s.`
+        : `No bumpy surface point is in the one target cell at ${fmt(flyby.timeS, 1)} s; nearest is ${fmt(nearest.dopplerDeltaHz, 1)} Hz and ${fmt(nearest.depthDeltaKm, 2)} km away.`;
     }
     renderMultiClutterGeometry(state);
     renderMultiClutterDoppler(state);
     return state;
+  }
+
+  function phaseSolutionState(state) {
+    if (!state) return null;
+    const targetPhaseRad = phaseWrap(4 * Math.PI * state.targetState.targetRangeKm * 1000 / wavelengthM);
+    const dopplerSigmaHz = Math.max(model.dopplerToleranceHz, 1e-6);
+    const depthSigmaKm = Math.max(model.depthToleranceKm, 1e-6);
+    const points = state.points.map((point) => {
+      const absolutePhaseRad = phaseWrap(4 * Math.PI * point.surfaceRangeKm * 1000 / wavelengthM);
+      const relativePhaseRad = phaseWrap(absolutePhaseRad - targetPhaseRad);
+      const cellWeight = Math.exp(-0.5 * (
+        (point.dopplerDeltaHz / dopplerSigmaHz) ** 2 +
+        (point.depthDeltaKm / depthSigmaKm) ** 2
+      ));
+      return {
+        ...point,
+        phaseRad: relativePhaseRad,
+        phaseDeg: phaseDeg(relativePhaseRad),
+        cellWeight,
+        coherentRe: cellWeight * Math.cos(relativePhaseRad),
+        coherentIm: cellWeight * Math.sin(relativePhaseRad)
+      };
+    });
+    const surfaceSum = points.reduce((sum, point) => ({
+      re: sum.re + point.coherentRe,
+      im: sum.im + point.coherentIm
+    }), { re: 0, im: 0 });
+    const combined = {
+      re: 1 + surfaceSum.re,
+      im: surfaceSum.im
+    };
+    const vectorInfo = (vector) => {
+      const magnitude = Math.hypot(vector.re, vector.im);
+      return {
+        ...vector,
+        magnitude,
+        phaseRad: magnitude < 1e-6 ? 0 : phaseWrap(Math.atan2(vector.im, vector.re))
+      };
+    };
+    const targetVector = vectorInfo({ re: 1, im: 0 });
+    const surfaceVector = vectorInfo(surfaceSum);
+    const combinedVector = vectorInfo(combined);
+    const residualVector = vectorInfo({
+      re: combined.re - surfaceSum.re,
+      im: combined.im - surfaceSum.im
+    });
+    const targetPower = targetVector.magnitude ** 2;
+    const surfacePower = surfaceVector.magnitude ** 2;
+    const interferencePower = 2 * (
+      targetVector.re * surfaceVector.re + targetVector.im * surfaceVector.im
+    );
+    const observedPower = combinedVector.magnitude ** 2;
+    const residualPower = residualVector.magnitude ** 2;
+    return {
+      ...state,
+      points,
+      targetPhaseRad,
+      targetVector,
+      surfaceVector,
+      combinedVector,
+      residualVector,
+      targetPower,
+      surfacePower,
+      interferencePower,
+      observedPower,
+      residualPower,
+      powerOnlyResidual: observedPower - surfacePower,
+      removedPower: observedPower - residualPower,
+      powerClosureError: observedPower - (targetPower + surfacePower + interferencePower)
+    };
+  }
+
+  function renderPhaseGeometry(solution) {
+    if (!phaseGeometryPlot || !solution) return;
+    const width = 560;
+    const height = 350;
+    const left = 62;
+    const right = 32;
+    const surfaceY = 138;
+    const aircraftY = 76;
+    const depthMaxKm = Math.max(
+      12,
+      currentFastTimeDepthMaxKm(),
+      solution.targetState.targetApparentDepthKm + 1,
+      model.targetDepthKm + 1,
+      ...solution.points.map((point) => point.surfaceApparentDepthKm + 1)
+    );
+    const furthestPointKm = Math.max(
+      ...solution.points.map((point) => Math.abs(point.xKm)),
+      Math.abs(solution.planeXKm),
+      Math.abs(solution.targetState.xKm)
+    );
+    const geometryHalfWidthKm = Math.ceil(Math.max(model.spreadKm, flybyHalfDistanceKm(), furthestPointKm) / 10) * 10;
+    const sx = (xKm) => left + ((xKm + geometryHalfWidthKm) / (2 * geometryHalfWidthKm)) * (width - left - right);
+    const surfaceYFor = (xKm) => surfaceY - surfaceBumpElevationKm(xKm) * 9;
+    const depthToY = (depthKm) => surfaceY + (depthKm / depthMaxKm) * 160;
+    const targetX = sx(solution.targetState.xKm);
+    const targetY = depthToY(model.targetDepthKm);
+    const aircraftX = sx(solution.planeXKm);
+    const surfaceSamples = Array.from({ length: 161 }, (_, index) => -geometryHalfWidthKm + (2 * geometryHalfWidthKm * index) / 160);
+    const surfacePath = surfaceSamples.map((xKm, index) => (
+      `${index ? 'L' : 'M'} ${sx(xKm).toFixed(2)} ${surfaceYFor(xKm).toFixed(2)}`
+    )).join(' ');
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Bumpy surface points colored by two-way phase relative to the subsurface target">`;
+    svg += `<line class="geometry-surface" x1="${left}" y1="${surfaceY}" x2="${width - right}" y2="${surfaceY}"></line>`;
+    svg += `<path class="geometry-bumpy-surface" d="${surfacePath}"></path>`;
+    svg += `<line class="geometry-target-ray" x1="${aircraftX}" y1="${aircraftY + 10}" x2="${targetX}" y2="${targetY - 10}"></line>`;
+    solution.overlappingPoints.forEach((point) => {
+      svg += `<line class="multi-clutter-ray" x1="${aircraftX}" y1="${aircraftY + 10}" x2="${sx(point.xKm)}" y2="${surfaceYFor(point.xKm) - 7}"></line>`;
+    });
+    svg += `<g class="geometry-plane" transform="translate(${aircraftX} ${aircraftY})">
+        <path class="geometry-plane-wing" d="M -3 -5 L 9 -25 L 15 -23 L 8 -4 Z"></path>
+        <path class="geometry-plane-wing" d="M -3 5 L 9 25 L 15 23 L 8 4 Z"></path>
+        <path class="geometry-plane-tail" d="M -15 -4 L -25 -15 L -20 -2 Z"></path>
+        <path class="geometry-plane-tail" d="M -15 4 L -25 15 L -20 2 Z"></path>
+        <path class="geometry-plane-body" d="M -22 0 C -12 -8 8 -8 23 0 C 8 8 -12 8 -22 0 Z"></path>
+        <circle class="geometry-plane-window" cx="10" cy="0" r="2.7"></circle>
+      </g>`;
+    solution.points.forEach((point) => {
+      const radius = point.overlapsTarget ? 7.6 : 4.6 + 4.2 * Math.sqrt(point.cellWeight);
+      const css = point.overlapsTarget ? 'overlap' : point.cellWeight > 0.12 ? 'weighted' : '';
+      svg += `<circle class="phase-surface-point ${css}" cx="${sx(point.xKm)}" cy="${surfaceYFor(point.xKm)}" r="${radius}" style="fill:${phaseColor(point.phaseRad)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, cell weight ${fmt(point.cellWeight, 2)}, alias ${signed(point.surfaceAliasHz, 1)} Hz</title></circle>`;
+    });
+    svg += `<rect class="geometry-target ${solution.targetState.overlapsSurface ? 'overlap' : ''}" x="${targetX - 8}" y="${targetY - 8}" width="16" height="16" transform="rotate(45 ${targetX} ${targetY})"><title>Target phase reference: 0 deg</title></rect>`;
+    svg += `<text class="geometry-title" x="${left}" y="20">color = phase relative to target echo</text>`;
+    svg += `<text class="geometry-value" x="${left}" y="38">${fmt(solution.points.length, 0)} surface returns, ${fmt(solution.overlappingPoints.length, 0)} in the target cell</text>`;
+    svg += `<text class="geometry-label" x="${targetX + 14}" y="${targetY + 31}">target phase 0 deg</text>`;
+    svg += '</svg>';
+    phaseGeometryPlot.innerHTML = svg;
+  }
+
+  function renderPhaseCell(solution) {
+    if (!phaseCellPlot || !solution) return;
+    const width = 560;
+    const height = 350;
+    const margin = { left: 68, right: 28, top: 48, bottom: 48 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const prf = solution.effectivePrfHz;
+    const targetState = solution.targetState;
+    const relativeDopplerHz = (valueHz) => alias(valueHz - targetState.targetAliasHz, prf);
+    const depthMinKm = Math.floor(Math.min(
+      0,
+      targetState.targetApparentDepthKm,
+      ...solution.points.map((point) => point.surfaceApparentDepthKm)
+    ) * 10) / 10;
+    const depthMaxKm = Math.ceil(Math.max(
+      12,
+      targetState.targetApparentDepthKm + 1,
+      ...solution.points.map((point) => point.surfaceApparentDepthKm)
+    ));
+    const sx = (value) => margin.left + ((value + prf / 2) / prf) * plotWidth;
+    const sy = (value) => margin.top + ((value - depthMinKm) / (depthMaxKm - depthMinKm)) * plotHeight;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Folded Doppler and apparent depth cell with surface points colored by phase">`;
+    [-prf / 2, -prf / 4, 0, prf / 4, prf / 2].forEach((value) => {
+      const x = sx(value);
+      svg += `<line class="check-grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
+      svg += `<text class="check-label" x="${x}" y="${height - margin.bottom + 17}" text-anchor="middle">${signed(value, 0)}</text>`;
+    });
+    Array.from({ length: 5 }, (_, index) => depthMinKm + (index * (depthMaxKm - depthMinKm)) / 4).forEach((value) => {
+      const y = sy(value);
+      svg += `<line class="check-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+      svg += `<text class="check-label" x="${margin.left - 9}" y="${y + 4}" text-anchor="end">${fmt(value, 1)}</text>`;
+    });
+    periodicIntervalSegments(0, model.dopplerToleranceHz, prf).forEach(([startHz, endHz]) => {
+      svg += `<rect class="check-target-window ${targetState.overlapsSurface ? 'overlap' : ''}" x="${sx(startHz)}" y="${sy(targetState.targetApparentDepthKm - model.depthToleranceKm)}" width="${Math.max(2, sx(endHz) - sx(startHz))}" height="${Math.max(2, sy(targetState.targetApparentDepthKm + model.depthToleranceKm) - sy(targetState.targetApparentDepthKm - model.depthToleranceKm))}"></rect>`;
+    });
+    svg += `<line class="check-target-line" x1="${sx(0)}" y1="${margin.top}" x2="${sx(0)}" y2="${height - margin.bottom}"></line>`;
+    svg += `<line class="check-target-line" x1="${margin.left}" y1="${sy(targetState.targetApparentDepthKm)}" x2="${width - margin.right}" y2="${sy(targetState.targetApparentDepthKm)}"></line>`;
+    solution.points.forEach((point) => {
+      const x = sx(relativeDopplerHz(point.surfaceAliasHz));
+      const y = sy(point.surfaceApparentDepthKm);
+      const radius = 3 + 6 * Math.sqrt(point.cellWeight);
+      const css = point.overlapsTarget ? 'overlap' : point.cellWeight > 0.12 ? 'weighted' : '';
+      svg += `<circle class="phase-cell-point ${css}" cx="${x}" cy="${y}" r="${radius}" style="fill:${phaseColor(point.phaseRad)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, weight ${fmt(point.cellWeight, 2)}, relative Doppler ${signed(relativeDopplerHz(point.surfaceAliasHz), 1)} Hz</title></circle>`;
+    });
+    svg += `<rect class="check-target-center" x="${sx(0) - 5}" y="${sy(targetState.targetApparentDepthKm) - 5}" width="10" height="10" transform="rotate(45 ${sx(0)} ${sy(targetState.targetApparentDepthKm)})"><title>Target phase reference: 0 deg</title></rect>`;
+    svg += `<text class="check-title" x="${margin.left}" y="18">dot color = wrapped carrier phase, dot size = target-cell weight</text>`;
+    svg += `<text class="${solution.overlappingPoints.length ? 'check-danger' : 'check-title'}" x="${margin.left}" y="36">${fmt(solution.overlappingPoints.length, 0)} phase-weighted surface return${solution.overlappingPoints.length === 1 ? '' : 's'} in the target cell</text>`;
+    svg += `<line class="check-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
+    svg += `<line class="check-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
+    svg += `<text class="check-title" x="${margin.left + plotWidth / 2}" y="${height - 7}" text-anchor="middle">folded Doppler relative to target (Hz)</text>`;
+    svg += `<text class="check-title" transform="translate(17 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">apparent depth / fast time (km)</text>`;
+    svg += '</svg>';
+    phaseCellPlot.innerHTML = svg;
+  }
+
+  function renderPhasePhasor(solution) {
+    if (!phasePhasorPlot || !solution) return;
+    const width = 900;
+    const height = 315;
+    const centerX = 180;
+    const centerY = 158;
+    const circleRadius = 96;
+    const maxMagnitude = Math.max(1, solution.surfaceVector.magnitude, solution.combinedVector.magnitude);
+    const vectorScale = circleRadius * 0.82 / maxMagnitude;
+    const endpoint = (vector) => ({
+      x: centerX + vector.re * vectorScale,
+      y: centerY - vector.im * vectorScale
+    });
+    const targetEnd = endpoint(solution.targetVector);
+    const surfaceEnd = endpoint(solution.surfaceVector);
+    const combinedEnd = endpoint(solution.combinedVector);
+    const barX = 410;
+    const barWidth = 330;
+    const barScale = barWidth / Math.max(1, solution.combinedVector.magnitude, solution.surfaceVector.magnitude);
+    const barRows = [
+      { label: 'target', vector: solution.targetVector, css: 'target' },
+      { label: 'surface sum', vector: solution.surfaceVector, css: 'surface' },
+      { label: 'target + surface', vector: solution.combinedVector, css: 'combined' }
+    ];
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Coherent phase sum of the target and weighted bumpy surface clutter returns">
+      <defs>
+        <marker id="phase-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="phase-arrow-head"></path></marker>
+      </defs>`;
+    svg += `<circle class="phase-unit-circle" cx="${centerX}" cy="${centerY}" r="${circleRadius}"></circle>`;
+    svg += `<line class="phase-axis-line" x1="${centerX - circleRadius - 12}" y1="${centerY}" x2="${centerX + circleRadius + 12}" y2="${centerY}"></line>`;
+    svg += `<line class="phase-axis-line" x1="${centerX}" y1="${centerY - circleRadius - 12}" x2="${centerX}" y2="${centerY + circleRadius + 12}"></line>`;
+    svg += `<text class="phase-label" x="${centerX + circleRadius + 18}" y="${centerY + 4}">0 deg</text>`;
+    svg += `<text class="phase-label" x="${centerX - 6}" y="${centerY - circleRadius - 18}" text-anchor="end">+90</text>`;
+    solution.points.forEach((point) => {
+      if (point.cellWeight < 0.02) return;
+      const end = endpoint({ re: point.coherentRe, im: point.coherentIm });
+      const css = point.overlapsTarget ? 'overlap' : 'surface';
+      svg += `<line class="phase-vector ${css}" x1="${centerX}" y1="${centerY}" x2="${end.x}" y2="${end.y}" style="stroke:${phaseColor(point.phaseRad)};stroke-width:${(1 + 3 * Math.sqrt(point.cellWeight)).toFixed(2)}"><title>Surface point ${point.index + 1}: phase ${signed(point.phaseDeg, 0)} deg, coherent weight ${fmt(point.cellWeight, 2)}</title></line>`;
+      svg += `<circle class="phase-vector-tip ${css}" cx="${end.x}" cy="${end.y}" r="${2.5 + 2.5 * Math.sqrt(point.cellWeight)}" style="fill:${phaseColor(point.phaseRad)}"></circle>`;
+    });
+    svg += `<line class="phase-vector target" x1="${centerX}" y1="${centerY}" x2="${targetEnd.x}" y2="${targetEnd.y}" marker-end="url(#phase-arrow)"></line>`;
+    svg += `<line class="phase-vector sum" x1="${centerX}" y1="${centerY}" x2="${surfaceEnd.x}" y2="${surfaceEnd.y}" marker-end="url(#phase-arrow)"></line>`;
+    svg += `<line class="phase-vector combined" x1="${centerX}" y1="${centerY}" x2="${combinedEnd.x}" y2="${combinedEnd.y}" marker-end="url(#phase-arrow)"></line>`;
+    svg += `<text class="phase-title" x="38" y="22">coherent vector plane</text>`;
+    svg += `<text class="phase-note" x="38" y="40">${fmt(solution.overlappingPoints.length, 0)} target-cell surface phasor${solution.overlappingPoints.length === 1 ? '' : 's'} weighted by Doppler/depth match</text>`;
+    barRows.forEach((row, index) => {
+      const y = 84 + index * 58;
+      const length = Math.max(1, row.vector.magnitude * barScale);
+      svg += `<text class="phase-title" x="${barX}" y="${y - 10}">${row.label}</text>`;
+      svg += `<rect class="phase-bar-track" x="${barX}" y="${y}" width="${barWidth}" height="12"></rect>`;
+      svg += `<rect class="phase-bar ${row.css}" x="${barX}" y="${y}" width="${length}" height="12"></rect>`;
+      svg += `<text class="phase-note" x="${barX + barWidth + 16}" y="${y + 10}">${fmt(row.vector.magnitude, 2)} at ${signed(phaseDeg(row.vector.phaseRad), 0)} deg</text>`;
+    });
+    svg += `<text class="phase-title" x="${barX}" y="260">cell equation</text>`;
+    svg += `<text class="phase-note" x="${barX}" y="280">target vector + weighted surface vectors = coherent return in the target cell</text>`;
+    svg += '</svg>';
+    phasePhasorPlot.innerHTML = svg;
+  }
+
+  function renderPhasePower(solution) {
+    if (!phasePowerPlot || !solution) return;
+    const width = 900;
+    const height = 430;
+    const left = 78;
+    const right = 36;
+    const plotWidth = width - left - right;
+    const zeroX = left + plotWidth * 0.28;
+    const maxPositivePower = Math.max(
+      1,
+      solution.targetPower,
+      solution.surfacePower,
+      solution.observedPower,
+      solution.residualPower,
+      solution.interferencePower,
+      solution.removedPower
+    );
+    const maxNegativePower = Math.max(0, -solution.interferencePower, -solution.removedPower);
+    const axisMagnitude = Math.max(maxPositivePower, maxNegativePower * 2.4, 1);
+    const positiveWidth = width - right - 64 - zeroX;
+    const negativeWidth = zeroX - left;
+    const sx = (value) => value >= 0
+      ? zeroX + (value / axisMagnitude) * positiveWidth
+      : zeroX + (value / axisMagnitude) * negativeWidth;
+    const powerRows = [
+      { label: 'target self-power', value: solution.targetPower, css: 'target' },
+      { label: 'surface self-power', value: solution.surfacePower, css: 'surface' },
+      { label: 'phase interference', value: solution.interferencePower, css: 'interference' },
+      { label: 'observed overlap', value: solution.observedPower, css: 'observed' }
+    ];
+    const rowStartY = 78;
+    const rowGap = 46;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Power budget before and after coherent phase subtraction of surface clutter"
+      data-target-power="${solution.targetPower}"
+      data-surface-power="${solution.surfacePower}"
+      data-interference-power="${solution.interferencePower}"
+      data-observed-power="${solution.observedPower}"
+      data-power-only-residual="${solution.powerOnlyResidual}"
+      data-residual-power="${solution.residualPower}"
+      data-power-closure-error="${solution.powerClosureError}">`;
+    svg += `<text class="phase-title" x="${left}" y="22">power in the target Doppler/depth cell, normalized to target-only power</text>`;
+    svg += `<text class="phase-note" x="${left}" y="41">observed = target self-power + surface self-power + phase interference</text>`;
+    svg += `<line class="phase-power-zero" x1="${zeroX}" y1="56" x2="${zeroX}" y2="${rowStartY + (powerRows.length - 1) * rowGap + 17}"></line>`;
+    svg += `<text class="phase-label" x="${zeroX}" y="69" text-anchor="middle">0</text>`;
+    powerRows.forEach((row, index) => {
+      const y = rowStartY + index * rowGap;
+      const endX = sx(row.value);
+      const barX = Math.min(zeroX, endX);
+      const barWidth = Math.max(1, Math.abs(endX - zeroX));
+      const valueAnchor = row.value >= 0 ? 'start' : 'end';
+      const valueX = row.value >= 0 ? endX + 9 : endX - 9;
+      svg += `<text class="phase-title" x="${left}" y="${y - 8}">${row.label}</text>`;
+      svg += `<rect class="phase-power-bar ${row.css}" x="${barX}" y="${y}" width="${barWidth}" height="15"></rect>`;
+      svg += `<text class="phase-note" x="${valueX}" y="${y + 12}" text-anchor="${valueAnchor}">${signed(row.value, 2)} x</text>`;
+    });
+
+    const dividerY = 270;
+    const comparisonTop = 300;
+    const comparisonSplitX = width / 2;
+    svg += `<line class="phase-power-divider" x1="${left}" y1="${dividerY}" x2="${width - right}" y2="${dividerY}"></line>`;
+    svg += `<line class="phase-power-comparison-line" x1="${comparisonSplitX}" y1="${comparisonTop - 13}" x2="${comparisonSplitX}" y2="${height - 22}"></line>`;
+    svg += `<text class="phase-title" x="${left}" y="${comparisonTop}">power-only subtraction</text>`;
+    svg += `<text class="phase-note" x="${left}" y="${comparisonTop + 23}">observed power - surface self-power</text>`;
+    svg += `<text class="phase-power-comparison-value warning" x="${left}" y="${comparisonTop + 58}">${fmt(solution.observedPower, 2)} - ${fmt(solution.surfacePower, 2)} = ${fmt(solution.powerOnlyResidual, 2)} x</text>`;
+    svg += `<text class="phase-note" x="${left}" y="${comparisonTop + 83}">wrong by ${signed(solution.powerOnlyResidual - solution.targetPower, 2)} x because phase interference remains</text>`;
+    svg += `<text class="phase-title" x="${comparisonSplitX + 34}" y="${comparisonTop}">phase-aware subtraction</text>`;
+    svg += `<text class="phase-note" x="${comparisonSplitX + 34}" y="${comparisonTop + 23}">|observed phasor - surface phasor| squared</text>`;
+    svg += `<text class="phase-power-comparison-value success" x="${comparisonSplitX + 34}" y="${comparisonTop + 58}">${fmt(solution.residualPower, 2)} x</text>`;
+    svg += `<text class="phase-note" x="${comparisonSplitX + 34}" y="${comparisonTop + 83}">target-only power recovered</text>`;
+    svg += '</svg>';
+    phasePowerPlot.innerHTML = svg;
+  }
+
+  function renderPhaseSweep(solution) {
+    if (!phaseSweepPlot || !solution) return;
+    const width = 900;
+    const height = 380;
+    const margin = { left: 72, right: 28, top: 68, bottom: 52 };
+    const sampleCount = 61;
+    const samples = Array.from({ length: sampleCount }, (_, index) => {
+      const timeS = (flyby.durationS * index) / (sampleCount - 1);
+      const sampleSolution = phaseSolutionState(multiClutterStateAt(timeS, solution.effectivePrfHz));
+      return {
+        timeS,
+        observedPower: sampleSolution.observedPower,
+        powerOnlyResidual: sampleSolution.powerOnlyResidual,
+        coherentResidual: sampleSolution.residualPower,
+        overlapCount: sampleSolution.overlappingPoints.length
+      };
+    });
+    const minPower = Math.min(0, ...samples.map((sample) => sample.powerOnlyResidual));
+    const maxPower = Math.max(1, ...samples.flatMap((sample) => [sample.observedPower, sample.powerOnlyResidual]));
+    const padding = Math.max(0.35, (maxPower - minPower) * 0.08);
+    const yMin = Math.floor((minPower - padding) * 2) / 2;
+    const yMax = Math.ceil((maxPower + padding) * 2) / 2;
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const sx = (timeS) => margin.left + (timeS / flyby.durationS) * plotWidth;
+    const sy = (power) => margin.top + ((yMax - power) / (yMax - yMin)) * plotHeight;
+    const pathFor = (key) => samples.map((sample, index) => (
+      `${index ? 'L' : 'M'} ${sx(sample.timeS).toFixed(2)} ${sy(sample[key]).toFixed(2)}`
+    )).join(' ');
+    const currentSample = {
+      timeS: flyby.timeS,
+      observedPower: solution.observedPower,
+      powerOnlyResidual: solution.powerOnlyResidual,
+      coherentResidual: solution.residualPower
+    };
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Observed, power-only residual, and phase-aware residual target-cell power across the full flyby"
+      data-current-observed-power="${solution.observedPower}"
+      data-current-power-only-residual="${solution.powerOnlyResidual}"
+      data-current-coherent-residual="${solution.residualPower}">`;
+    svg += `<line class="phase-sweep-observed" x1="${margin.left}" y1="18" x2="${margin.left + 26}" y2="18"></line>`;
+    svg += `<text class="phase-note" x="${margin.left + 34}" y="22">observed cell power</text>`;
+    svg += `<line class="phase-sweep-power-only" x1="${margin.left + 195}" y1="18" x2="${margin.left + 221}" y2="18"></line>`;
+    svg += `<text class="phase-note" x="${margin.left + 229}" y="22">power-only subtraction</text>`;
+    svg += `<line class="phase-sweep-coherent" x1="${margin.left + 410}" y1="18" x2="${margin.left + 436}" y2="18"></line>`;
+    svg += `<text class="phase-note" x="${margin.left + 444}" y="22">phase-aware residual</text>`;
+    svg += `<rect class="phase-sweep-overlap-band" x="${margin.left + 635}" y="10" width="20" height="12"></rect>`;
+    svg += `<text class="phase-note" x="${margin.left + 663}" y="22">clutter in target cell</text>`;
+    svg += `<text class="phase-title" x="${margin.left}" y="47">current ${fmt(flyby.timeS, 1)} s: power-only ${fmt(solution.powerOnlyResidual, 2)} x; phase-aware ${fmt(solution.residualPower, 2)} x</text>`;
+    samples.forEach((sample, index) => {
+      if (!sample.overlapCount) return;
+      const halfStepS = flyby.durationS / (sampleCount - 1) / 2;
+      const startS = Math.max(0, sample.timeS - halfStepS);
+      const endS = Math.min(flyby.durationS, sample.timeS + halfStepS);
+      svg += `<rect class="phase-sweep-overlap-band" x="${sx(startS)}" y="${margin.top}" width="${Math.max(1, sx(endS) - sx(startS))}" height="${plotHeight}"><title>${sample.overlapCount} clutter return${sample.overlapCount === 1 ? '' : 's'} in the target cell at ${fmt(sample.timeS, 1)} s</title></rect>`;
+    });
+    const yTicks = 5;
+    Array.from({ length: yTicks }, (_, index) => yMin + (index * (yMax - yMin)) / (yTicks - 1)).forEach((value) => {
+      const y = sy(value);
+      svg += `<line class="check-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"></line>`;
+      svg += `<text class="check-label" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${fmt(value, 1)}</text>`;
+    });
+    [0, 3, 6, 9, 12].forEach((value) => {
+      const x = sx(value);
+      svg += `<line class="check-grid-line" x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}"></line>`;
+      svg += `<text class="check-label" x="${x}" y="${height - margin.bottom + 18}" text-anchor="middle">${fmt(value, 0)}</text>`;
+    });
+    svg += `<path class="phase-sweep-observed" d="${pathFor('observedPower')}"><title>Observed target-cell power across the flyby</title></path>`;
+    svg += `<path class="phase-sweep-power-only" d="${pathFor('powerOnlyResidual')}"><title>Residual after subtracting surface power without phase</title></path>`;
+    svg += `<path class="phase-sweep-coherent" d="${pathFor('coherentResidual')}"><title>Residual after coherent surface phasor subtraction</title></path>`;
+    const currentX = sx(currentSample.timeS);
+    svg += `<line class="phase-sweep-current" x1="${currentX}" y1="${margin.top}" x2="${currentX}" y2="${height - margin.bottom}"></line>`;
+    [
+      { key: 'observedPower', css: 'observed' },
+      { key: 'powerOnlyResidual', css: 'power-only' },
+      { key: 'coherentResidual', css: 'coherent' }
+    ].forEach((entry) => {
+      svg += `<circle class="phase-sweep-marker ${entry.css}" cx="${currentX}" cy="${sy(currentSample[entry.key])}" r="5"></circle>`;
+    });
+    svg += `<line class="check-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>`;
+    svg += `<line class="check-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>`;
+    svg += `<text class="phase-title" x="${margin.left + plotWidth / 2}" y="${height - 8}" text-anchor="middle">flyby time (s)</text>`;
+    svg += `<text class="phase-title" transform="translate(18 ${margin.top + plotHeight / 2}) rotate(-90)" text-anchor="middle">normalized target-cell power</text>`;
+    svg += '</svg>';
+    phaseSweepPlot.innerHTML = svg;
+  }
+
+  function phaseVectorInfo(vector) {
+    const magnitude = Math.hypot(vector.re, vector.im);
+    return {
+      ...vector,
+      magnitude,
+      phaseRad: magnitude < 1e-9 ? 0 : phaseWrap(Math.atan2(vector.im, vector.re)),
+      power: magnitude ** 2
+    };
+  }
+
+  function estimatedClutterVector(surfaceVector, phaseErrorDegValue, amplitudeErrorFractionValue) {
+    const scale = Math.max(0, 1 + amplitudeErrorFractionValue);
+    const angle = surfaceVector.phaseRad + phaseErrorDegValue * Math.PI / 180;
+    return phaseVectorInfo({
+      re: scale * surfaceVector.magnitude * Math.cos(angle),
+      im: scale * surfaceVector.magnitude * Math.sin(angle)
+    });
+  }
+
+  function representativeNoiseVector(noiseRms) {
+    const angle = 35 * Math.PI / 180;
+    return {
+      re: noiseRms * Math.cos(angle),
+      im: noiseRms * Math.sin(angle)
+    };
+  }
+
+  function validationRecovery(solution, phaseErrorDegValue, amplitudeErrorFractionValue, noiseVector = { re: 0, im: 0 }) {
+    const estimatedSurface = estimatedClutterVector(
+      solution.surfaceVector,
+      phaseErrorDegValue,
+      amplitudeErrorFractionValue
+    );
+    const observed = phaseVectorInfo({
+      re: solution.combinedVector.re + noiseVector.re,
+      im: solution.combinedVector.im + noiseVector.im
+    });
+    const recovered = phaseVectorInfo({
+      re: observed.re - estimatedSurface.re,
+      im: observed.im - estimatedSurface.im
+    });
+    const recoveredWithoutTarget = phaseVectorInfo({
+      re: solution.surfaceVector.re + noiseVector.re - estimatedSurface.re,
+      im: solution.surfaceVector.im + noiseVector.im - estimatedSurface.im
+    });
+    const recoveryErrorVector = phaseVectorInfo({
+      re: recovered.re - solution.targetVector.re,
+      im: recovered.im - solution.targetVector.im
+    });
+    const powerOnlyResidual = observed.power - estimatedSurface.power;
+    return {
+      solution,
+      estimatedSurface,
+      observed,
+      recovered,
+      recoveredWithoutTarget,
+      recoveryErrorVector,
+      powerOnlyResidual,
+      observedPowerError: Math.abs(observed.power - solution.targetPower),
+      powerOnlyError: Math.abs(powerOnlyResidual - solution.targetPower),
+      phaseAwarePowerError: Math.abs(recovered.power - solution.targetPower),
+      targetAbsentError: recoveredWithoutTarget.power
+    };
+  }
+
+  function renderCriticalWindow(solution) {
+    if (!criticalWindowPlot || !solution) return;
+    const width = 900;
+    const height = 360;
+    const margin = { left: 54, right: 24, top: 56, bottom: 58 };
+    const panelGap = 24;
+    const panelWidth = (width - margin.left - margin.right - panelGap * 2) / 3;
+    const sampleRecoveries = phaseValidation.comparisonTimesS.map((timeS) => {
+      const sample = phaseSolutionState(multiClutterStateAt(timeS, solution.effectivePrfHz));
+      return {
+        timeS,
+        recovery: validationRecovery(
+          sample,
+          phaseValidation.phaseErrorDeg,
+          phaseValidation.amplitudeErrorFraction,
+          representativeNoiseVector(phaseValidation.noiseRms)
+        )
+      };
+    });
+    const maxValue = Math.max(5.5, ...sampleRecoveries.flatMap(({ recovery }) => [
+      recovery.observed.power,
+      recovery.powerOnlyResidual,
+      recovery.recovered.power
+    ]));
+    const yTop = margin.top + 20;
+    const yBottom = height - margin.bottom;
+    const sy = (value) => yBottom - (Math.max(0, value) / maxValue) * (yBottom - yTop);
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Observed, power-only, and phase-aware target-cell power immediately before, during, and after the overlap">`;
+    svg += `<text class="phase-title" x="${margin.left}" y="22">same axes in every panel; dashed line = target-only power 1.00 x</text>`;
+    svg += `<text class="phase-note" x="${width - margin.right}" y="22" text-anchor="end">selected estimate bias plus one fixed noise realization</text>`;
+    sampleRecoveries.forEach(({ timeS, recovery }, panelIndex) => {
+      const panelX = margin.left + panelIndex * (panelWidth + panelGap);
+      const isOverlap = recovery.solution.overlappingPoints.length > 0;
+      const barData = [
+        { label: 'observed', value: recovery.observed.power, css: 'observed' },
+        { label: 'power only', value: recovery.powerOnlyResidual, css: 'power-only' },
+        { label: 'phase aware', value: recovery.recovered.power, css: 'phase-aware' }
+      ];
+      svg += `<rect class="critical-panel-bg ${isOverlap ? 'overlap' : ''}" x="${panelX}" y="${margin.top}" width="${panelWidth}" height="${yBottom - margin.top}"></rect>`;
+      svg += `<text class="critical-time" x="${panelX + panelWidth / 2}" y="${margin.top + 18}" text-anchor="middle">${fmt(timeS, 1)} s</text>`;
+      svg += `<text class="${isOverlap ? 'check-danger' : 'phase-note'}" x="${panelX + panelWidth / 2}" y="${margin.top + 36}" text-anchor="middle">${isOverlap ? `${recovery.solution.overlappingPoints.length} clutter returns on target` : 'returns separated'}</text>`;
+      const baselineY = sy(1);
+      svg += `<line class="critical-target-line" x1="${panelX + 12}" y1="${baselineY}" x2="${panelX + panelWidth - 12}" y2="${baselineY}"></line>`;
+      barData.forEach((bar, barIndex) => {
+        const barWidth = 42;
+        const barGap = 20;
+        const totalWidth = barWidth * 3 + barGap * 2;
+        const x = panelX + (panelWidth - totalWidth) / 2 + barIndex * (barWidth + barGap);
+        const y = sy(bar.value);
+        const visibleBottom = sy(0);
+        svg += `<rect class="critical-bar ${bar.css}" x="${x}" y="${Math.min(y, visibleBottom)}" width="${barWidth}" height="${Math.max(2, Math.abs(visibleBottom - y))}"></rect>`;
+        svg += `<text class="phase-note" x="${x + barWidth / 2}" y="${Math.max(margin.top + 58, y - 7)}" text-anchor="middle">${fmt(bar.value, 2)}</text>`;
+        svg += `<text class="critical-bar-label" x="${x + barWidth / 2}" y="${yBottom + 19}" text-anchor="middle">${bar.label}</text>`;
+      });
+    });
+    svg += `<text class="phase-title" transform="translate(16 ${(yTop + yBottom) / 2}) rotate(-90)" text-anchor="middle">normalized power</text>`;
+    svg += '</svg>';
+    criticalWindowPlot.innerHTML = svg;
+  }
+
+  function renderTruthEstimate(solution) {
+    if (!truthEstimatePlot || !solution) return;
+    const recovery = validationRecovery(
+      solution,
+      phaseValidation.phaseErrorDeg,
+      phaseValidation.amplitudeErrorFraction,
+      representativeNoiseVector(phaseValidation.noiseRms)
+    );
+    const width = 560;
+    const height = 350;
+    const centerX = 174;
+    const centerY = 176;
+    const radius = 106;
+    const maxMagnitude = Math.max(1, recovery.solution.surfaceVector.magnitude, recovery.estimatedSurface.magnitude, recovery.recovered.magnitude);
+    const scale = radius * 0.78 / maxMagnitude;
+    const end = (vector) => ({ x: centerX + vector.re * scale, y: centerY - vector.im * scale });
+    const trueEnd = end(recovery.solution.surfaceVector);
+    const estimateEnd = end(recovery.estimatedSurface);
+    const recoveredEnd = end(recovery.recovered);
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="True clutter phasor compared with the biased phase and amplitude estimate">
+      <defs>
+        <marker id="validation-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="phase-arrow-head"></path></marker>
+      </defs>`;
+    svg += `<circle class="phase-unit-circle" cx="${centerX}" cy="${centerY}" r="${radius}"></circle>`;
+    svg += `<line class="phase-axis-line" x1="${centerX - radius - 10}" y1="${centerY}" x2="${centerX + radius + 10}" y2="${centerY}"></line>`;
+    svg += `<line class="phase-axis-line" x1="${centerX}" y1="${centerY - radius - 10}" x2="${centerX}" y2="${centerY + radius + 10}"></line>`;
+    svg += `<line class="validation-vector truth" x1="${centerX}" y1="${centerY}" x2="${trueEnd.x}" y2="${trueEnd.y}" marker-end="url(#validation-arrow)"></line>`;
+    svg += `<line class="validation-vector estimate" x1="${centerX}" y1="${centerY}" x2="${estimateEnd.x}" y2="${estimateEnd.y}" marker-end="url(#validation-arrow)"></line>`;
+    svg += `<line class="validation-vector recovered" x1="${centerX}" y1="${centerY}" x2="${recoveredEnd.x}" y2="${recoveredEnd.y}" marker-end="url(#validation-arrow)"></line>`;
+    svg += `<line class="validation-error-vector" x1="${estimateEnd.x}" y1="${estimateEnd.y}" x2="${trueEnd.x}" y2="${trueEnd.y}"></line>`;
+    const labelX = 342;
+    [
+      { y: 82, label: 'true clutter C', value: `${fmt(recovery.solution.surfaceVector.magnitude, 2)} at ${signed(phaseDeg(recovery.solution.surfaceVector.phaseRad), 0)} deg`, css: 'truth' },
+      { y: 146, label: 'estimated clutter C-hat', value: `${fmt(recovery.estimatedSurface.magnitude, 2)} at ${signed(phaseDeg(recovery.estimatedSurface.phaseRad), 0)} deg`, css: 'estimate' },
+      { y: 210, label: 'recovered target T-hat', value: `${fmt(recovery.recovered.magnitude, 2)} at ${signed(phaseDeg(recovery.recovered.phaseRad), 0)} deg`, css: 'recovered' },
+      { y: 274, label: 'complex recovery error', value: `${fmt(recovery.recoveryErrorVector.magnitude * 100, 1)}% of target amplitude`, css: 'error' }
+    ].forEach((row) => {
+      svg += `<line class="validation-legend ${row.css}" x1="${labelX}" y1="${row.y}" x2="${labelX + 26}" y2="${row.y}"></line>`;
+      svg += `<text class="phase-title" x="${labelX + 36}" y="${row.y - 5}">${row.label}</text>`;
+      svg += `<text class="phase-note" x="${labelX + 36}" y="${row.y + 14}">${row.value}</text>`;
+    });
+    svg += '</svg>';
+    truthEstimatePlot.innerHTML = svg;
+  }
+
+  function validationErrorColor(relativeAmplitudeError) {
+    const normalized = Math.min(1, Math.max(0, relativeAmplitudeError / 1.25));
+    const hue = 184 - normalized * 178;
+    const lightness = 86 - normalized * 40;
+    return `hsl(${hue.toFixed(0)} 52% ${lightness.toFixed(0)}%)`;
+  }
+
+  function renderPhaseErrorMap(solution) {
+    if (!phaseErrorMap || !solution) return;
+    const width = 560;
+    const height = 350;
+    const margin = { left: 74, right: 28, top: 35, bottom: 60 };
+    const phaseValues = Array.from({ length: 19 }, (_, index) => -45 + index * 5);
+    const amplitudeValues = Array.from({ length: 21 }, (_, index) => -0.5 + index * 0.05);
+    const cellWidth = (width - margin.left - margin.right) / phaseValues.length;
+    const cellHeight = (height - margin.top - margin.bottom) / amplitudeValues.length;
+    const selectedError = validationRecovery(
+      solution,
+      phaseValidation.phaseErrorDeg,
+      phaseValidation.amplitudeErrorFraction
+    ).recoveryErrorVector.magnitude;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Recovered target amplitude error for phase and clutter amplitude estimation errors">
+      <defs><linearGradient id="validation-error-gradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="hsl(184 52% 86%)"></stop><stop offset="1" stop-color="hsl(6 52% 46%)"></stop></linearGradient></defs>`;
+    amplitudeValues.forEach((amplitudeError, rowIndex) => {
+      phaseValues.forEach((phaseError, columnIndex) => {
+        const error = validationRecovery(solution, phaseError, amplitudeError).recoveryErrorVector.magnitude;
+        const x = margin.left + columnIndex * cellWidth;
+        const y = margin.top + (amplitudeValues.length - rowIndex - 1) * cellHeight;
+        svg += `<rect x="${x}" y="${y}" width="${cellWidth + 0.4}" height="${cellHeight + 0.4}" fill="${validationErrorColor(error)}"><title>${signed(phaseError, 0)} deg, ${signed(amplitudeError * 100, 0)}% amplitude: ${fmt(error * 100, 1)}% target-amplitude error</title></rect>`;
+      });
+    });
+    [-45, -20, 0, 20, 45].forEach((value) => {
+      const x = margin.left + ((value + 45) / 90) * (width - margin.left - margin.right);
+      svg += `<text class="check-label" x="${x}" y="${height - margin.bottom + 20}" text-anchor="middle">${signed(value, 0)}</text>`;
+    });
+    [-50, -25, 0, 25, 50].forEach((value) => {
+      const y = margin.top + ((50 - value) / 100) * (height - margin.top - margin.bottom);
+      svg += `<text class="check-label" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${signed(value, 0)}%</text>`;
+    });
+    const selectedX = margin.left + ((phaseValidation.phaseErrorDeg + 45) / 90) * (width - margin.left - margin.right);
+    const selectedY = margin.top + ((0.5 - phaseValidation.amplitudeErrorFraction) / 1.0) * (height - margin.top - margin.bottom);
+    svg += `<circle class="validation-map-marker" cx="${selectedX}" cy="${selectedY}" r="7"><title>Selected errors: ${fmt(selectedError * 100, 1)}% target-amplitude error</title></circle>`;
+    svg += `<rect x="${width - 174}" y="9" width="116" height="10" fill="url(#validation-error-gradient)"></rect>`;
+    svg += `<text class="phase-note" x="${width - 182}" y="18" text-anchor="end">low</text>`;
+    svg += `<text class="phase-note" x="${width - 50}" y="18">high</text>`;
+    svg += `<text class="phase-title" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${height - 9}" text-anchor="middle">phase estimate error (deg)</text>`;
+    svg += `<text class="phase-title" transform="translate(18 ${margin.top + (height - margin.top - margin.bottom) / 2}) rotate(-90)" text-anchor="middle">amplitude estimate error</text>`;
+    svg += `<text class="phase-title" x="${margin.left}" y="19">color = target recovery error</text>`;
+    svg += '</svg>';
+    phaseErrorMap.innerHTML = svg;
+  }
+
+  function seededRandom(seed) {
+    let state = seed >>> 0;
+    return () => {
+      state = (1664525 * state + 1013904223) >>> 0;
+      return state / 4294967296;
+    };
+  }
+
+  function gaussianSample(random) {
+    const u1 = Math.max(1e-12, random());
+    const u2 = random();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(TWO_PI * u2);
+  }
+
+  function percentile(values, fraction) {
+    const sorted = [...values].sort((a, b) => a - b);
+    const index = Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * fraction)));
+    return sorted[index];
+  }
+
+  function uncertaintyTrialSummary(solution) {
+    const random = seededRandom(20260719);
+    const metrics = {
+      observed: [],
+      powerOnly: [],
+      phaseAware: [],
+      targetAbsent: []
+    };
+    for (let index = 0; index < phaseValidation.trialCount; index += 1) {
+      const trialPhaseError = phaseValidation.phaseErrorDeg + gaussianSample(random) * 5;
+      const trialAmplitudeError = phaseValidation.amplitudeErrorFraction + gaussianSample(random) * 0.05;
+      const componentSigma = phaseValidation.noiseRms / Math.sqrt(2);
+      const noiseVector = {
+        re: gaussianSample(random) * componentSigma,
+        im: gaussianSample(random) * componentSigma
+      };
+      const recovery = validationRecovery(solution, trialPhaseError, trialAmplitudeError, noiseVector);
+      metrics.observed.push(recovery.observedPowerError);
+      metrics.powerOnly.push(recovery.powerOnlyError);
+      metrics.phaseAware.push(recovery.phaseAwarePowerError);
+      metrics.targetAbsent.push(recovery.targetAbsentError);
+    }
+    return Object.fromEntries(Object.entries(metrics).map(([key, values]) => [key, {
+      median: percentile(values, 0.5),
+      p95: percentile(values, 0.95)
+    }]));
+  }
+
+  function renderUncertaintyTrials(solution) {
+    if (!uncertaintyTrialsPlot || !solution) return;
+    const summary = uncertaintyTrialSummary(solution);
+    const width = 900;
+    const height = 330;
+    const margin = { left: 205, right: 42, top: 70, bottom: 48 };
+    const rows = [
+      { label: 'No correction', values: summary.observed, css: 'observed' },
+      { label: 'Power-only subtraction', values: summary.powerOnly, css: 'power-only' },
+      { label: 'Phase-aware estimate', values: summary.phaseAware, css: 'phase-aware' },
+      { label: 'Target absent: false residual', values: summary.targetAbsent, css: 'target-absent' }
+    ];
+    const xMax = Math.max(0.5, ...rows.map((row) => row.values.p95)) * 1.12;
+    const sx = (value) => margin.left + (value / xMax) * (width - margin.left - margin.right);
+    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Median and 95th percentile target recovery error across deterministic Monte Carlo trials">`;
+    svg += `<text class="phase-title" x="${margin.left}" y="22">${phaseValidation.trialCount} trials at 6.0 s: 5 deg and 5% random scatter around the selected estimate bias</text>`;
+    svg += `<text class="phase-note" x="${margin.left}" y="43">bar = 95th percentile error; dark segment = median error; receiver noise is complex Gaussian</text>`;
+    rows.forEach((row, index) => {
+      const y = margin.top + index * 52;
+      svg += `<text class="phase-title" x="${margin.left - 18}" y="${y + 16}" text-anchor="end">${row.label}</text>`;
+      svg += `<rect class="uncertainty-track" x="${margin.left}" y="${y}" width="${width - margin.left - margin.right}" height="20"></rect>`;
+      svg += `<rect class="uncertainty-bar ${row.css}" x="${margin.left}" y="${y}" width="${Math.max(2, sx(row.values.p95) - margin.left)}" height="20"></rect>`;
+      svg += `<rect class="uncertainty-median ${row.css}" x="${margin.left}" y="${y + 5}" width="${Math.max(2, sx(row.values.median) - margin.left)}" height="10"></rect>`;
+      svg += `<text class="phase-note" x="${Math.min(width - margin.right, sx(row.values.p95) + 9)}" y="${y + 15}">p95 ${fmt(row.values.p95, 2)} x</text>`;
+    });
+    [0, xMax / 4, xMax / 2, 3 * xMax / 4, xMax].forEach((value) => {
+      const x = sx(value);
+      svg += `<line class="check-grid-line" x1="${x}" y1="${margin.top - 8}" x2="${x}" y2="${height - margin.bottom}"></line>`;
+      svg += `<text class="check-label" x="${x}" y="${height - margin.bottom + 18}" text-anchor="middle">${fmt(value, 1)}</text>`;
+    });
+    svg += `<text class="phase-title" x="${margin.left + (width - margin.left - margin.right) / 2}" y="${height - 8}" text-anchor="middle">absolute normalized power error</text>`;
+    svg += '</svg>';
+    uncertaintyTrialsPlot.innerHTML = svg;
+  }
+
+  function renderPhaseValidation(solution) {
+    if (!criticalWindowPlot && !truthEstimatePlot && !phaseErrorMap && !uncertaintyTrialsPlot) return;
+    const overlapSolution = phaseSolutionState(multiClutterStateAt(6.0, solution.effectivePrfHz));
+    const recovery = validationRecovery(
+      overlapSolution,
+      phaseValidation.phaseErrorDeg,
+      phaseValidation.amplitudeErrorFraction,
+      representativeNoiseVector(phaseValidation.noiseRms)
+    );
+    if (phaseValidationStatus) {
+      phaseValidationStatus.className = `multi-clutter-status${overlapSolution.overlappingPoints.length ? ' is-overlap' : ''}`;
+      phaseValidationStatus.textContent = `At 6.0 s, ${overlapSolution.overlappingPoints.length} clutter returns overlap the target. With ${signed(phaseValidation.phaseErrorDeg, 0)} deg phase error, ${signed(phaseValidation.amplitudeErrorFraction * 100, 0)}% amplitude error, and ${fmt(phaseValidation.noiseRms, 2)} x noise RMS, the recovered target power is ${fmt(recovery.recovered.power, 2)} x and the target-absent false residual is ${fmt(recovery.recoveredWithoutTarget.power, 2)} x.`;
+    }
+    if (phaseErrorOutput) phaseErrorOutput.textContent = `${signed(phaseValidation.phaseErrorDeg, 0)} deg`;
+    if (amplitudeErrorOutput) amplitudeErrorOutput.textContent = `${signed(phaseValidation.amplitudeErrorFraction * 100, 0)}%`;
+    if (validationNoiseOutput) validationNoiseOutput.textContent = `${fmt(phaseValidation.noiseRms, 2)} x`;
+    if (summaryObservedPower) summaryObservedPower.textContent = `${fmt(recovery.observed.power, 2)} x`;
+    if (summaryObservedError) summaryObservedError.textContent = `${signed((recovery.observed.power - 1) * 100, 0)}%`;
+    if (summaryPowerOnly) summaryPowerOnly.textContent = `${fmt(recovery.powerOnlyResidual, 2)} x`;
+    if (summaryPowerOnlyError) summaryPowerOnlyError.textContent = `${signed((recovery.powerOnlyResidual - 1) * 100, 0)}%`;
+    if (summaryPhaseAware) summaryPhaseAware.textContent = `${fmt(recovery.recovered.power, 2)} x`;
+    if (summaryPhaseAwareError) summaryPhaseAwareError.textContent = `${signed((recovery.recovered.power - 1) * 100, 0)}%`;
+    if (summaryTargetAbsent) summaryTargetAbsent.textContent = `${fmt(recovery.recoveredWithoutTarget.power, 2)} x`;
+    if (summaryTargetAbsentError) summaryTargetAbsentError.textContent = `${fmt(recovery.recoveredWithoutTarget.power * 100, 0)}% of target power`;
+    renderCriticalWindow(solution);
+    renderTruthEstimate(overlapSolution);
+    renderPhaseErrorMap(overlapSolution);
+    renderUncertaintyTrials(overlapSolution);
+  }
+
+  function renderPhaseSolution(state) {
+    if (!phaseGeometryPlot && !phaseCellPlot && !phasePhasorPlot && !phasePowerPlot && !phaseSweepPlot && !criticalWindowPlot && !truthEstimatePlot && !phaseErrorMap && !uncertaintyTrialsPlot) return;
+    const solution = phaseSolutionState(state);
+    if (!solution) return;
+    if (phaseSolutionStatus) {
+      const surfaceSummary = solution.surfaceVector.magnitude < 0.005
+        ? 'coherent surface sum is below 0.01'
+        : `coherent surface sum is ${fmt(solution.surfaceVector.magnitude, 2)} at ${signed(phaseDeg(solution.surfaceVector.phaseRad), 0)} deg`;
+      const overlapText = solution.overlappingPoints.length
+        ? `${fmt(solution.overlappingPoints.length, 0)} surface return${solution.overlappingPoints.length === 1 ? '' : 's'} are in the target Doppler/depth cell`
+        : 'No surface returns are in the target Doppler/depth cell';
+      phaseSolutionStatus.className = `multi-clutter-status phase-solution-status${solution.overlappingPoints.length ? ' is-overlap' : ''}`;
+      phaseSolutionStatus.textContent = `${overlapText}. The ${surfaceSummary}; observed cell power is ${fmt(solution.observedPower, 2)} x target. Power-only subtraction leaves ${fmt(solution.powerOnlyResidual, 2)} x, while phase-aware subtraction recovers ${fmt(solution.residualPower, 2)} x.`;
+    }
+    renderPhaseGeometry(solution);
+    renderPhaseCell(solution);
+    renderPhasePhasor(solution);
+    renderPhasePower(solution);
+    renderPhaseSweep(solution);
+    renderPhaseValidation(solution);
   }
 
   const processingModel = {
@@ -1362,6 +2448,8 @@
     renderDopplerBins(diagnosticState, multiState);
     renderTraceCheck(diagnosticState, multiState);
     renderFastTimeDopplerCheck(diagnosticState, multiState);
+    syncRecordingPair();
+    renderPhaseSolution(multiState);
     if (!processingRendered) {
       if (radargramPlot && fftPlot && decimatedFftPlot && reconstructionPlot) {
         renderProcessingExperiment();
@@ -1374,7 +2462,7 @@
     const baseCaseIsValid = timingIsSafe && prfWithinPublishedRange;
     if (originalPrfText) {
       originalPrfText.className = baseCaseIsValid ? '' : 'is-warning';
-      originalPrfText.textContent = `Base trace PRF: ${fmt(originalPrfHz, 1)} Hz; PRI ${fmt(basePriUs, 1)} Âµs ${timingIsSafe ? '>' : '<'} echo ${fmt(targetEchoUs, 1)} Âµs + ${fmt(SIMPLE_LISTEN_MARGIN_US, 0)} Âµs assumed margin.`;
+      originalPrfText.textContent = `Base trace PRF: ${fmt(originalPrfHz, 1)} Hz; PRI ${fmt(basePriUs, 1)} us ${timingIsSafe ? '>' : '<'} echo ${fmt(targetEchoUs, 1)} us + ${fmt(SIMPLE_LISTEN_MARGIN_US, 0)} us assumed margin.`;
     }
     output.textContent = `${fmt(effectivePrfHz, 1)} Hz`;
     if (timeOutput) timeOutput.textContent = `${fmt(flyby.timeS, 1)} s`;
@@ -1416,6 +2504,14 @@
     });
   });
   refreshDerivedModel(true);
+  const initialTime = Number(pageParams.get('time'));
+  if (Number.isFinite(initialTime) && timeSlider) {
+    flyby.timeS = clamp(initialTime, Number(timeSlider.min), Number(timeSlider.max));
+    timeSlider.value = flyby.timeS.toFixed(2);
+  }
+  const initialPrf = Number(pageParams.get('prf'));
+  if (Number.isFinite(initialPrf)) prfSlider.value = String(initialPrf);
+  window.setAliasingCaptureTime = setFlybyFrame;
   if (prfPlayButton) {
     prfPlayButton.addEventListener('click', () => {
       if (playbackFrameId === null) startPlayback();
@@ -1443,10 +2539,29 @@
   }
   if (multiClutterCountSlider) {
     multiClutterPointCount = Math.round(Number(multiClutterCountSlider.value));
+    if (multiClutterCountOutput) multiClutterCountOutput.textContent = fmt(multiClutterPointCount, 0);
     multiClutterCountSlider.addEventListener('input', () => {
       multiClutterPointCount = Math.round(Number(multiClutterCountSlider.value));
+      if (multiClutterCountOutput) multiClutterCountOutput.textContent = fmt(multiClutterPointCount, 0);
       draw(Number(prfSlider.value));
     });
   }
+  if (bumpHeightSlider) {
+    model.bumpHeightKm = Number(bumpHeightSlider.value);
+    if (bumpHeightOutput) bumpHeightOutput.textContent = `${fmt(model.bumpHeightKm, 1)} km`;
+    bumpHeightSlider.addEventListener('input', () => {
+      model.bumpHeightKm = Number(bumpHeightSlider.value);
+      if (bumpHeightOutput) bumpHeightOutput.textContent = `${fmt(model.bumpHeightKm, 1)} km`;
+      draw(Number(prfSlider.value));
+    });
+  }
+  [phaseErrorSlider, amplitudeErrorSlider, validationNoiseSlider].filter(Boolean).forEach((input) => {
+    input.addEventListener('input', () => {
+      phaseValidation.phaseErrorDeg = Number(phaseErrorSlider.value);
+      phaseValidation.amplitudeErrorFraction = Number(amplitudeErrorSlider.value) / 100;
+      phaseValidation.noiseRms = Number(validationNoiseSlider.value);
+      draw(Number(prfSlider.value));
+    });
+  });
   draw(Number(prfSlider.value));
 })();

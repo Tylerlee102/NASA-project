@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Effective-PRF Clutter Aliasing</title>
     <script>
-      if (window.top === window.self) {
+      const aliasingParams = new URLSearchParams(window.location.search);
+      if (window.top === window.self && aliasingParams.get('capture') !== 'powerpoint') {
         const fullSiteUrl = new URL('index.html', window.location.href);
         fullSiteUrl.searchParams.set('page', 'aliasing-lab');
         window.location.replace(fullSiteUrl.href);
       }
     </script>
     <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
-    <link rel="stylesheet" href="aliasing.css?v=doppler-main-20260717">
-    <script defer src="aliasing.js?v=doppler-main-20260717"></script>
+    <link rel="stylesheet" href="aliasing.css?v=powerpoint-pair-20260720">
+    <script defer src="aliasing.js?v=powerpoint-pair-20260720"></script>
   </head>
   <body>
     <main class="simple-lab">
@@ -80,6 +81,22 @@
           <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
           <div><dt>Ice index</dt><dd id="given-index"></dd></div>
         </dl>
+      </section>
+
+      <section id="recording-pair" class="recording-pair" aria-label="PowerPoint two-graph recording view">
+        <section class="horizontal-map" aria-labelledby="recording-map-title">
+          <div class="map-heading">
+            <h2 id="recording-map-title">Plane motion past two returns</h2>
+          </div>
+          <div id="recording-horizontal-plot" class="horizontal-plot" aria-live="polite"></div>
+        </section>
+
+        <section class="horizontal-map" aria-labelledby="recording-trace-title">
+          <div class="map-heading">
+            <h2 id="recording-trace-title">1. Trace hyperbola overlap</h2>
+          </div>
+          <div id="recording-trace-check-plot" class="diagnostic-plot" aria-live="polite"></div>
+        </section>
       </section>
 
       <div class="visual-grid">

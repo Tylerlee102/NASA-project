@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phase Solution</title>
+    <script>
+      if (window.top === window.self && !new URLSearchParams(window.location.search).has('standalone')) {
+        const fullSiteUrl = new URL('index.html', window.location.href);
+        fullSiteUrl.searchParams.set('page', 'aliasing-phase-lab');
+        window.location.replace(fullSiteUrl.href);
+      }
+    </script>
+    <link rel="stylesheet" href="styles.css?v=reason-blur-live-20260708">
+    <link rel="stylesheet" href="aliasing.css?v=validation-proof-20260719">
+    <script defer src="aliasing.js?v=validation-proof-20260719"></script>
+  </head>
+  <body>
+    <main class="simple-lab">
+      <section class="checks-section phase-solution-section is-subtab-section" aria-labelledby="phase-solution-title">
+        <div class="checks-heading">
+          <p class="section-kicker">Phase-aware surface clutter</p>
+          <h1 id="phase-solution-title">Solution</h1>
+          <p id="phase-solution-status" class="multi-clutter-status phase-solution-status" aria-live="polite"></p>
+        </div>
+
+        <section class="prf-control combined-clutter-control" aria-label="Phase-aware surface clutter simulation controls">
+          <div class="prf-label-row">
+            <div>
+              <h2>Fixed low-PRF Doppler sampling</h2>
+            </div>
+            <output id="effective-prf-output" aria-live="polite"></output>
+          </div>
+          <input id="effective-prf-slider" class="prf-slider" type="range" min="857" max="913" step="0.1" value="885.2" aria-label="Fixed effective Doppler sampling PRF in hertz">
+          <div class="prf-range-labels" aria-hidden="true">
+            <span id="prf-min-label">857 Hz</span>
+            <span>target folding neighborhood</span>
+            <span id="prf-max-label">913 Hz</span>
+          </div>
+
+          <div class="flyby-control" aria-label="Flyby time control">
+            <div class="flyby-label-row">
+              <h2>Flyby time</h2>
+              <output id="flyby-time-output" aria-live="polite">0.0 s</output>
+            </div>
+            <input id="flyby-time-slider" class="prf-slider" type="range" min="0" max="12" step="0.05" value="0" aria-label="Flyby time in seconds">
+            <div class="prf-range-labels" aria-hidden="true">
+              <span id="time-min-label">0 s</span>
+              <span>forward plane motion</span>
+              <span id="time-max-label">12 s</span>
+            </div>
+            <div class="prf-slider-row">
+              <button id="prf-play-button" class="prf-play-button" type="button" aria-pressed="false">Play</button>
+              <button id="playback-speed-button" class="play-speed-button" type="button" aria-label="Playback speed 2x">
+                <span>Speed</span>
+                <output id="playback-speed-output">2x</output>
+              </button>
+              <div id="folding-indicator" class="folding-indicator" aria-live="polite">
+                <span class="folding-dot" aria-hidden="true"></span>
+                <span id="folding-indicator-text">outside target fold</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="model-controls" aria-label="Live phase model parameters">
+            <label class="model-control" for="model-speed-slider">
+              <span>Plane speed <output id="model-speed-output" for="model-speed-slider">2.5 km/s</output></span>
+              <input id="model-speed-slider" type="range" min="1.5" max="6.0" step="0.1" value="2.5">
+            </label>
+            <label class="model-control" for="model-altitude-slider">
+              <span>Altitude <output id="model-altitude-output" for="model-altitude-slider">25 km</output></span>
+              <input id="model-altitude-slider" type="range" min="10" max="60" step="1" value="25">
+            </label>
+            <label class="model-control" for="model-depth-slider">
+              <span>Target depth <output id="model-depth-output" for="model-depth-slider">6.74 km</output></span>
+              <input id="model-depth-slider" type="range" min="2.0" max="12.0" step="0.01" value="6.74">
+            </label>
+            <label class="model-control" for="multi-clutter-count-slider">
+              <span>Surface bump points <output id="multi-clutter-count-output" for="multi-clutter-count-slider">12</output></span>
+              <input id="multi-clutter-count-slider" type="range" min="1" max="64" step="1" value="12">
+            </label>
+            <label class="model-control" for="bump-height-slider">
+              <span>Surface bump height <output id="bump-height-output" for="bump-height-slider">1.2 km</output></span>
+              <input id="bump-height-slider" type="range" min="0" max="4" step="0.1" value="1.2">
+            </label>
+          </div>
+
+          <dl class="lab-givens" aria-label="Current model assumptions">
+            <div><dt>Altitude</dt><dd id="given-altitude"></dd></div>
+            <div><dt>Speed</dt><dd id="given-speed"></dd></div>
+            <div><dt>Radar</dt><dd id="given-frequency"></dd></div>
+            <div><dt>Target depth</dt><dd id="given-depth"></dd></div>
+            <div><dt>Ice index</dt><dd id="given-index"></dd></div>
+          </dl>
+        </section>
+
+        <div class="visual-grid checks-grid">
+          <section class="horizontal-map" aria-labelledby="phase-geometry-title">
+            <div class="map-heading">
+              <h2 id="phase-geometry-title">Phase on the bumpy surface</h2>
+            </div>
+            <div id="phase-geometry-plot" class="diagnostic-plot" aria-live="polite"></div>
+          </section>
+
+          <section class="horizontal-map" aria-labelledby="phase-cell-title">
+            <div class="map-heading">
+              <h2 id="phase-cell-title">Folded cell with phase</h2>
+            </div>
+            <div id="phase-cell-plot" class="diagnostic-plot" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <div class="visual-grid checks-grid">
+          <section class="horizontal-map full-span" aria-labelledby="phase-sum-title">
+            <div class="map-heading">
+              <h2 id="phase-sum-title">Coherent phase sum</h2>
+            </div>
+            <div id="phase-phasor-plot" class="doppler-bins-plot phase-phasor-plot" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <div class="visual-grid checks-grid">
+          <section class="horizontal-map full-span" aria-labelledby="phase-power-title">
+            <div class="map-heading">
+              <h2 id="phase-power-title">Overlapping power and phase subtraction</h2>
+            </div>
+            <div id="phase-power-plot" class="doppler-bins-plot phase-power-plot" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <div class="visual-grid checks-grid">
+          <section class="horizontal-map full-span" aria-labelledby="phase-sweep-title">
+            <div class="map-heading">
+              <h2 id="phase-sweep-title">Solution performance over the flyby</h2>
+            </div>
+            <div id="phase-sweep-plot" class="doppler-bins-plot phase-sweep-plot" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <section class="phase-validation-section" aria-labelledby="phase-validation-title">
+          <div class="checks-heading">
+            <p class="section-kicker">Independent validation</p>
+            <h2 id="phase-validation-title">Can estimated phase still recover the target?</h2>
+            <p id="phase-validation-status" class="multi-clutter-status" aria-live="polite"></p>
+          </div>
+
+          <div class="phase-validation-controls" aria-label="Phase estimation validation controls">
+            <label class="model-control" for="phase-error-slider">
+              <span>Phase estimate error <output id="phase-error-output" for="phase-error-slider">10 deg</output></span>
+              <input id="phase-error-slider" type="range" min="-45" max="45" step="1" value="10">
+            </label>
+            <label class="model-control" for="amplitude-error-slider">
+              <span>Amplitude estimate error <output id="amplitude-error-output" for="amplitude-error-slider">10%</output></span>
+              <input id="amplitude-error-slider" type="range" min="-50" max="50" step="1" value="10">
+            </label>
+            <label class="model-control" for="validation-noise-slider">
+              <span>Receiver noise RMS <output id="validation-noise-output" for="validation-noise-slider">0.08 x</output></span>
+              <input id="validation-noise-slider" type="range" min="0" max="0.5" step="0.01" value="0.08">
+            </label>
+          </div>
+
+          <div class="visual-grid checks-grid phase-validation-grid">
+            <section class="horizontal-map full-span" aria-labelledby="critical-window-title">
+              <div class="map-heading">
+                <h3 id="critical-window-title">Right before, during, and after overlap</h3>
+              </div>
+              <div id="critical-window-plot" class="doppler-bins-plot critical-window-plot" aria-live="polite"></div>
+            </section>
+
+            <section class="horizontal-map" aria-labelledby="truth-estimate-title">
+              <div class="map-heading">
+                <h3 id="truth-estimate-title">Truth versus estimated clutter phasor</h3>
+              </div>
+              <div id="truth-estimate-plot" class="diagnostic-plot truth-estimate-plot" aria-live="polite"></div>
+            </section>
+
+            <section class="horizontal-map" aria-labelledby="phase-error-map-title">
+              <div class="map-heading">
+                <h3 id="phase-error-map-title">Recovery sensitivity to estimation error</h3>
+              </div>
+              <div id="phase-error-map" class="diagnostic-plot phase-error-map" aria-live="polite"></div>
+            </section>
+
+            <section class="horizontal-map full-span" aria-labelledby="uncertainty-trials-title">
+              <div class="map-heading">
+                <h3 id="uncertainty-trials-title">Noise and uncertainty trials</h3>
+              </div>
+              <div id="uncertainty-trials-plot" class="doppler-bins-plot uncertainty-trials-plot" aria-live="polite"></div>
+            </section>
+          </div>
+
+          <div class="table-responsive phase-validation-table-wrap">
+            <table class="phase-validation-table" aria-label="Target recovery validation summary">
+              <thead>
+                <tr>
+                  <th>Validation case</th>
+                  <th>Expected</th>
+                  <th>Recovered</th>
+                  <th>Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Target present, no correction</th>
+                  <td>1.00 x</td>
+                  <td id="summary-observed-power">-</td>
+                  <td id="summary-observed-error">-</td>
+                </tr>
+                <tr>
+                  <th scope="row">Target present, power-only</th>
+                  <td>1.00 x</td>
+                  <td id="summary-power-only">-</td>
+                  <td id="summary-power-only-error">-</td>
+                </tr>
+                <tr>
+                  <th scope="row">Target present, phase-aware estimate</th>
+                  <td>1.00 x</td>
+                  <td id="summary-phase-aware">-</td>
+                  <td id="summary-phase-aware-error">-</td>
+                </tr>
+                <tr>
+                  <th scope="row">Target absent, phase-aware estimate</th>
+                  <td>0.00 x</td>
+                  <td id="summary-target-absent">-</td>
+                  <td id="summary-target-absent-error">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
