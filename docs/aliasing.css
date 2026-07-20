@@ -86,7 +86,7 @@ body.is-powerpoint-capture {
   height: 500px;
   min-height: 500px;
   overflow: hidden;
-  background: transparent;
+  background: #f3eee5;
 }
 
 body.is-powerpoint-capture .simple-lab {
