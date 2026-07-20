@@ -455,6 +455,8 @@
     const altMax = Math.ceil(Math.max(...samples.map((entry) => entry.altitudeKm)) / 100) * 100;
     const scales = chartScales(width, height, margin, groundMin, groundMax, altMax, 0);
     const coreRows = rowsInWindow(coreWindow);
+    const coreStart = coreWindow ? interpolateRow(coreWindow.startOffsetS) : null;
+    const coreEnd = coreWindow ? interpolateRow(coreWindow.endOffsetS) : null;
     const svg = [`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Local side view of E19 altitude over groundtrack distance">`];
     axis(svg, width, height, margin, scales, [-1000, -500, 0, 500, 1000], [0, 100, 200, 300], {
       x: (value) => signed(value, 0),
@@ -464,12 +466,12 @@
     });
     svg.push(`<line class="surface" x1="${margin.left}" y1="${scales.y(0)}" x2="${width - margin.right}" y2="${scales.y(0)}"></line>`);
     svg.push(`<path class="trajectory-line" fill="none" d="${pathFor(samples, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
-    svg.push(`<path class="trajectory-alias-broad" d="${pathFor(rowsInSector(aliasAnalysis.broadAliasSector), scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
-    aliasAnalysis.zeroFoldSectors.forEach((sector) => {
-      svg.push(`<path class="trajectory-alias-sector${sector.strongest ? ' is-strongest' : ''}" d="${pathFor(rowsInSector(sector), scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
-    });
     if (coreRows.length) {
-      svg.push(`<path class="trajectory-reconable" d="${pathFor(coreRows, scales, 'groundTrackKm', 'altitudeKm')}"></path>`);
+      svg.push(`<path class="trajectory-reconable" d="${pathFor(coreRows, scales, 'groundTrackKm', 'altitudeKm')}"><title>Core SPICE window: ${signed(coreStart.groundTrackKm, 1)} to ${signed(coreEnd.groundTrackKm, 1)} km; ${signed(coreWindow.startOffsetS, 0)} to ${signed(coreWindow.endOffsetS, 0)} s</title></path>`);
+      [coreStart, coreEnd].forEach((point, index) => {
+        svg.push(`<circle class="trajectory-window-end" cx="${scales.x(point.groundTrackKm)}" cy="${scales.y(point.altitudeKm)}" r="4.2"><title>${index ? 'Core end' : 'Core start'}: ${signed(point.groundTrackKm, 1)} km, ${fmt(point.altitudeKm, 1)} km altitude, ${fmt(point.incidenceDeg, 1)} deg incidence</title></circle>`);
+      });
+      svg.push(`<text class="label-warning" x="${margin.left}" y="38">core window ${signed(coreStart.groundTrackKm, 0)} to ${signed(coreEnd.groundTrackKm, 0)} km from SPICE altitude/incidence criteria</text>`);
     }
     svg.push(`<line class="current-guide" x1="${scales.x(row.groundTrackKm)}" y1="${margin.top}" x2="${scales.x(row.groundTrackKm)}" y2="${height - margin.bottom}"></line>`);
     svg.push(satelliteIcon(scales.x(row.groundTrackKm), scales.y(row.altitudeKm), 11));

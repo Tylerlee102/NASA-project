@@ -347,6 +347,12 @@ a:focus-visible {
   stroke-linecap: round;
 }
 
+.trajectory-window-end {
+  fill: var(--gold);
+  stroke: var(--panel);
+  stroke-width: 1.4;
+}
+
 .cilix-marker {
   fill: rgba(169, 121, 34, .18);
   stroke: var(--gold);
