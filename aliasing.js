@@ -2504,13 +2504,17 @@
     });
   });
   refreshDerivedModel(true);
-  const initialTime = Number(pageParams.get('time'));
-  if (Number.isFinite(initialTime) && timeSlider) {
-    flyby.timeS = clamp(initialTime, Number(timeSlider.min), Number(timeSlider.max));
-    timeSlider.value = flyby.timeS.toFixed(2);
+  if (pageParams.has('time') && timeSlider) {
+    const initialTime = Number(pageParams.get('time'));
+    if (Number.isFinite(initialTime)) {
+      flyby.timeS = clamp(initialTime, Number(timeSlider.min), Number(timeSlider.max));
+      timeSlider.value = flyby.timeS.toFixed(2);
+    }
   }
-  const initialPrf = Number(pageParams.get('prf'));
-  if (Number.isFinite(initialPrf)) prfSlider.value = String(initialPrf);
+  if (pageParams.has('prf')) {
+    const initialPrf = Number(pageParams.get('prf'));
+    if (Number.isFinite(initialPrf)) prfSlider.value = String(initialPrf);
+  }
   window.setAliasingCaptureTime = setFlybyFrame;
   if (prfPlayButton) {
     prfPlayButton.addEventListener('click', () => {
