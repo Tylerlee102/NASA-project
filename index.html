@@ -8,7 +8,7 @@
     <script defer src="data/v19-results.js?v=prf-folding-20260701"></script>
     <script defer src="data/v30-results.js?v=prf-folding-20260701"></script>
     <script defer src="model.js?v=reason-blur-live-20260708"></script>
-    <script defer src="app.js?v=validation-proof-20260719"></script>
+    <script defer src="app.js?v=remove-extra-sections-20260720"></script>
   </head>
   <body>
     <div class="site-frame">
@@ -26,10 +26,6 @@
                 <a class="tab sub-tab" href="?page=aliasing-phase-lab" data-target="aliasing-phase-lab">Phase solution</a>
               </div>
               <a class="tab" href="?page=trajectory-lab" data-target="trajectory-lab">E19 Cilix Flyby</a>
-              <div class="section-subtabs" aria-label="E19 Cilix Flyby sections">
-                <a class="tab sub-tab" href="?page=trajectory-roughness-lab" data-target="trajectory-roughness-lab">Isotropic layer noise</a>
-              </div>
-              <a class="tab" href="?page=radargram-lab" data-target="radargram-lab">Radargram PRF Demo</a>
               <a class="tab" href="?page=owner-access" data-target="owner-access">Owner Archive</a>
               <div id="owner-tabs" class="owner-tabs" hidden>
                 <a class="tab" href="?page=overview" data-target="overview">Overview</a>
@@ -77,18 +73,6 @@
         </div>
         <div class="trajectory-embed-shell">
           <iframe id="trajectory-frame" class="aliasing-frame" src="trajectory.html?v=e19-single-graph-20260716" title="NASA-reference E19 Cilix-region flyby simulator" loading="eager" scrolling="no"></iframe>
-        </div>
-      </section>
-
-      <section id="trajectory-roughness-lab" class="page-section embedded-lab-section">
-        <div class="aliasing-embed-shell">
-          <iframe id="trajectory-roughness-frame" class="aliasing-frame" src="trajectory-roughness.html?v=isotropic-layer-20260717" title="E19 isotropic rough-layer phase-noise simulator" loading="eager" scrolling="no"></iframe>
-        </div>
-      </section>
-
-      <section id="radargram-lab" class="page-section embedded-lab-section">
-        <div class="aliasing-embed-shell">
-          <iframe id="radargram-frame" class="aliasing-frame" src="radargram.html?v=radargram-blur-20260714" title="Real radargram PRF folding comparison" loading="eager" scrolling="no"></iframe>
         </div>
       </section>
 
