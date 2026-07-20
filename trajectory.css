@@ -293,6 +293,13 @@ a:focus-visible {
 .surface { fill: none; stroke: #6e6659; stroke-width: 2; }
 .trajectory-line { fill: none; stroke: var(--teal); stroke-width: 2.4; }
 
+.trajectory-sample-dot {
+  fill: var(--panel);
+  stroke: var(--teal);
+  stroke-width: .9;
+  opacity: .72;
+}
+
 .groundtrack-line,
 .look-range-line,
 .altitude-line,
