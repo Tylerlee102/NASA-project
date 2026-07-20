@@ -100,8 +100,6 @@
     'aliasing-clutter-lab': 'Surface Clutter Points',
     'aliasing-phase-lab': 'Phase Solution',
     'trajectory-lab': 'E19 Cilix Flyby',
-    'trajectory-roughness-lab': 'E19 Isotropic Layer Noise',
-    'radargram-lab': 'Radargram PRF Demo',
     'owner-access': 'Owner Archive',
     overview: 'Overview',
     surface: 'Flyby Geometry',
@@ -115,7 +113,7 @@
   const OWNER_SESSION_KEY = 'europa-owner-archive-unlocked';
   const RAIL_COLLAPSED_KEY = 'europa-aliasing-rail-collapsed';
   const OWNER_PASSWORD_SHA256 = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-  const PUBLIC_PAGE_TARGETS = new Set(['aliasing-lab', 'aliasing-clutter-lab', 'aliasing-phase-lab', 'trajectory-lab', 'trajectory-roughness-lab', 'radargram-lab', 'owner-access']);
+  const PUBLIC_PAGE_TARGETS = new Set(['aliasing-lab', 'aliasing-clutter-lab', 'aliasing-phase-lab', 'trajectory-lab', 'owner-access']);
   let pendingOwnerTarget = 'overview';
   let ownerUnlocked = (() => {
     try {
